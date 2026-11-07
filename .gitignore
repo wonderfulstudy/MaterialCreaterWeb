@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.pai
+.swc
+
+# local env (model download url, etc.) - do not commit
+.env
+.env.*
+!.env.example

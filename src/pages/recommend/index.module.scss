@@ -1,0 +1,329 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: $spacing-md $page-padding $spacing-xl;
+  background: linear-gradient(180deg, #fff1f0 0%, $color-bg-page 300rpx, $color-bg-page 100%);
+}
+
+.notice {
+  margin-bottom: $spacing-md;
+  padding: $spacing-md;
+  background: #fff7ed;
+  border-radius: $radius-md;
+}
+
+.noticeText {
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: #b45309;
+}
+
+// ============ 卡片堆叠区 ============
+.deck {
+  position: relative;
+  height: 460rpx;
+  margin: $spacing-sm 0 0;
+}
+
+.emptyCard {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 320rpx;
+  height: 400rpx;
+  margin-left: -160rpx;
+  margin-top: -200rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  background: $color-bg-card;
+  border: 2rpx dashed #d9dce3;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  transition: border-color $transition-fast;
+
+  &:active {
+    border-color: $color-primary;
+  }
+}
+
+.emptyIcon {
+  font-size: 64rpx;
+  line-height: 1;
+  color: $color-text-disabled;
+}
+
+.emptyText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 320rpx;
+  height: 400rpx;
+  margin-left: -160rpx;
+  margin-top: -200rpx;
+  overflow: hidden;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: 0 6rpx 24rpx rgba(0, 0, 0, 0.14);
+  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.32s ease,
+    box-shadow 0.32s ease;
+  will-change: transform;
+}
+
+.cardActive {
+  box-shadow: 0 12rpx 32rpx rgba(229, 57, 53, 0.24);
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+}
+
+.cardBadge {
+  position: absolute;
+  top: $spacing-xs;
+  left: $spacing-xs;
+  padding: 4rpx 14rpx;
+  border-radius: $radius-round;
+  background: rgba(29, 33, 41, 0.6);
+}
+
+.cardBadgeDone {
+  background: rgba(0, 180, 42, 0.85);
+}
+
+.cardBadgeError {
+  background: rgba(245, 63, 63, 0.85);
+}
+
+.cardBadgeText {
+  font-size: 20rpx;
+  color: $color-text-white;
+  line-height: 1.4;
+}
+
+.cardCaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: $spacing-sm;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.62) 100%);
+}
+
+.cardCaptionTitle {
+  display: block;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+  @include text-ellipsis;
+}
+
+.cardCaptionText {
+  display: block;
+  margin-top: 2rpx;
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.deckHint {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  text-align: center;
+}
+
+// ============ 操作区 ============
+.actions {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+.secondaryButton,
+.primaryButton {
+  flex: 1;
+  height: 78rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-button;
+  transition: opacity $transition-fast;
+}
+
+.secondaryButton {
+  background: $color-bg-card;
+  border: 2rpx solid $color-primary;
+
+  &:active {
+    background: #fff1f0;
+  }
+}
+
+.secondaryButtonText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, $color-primary-light 0%, $color-primary 100%);
+  box-shadow: 0 8rpx 20rpx rgba(229, 57, 53, 0.28);
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.primaryButtonText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+}
+
+.buttonDisabled {
+  opacity: 0.45;
+  box-shadow: none;
+
+  &:active {
+    transform: none;
+  }
+}
+
+.statusText {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $color-text-secondary;
+}
+
+.errorText {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $color-error;
+}
+
+// ============ 汇总表格 ============
+.summary {
+  margin-top: $spacing-lg;
+  padding: $spacing-md;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.summaryTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.summaryMeta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.summaryEmpty {
+  display: block;
+  padding: $spacing-lg 0;
+  font-size: $font-size-xs;
+  line-height: $line-height-loose;
+  color: $color-text-tertiary;
+  text-align: center;
+}
+
+.group {
+  & + & {
+    margin-top: $spacing-lg;
+  }
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 $spacing-xs $spacing-xs;
+}
+
+.groupDate {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.groupCount {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.table {
+  overflow: hidden;
+  border: 2rpx solid $color-divider;
+  border-radius: $radius-md;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  padding: $spacing-sm $spacing-xs;
+  border-top: 2rpx solid $color-divider;
+
+  &:first-child {
+    border-top: none;
+  }
+}
+
+.rowHead {
+  background: #fafbfc;
+
+  .cell {
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+}
+
+.cell {
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $color-text-primary;
+  word-break: break-all;
+}
+
+.cellTitle {
+  flex: 4;
+  min-width: 0;
+  padding-right: $spacing-xs;
+}
+
+.cellDate {
+  flex: 2;
+  text-align: center;
+  color: $color-text-secondary;
+}
+
+.cellPlan {
+  flex: 5;
+  min-width: 0;
+  padding-left: $spacing-xs;
+  color: $color-text-secondary;
+}

@@ -1,0 +1,142 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $color-bg-page;
+}
+
+.content {
+  box-sizing: border-box;
+  padding: $spacing-lg $page-padding $spacing-xl;
+}
+
+.resultsSection {
+  margin-bottom: $spacing-xl;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  color: $color-text-primary;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+}
+
+// 彩种卡片：默认白卡 + 阴影
+.card {
+  margin-bottom: $spacing-md;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+}
+
+// 加载态：外层 3rpx 光环厚度，::before 旋转紫色亮弧形成流光边框
+.cardLoading {
+  position: relative;
+  padding: 3rpx;
+  background: $color-border;
+  box-shadow: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    // 覆盖整个卡片并向外扩展，保证旋转时四角也有流光
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      $color-flow-purple-soft 40deg,
+      $color-flow-purple-light 70deg,
+      $color-flow-purple 100deg,
+      transparent 140deg,
+      transparent 360deg
+    );
+    animation: card-flow-spin 1.4s linear infinite;
+  }
+}
+
+@keyframes card-flow-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// 卡片内容层：白底遮住旋转渐变中心，只露出 3rpx 流光边框
+.cardBody {
+  position: relative;
+  z-index: 1;
+  padding: $spacing-md;
+  border-radius: calc(#{$radius-lg} - 3rpx);
+  background: $color-bg-card;
+}
+
+.resultHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.resultMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.drawDate {
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.gameName {
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+}
+
+.issue {
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+}
+
+.numbers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.singleNumber {
+  display: flex;
+  width: 48rpx;
+  height: 48rpx;
+  align-items: center;
+  justify-content: center;
+  margin: 0 8rpx 0 0;
+  border: 1rpx solid $color-lottery-red;
+  border-radius: $radius-round;
+  background: $color-bg-card;
+}
+
+.singleNumberText {
+  color: $color-lottery-red;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.gameStatus {
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+}
