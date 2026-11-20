@@ -1,37 +1,38 @@
-@use 'sass:math';
 @use '@/styles/variables.scss' as *;
 
 .ball {
   @include flex-center;
-  width: 64rpx;
-  height: 64rpx;
+  flex-shrink: 0;
+  width: 30rpx;
+  height: 30rpx;
+  margin-right: 4rpx;
   border-radius: $radius-round;
-  margin: 0 math.div($spacing-xs, 2);
 
   &.red {
-    background: linear-gradient(135deg, #FF5252 0%, #E53935 100%);
+    background: #ff383c;
   }
 
   &.blue {
-    background: linear-gradient(135deg, #42A5F5 0%, #1565C0 100%);
+    background: #0088ff;
   }
 
   &.gold {
-    background: linear-gradient(135deg, #FFD54F 0%, #FFB300 100%);
+    background: #f4b400;
   }
 
   &.small {
-    width: 48rpx;
-    height: 48rpx;
+    width: 26rpx;
+    height: 26rpx;
   }
 }
 
 .ballText {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
   color: $color-text-white;
+  font-size: 16rpx;
+  font-weight: $font-weight-medium;
+  line-height: 1;
 
   &.smallText {
-    font-size: $font-size-xs;
+    font-size: 13rpx;
   }
 }

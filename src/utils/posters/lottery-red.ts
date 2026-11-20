@@ -1,5 +1,13 @@
 import Taro from '@tarojs/taro'
-import type { LatestResult } from '@/api'
+
+/** 旧版海报工具自行声明的开奖结果结构 */
+interface LatestResult {
+  name: string
+  issue: string
+  pool?: string
+  redBalls: string[]
+  blueBalls: string[]
+}
 
 const COLORS = {
   bgStart: '#8B0000',

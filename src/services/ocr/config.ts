@@ -1,14 +1,16 @@
 /**
  * PP-OCRv6 tiny 文字识别配置。
  *
- * 模型源文件位于 src/ocr_model/，构建时会整体拷贝到代码包内的 ocr_model/，
- * 因此 modelPath 是代码包内的相对路径，与 config/index.ts 的 copy 配置保持一致。
+ * 模型不再随代码包分发：首次识别时按 remoteUrl 下载并缓存到 wx.env.USER_DATA_PATH，
+ * 之后离线复用。若本地临时放了 src/ocr_model/ 或 ocr_model/，config/index.ts 仍会把它
+ * 拷进代码包，运行时优先用包内文件（modelPath 即代码包内的相对路径）。
  */
 
 /**
  * 构建时注入的模型下载地址（见 config/index.ts 的 defineConstants）。
  *
- * 推荐通过环境变量传入，避免把带签名的临时链接提交进仓库：
+ * 来源优先级：命令行环境变量 > .env.local > .env，避免把带签名的临时链接提交进仓库：
+ *   .env 里写 OCR_MODEL_URL=https://...（已被 gitignore 忽略，推荐）
  *   PowerShell: $env:OCR_MODEL_URL="https://..."; npm run build:weapp
  * 也可以在运行时用 setOcrModelUrl() 覆盖（适合后端下发刷新后的链接）。
  */
@@ -17,22 +19,21 @@ declare const __OCR_MODEL_URL__: string | undefined
 const BUILD_TIME_REMOTE_URL = typeof __OCR_MODEL_URL__ === 'string' ? __OCR_MODEL_URL__ : ''
 
 export const OCR_MODEL = {
-  /** 代码包内的模型路径 */
+  /** 代码包内的模型路径（仅本地放了模型、随包分发时才会命中；默认走远端下载） */
   modelPath: 'ocr_model/PP-OCRv6_tiny.onnx',
   /** 模型文件名，复制到本地文件系统时使用 */
   fileName: 'PP-OCRv6_tiny.onnx',
   /** 模型字节数，用于校验下载结果是否完整（防止把服务端的 XML/HTML 报错页当成模型存下来） */
   expectedBytes: 4462639,
   /**
-   * 模型下载地址：公共读直链，留空时由你后续填充。
+   * 模型下载地址：公共读直链。
    *
-   * 小程序主包和单个分包的上限都是 2MB，而本模型有 4.26MB，
-   * 只能在本机开发者工具里随包运行，真机预览/上传会被包体限制拒绝。
-   * 真机运行时改为首次识别从远端下载并缓存到 wx.env.USER_DATA_PATH，之后离线可用。
+   * 小程序主包和单个分包的上限都是 2MB，而模型有 4.26MB，因此不随代码包分发：
+   * 首次识别时从该地址下载并缓存到 wx.env.USER_DATA_PATH，之后离线可用。
    *
    * 填写方式三选一（优先级从高到低）：
    *   1. 运行时 setOcrModelUrl(url) —— 适合由后端下发地址
-   *   2. 构建环境变量 OCR_MODEL_URL —— 不写进仓库，推荐
+   *   2. 构建期 OCR_MODEL_URL（.env / 命令行环境变量）—— 不写进仓库，推荐
    *   3. 直接填在下面这个空字符串里
    *
    * 形如：'https://kael2026.oss-cn-chengdu.aliyuncs.com/PP-OCRv6_tiny.onnx'

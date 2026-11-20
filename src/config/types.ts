@@ -13,11 +13,14 @@ export interface AppConfigType {
     name: string
     lottery_base_url: string
     cwl_base_url: string
+    football_base_url: string
+    basketball_base_url: string
   }
   
   navigation: {
     home: string
-    recommend: string
+    material: string
+    profile: string
     selector: string
   }
 

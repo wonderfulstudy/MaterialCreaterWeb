@@ -1,16 +1,16 @@
-import type { CwlHistory } from '../api/cwl.dto'
-import type { LotteryHistory } from '../api/lottery.dto'
+import type { CwlHistory } from '../api/cwl/cwl.dto'
+import type { LotteryHistory } from '../api/lottery/lottery.dto'
 
 /** 首页展示的彩种及顺序；numberType 决定号码展示形态 */
 export const LATEST_LOTTERIES = [
-  { code: 'dlt', name: '大乐透', numberType: 'red-blue' },
-  { code: 'pl3', name: '排列三', numberType: 'single' },
-  { code: 'pl5', name: '排列五', numberType: 'single' },
-  { code: 'qxc', name: '七星彩', numberType: 'red-blue' },
   { code: 'ssq', name: '双色球', numberType: 'red-blue' },
-  { code: 'qlc', name: '七乐彩', numberType: 'red-blue' },
-  { code: 'fc3d', name: '福彩3D', numberType: 'single' },
+  { code: 'dlt', name: '大乐透', numberType: 'red-blue' },
   { code: 'kl8', name: '快乐8', numberType: 'single' },
+  { code: 'fc3d', name: '3D', numberType: 'single' },
+  { code: 'qxc', name: '七星彩', numberType: 'red-blue' },
+  { code: 'pl3', name: '排列3', numberType: 'single' },
+  { code: 'pl5', name: '排列5', numberType: 'single' },
+  { code: 'qlc', name: '七乐彩', numberType: 'red-blue' },
 ] as const
 
 export type LotteryGameCode = (typeof LATEST_LOTTERIES)[number]['code']

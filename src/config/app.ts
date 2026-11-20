@@ -12,12 +12,15 @@ const config: AppConfigType = {
   app: {
     name: "彩店管理助手",
     lottery_base_url: "https://webapi.sporttery.cn/gateway/lottery/getHistoryPageListV1.qry",
-    cwl_base_url: "https://www.cwl.gov.cn/cwl_admin/front/cwlkj/search/kjxx/findDrawNotice"
+    cwl_base_url: "https://www.cwl.gov.cn/cwl_admin/front/cwlkj/search/kjxx/findDrawNotice",
+    football_base_url: "https://webapi.sporttery.cn/gateway/jc/football/getMatchCalculatorV1.qry",
+    basketball_base_url: "https://webapi.sporttery.cn/gateway/jc/basketball/getMatchCalculatorV1.qry"
   },
   
   navigation: {
     home: "首页",
-    recommend: "推单识别",
+    material: "素材",
+    profile: "我的",
     selector: "计算器"
   },
 

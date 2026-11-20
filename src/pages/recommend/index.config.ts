@@ -1,3 +1,8 @@
+import AppConfig from '@/config/app'
+
 export default definePageConfig({
-  navigationBarTitleText: '素材分享',
+  navigationBarTitleText: AppConfig.navigation.material,
+  navigationBarBackgroundColor: '#F2F2F5',
+  navigationBarTextStyle: 'black',
+  backgroundColor: '#F5F6F7',
 })

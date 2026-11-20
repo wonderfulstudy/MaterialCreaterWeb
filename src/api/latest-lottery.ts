@@ -1,5 +1,5 @@
-import { getDltHistory, getPl3History, getPl5History, getQxcHistory } from './lottery'
-import { get3DHistory, getKL8History, getQlcHistory, getSsqHistory } from './cwl'
+import { getDltHistory, getPl3History, getPl5History, getQxcHistory } from './lottery/lottery'
+import { get3DHistory, getKL8History, getQlcHistory, getSsqHistory } from './cwl/cwl'
 import {
   mapCwlHistory,
   mapLotteryHistory,

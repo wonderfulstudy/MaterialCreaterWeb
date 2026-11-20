@@ -1,142 +1,234 @@
 @use '@/styles/variables.scss' as *;
 
+$home-bg: #e5e5ea;
+$ink: #111111;
+$muted: #8e8e93;
+$divider: #f0f0f2;
+$red: #ff383c;
+$green: #34c759;
+
 .page {
   min-height: 100vh;
-  background: $color-bg-page;
+  background: $home-bg;
 }
 
 .content {
   box-sizing: border-box;
-  padding: $spacing-lg $page-padding $spacing-xl;
+  padding-right: 28rpx;
+  padding-bottom: calc(200rpx + env(safe-area-inset-bottom));
+  padding-left: 28rpx;
 }
 
-.resultsSection {
-  margin-bottom: $spacing-xl;
+/* ============ 顶部战报卡 ============ */
+.summaryCard {
+  padding: 8rpx 28rpx 18rpx;
+  border-radius: 28rpx;
+  background: #ffffff;
 }
 
-.sectionHeader {
+.summaryRow {
+  padding: 16rpx 0;
+}
+
+.summaryHead {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: $spacing-md;
+  align-items: center;
 }
 
-.sectionTitle {
-  color: $color-text-primary;
-  font-size: $font-size-xl;
+.summaryTitle {
+  color: $ink;
+  font-size: 38rpx;
   font-weight: $font-weight-bold;
+  line-height: 1.3;
 }
 
-// 彩种卡片：默认白卡 + 阴影
-.card {
-  margin-bottom: $spacing-md;
-  border-radius: $radius-lg;
-  background: $color-bg-card;
-  box-shadow: $shadow-card;
-  overflow: hidden;
+.summaryDate {
+  margin-left: 12rpx;
+  color: $ink;
+  font-size: 27rpx;
+  line-height: 1.3;
 }
 
-// 加载态：外层 3rpx 光环厚度，::before 旋转紫色亮弧形成流光边框
-.cardLoading {
-  position: relative;
-  padding: 3rpx;
-  background: $color-border;
-  box-shadow: none;
+.chevron {
+  width: 10rpx;
+  height: 10rpx;
+  flex-shrink: 0;
+  margin-top: 2rpx;
+  margin-left: 8rpx;
+  border-top: 2rpx solid #b0b0b5;
+  border-right: 2rpx solid #b0b0b5;
+  transform: rotate(45deg);
+}
 
-  &::before {
-    content: '';
-    position: absolute;
-    // 覆盖整个卡片并向外扩展，保证旋转时四角也有流光
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: conic-gradient(
-      from 0deg,
-      transparent 0deg,
-      $color-flow-purple-soft 40deg,
-      $color-flow-purple-light 70deg,
-      $color-flow-purple 100deg,
-      transparent 140deg,
-      transparent 360deg
-    );
-    animation: card-flow-spin 1.4s linear infinite;
+.stats {
+  display: flex;
+  margin-top: 12rpx;
+}
+
+.statCol {
+  width: 64rpx;
+  flex-shrink: 0;
+
+  & + & {
+    margin-left: 8rpx;
   }
 }
 
-@keyframes card-flow-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
+.statLabel {
+  display: block;
+  margin-bottom: 6rpx;
+  color: $ink;
+  font-size: 24rpx;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.statBox {
+  display: flex;
+  height: 44rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4rpx;
+  background: #d9d9d9;
+}
+
+.statValue {
+  font-size: 26rpx;
+  font-weight: $font-weight-medium;
+  line-height: 1;
+}
+
+.statMuted {
+  color: #9a9a9e;
+}
+
+.statRed {
+  color: $red;
+}
+
+.statPlain {
+  color: $ink;
+}
+
+.statGreen {
+  color: $green;
+}
+
+.divider {
+  height: 2rpx;
+  margin: 0 4rpx;
+  background: $divider;
+}
+
+.traditionalDate {
+  display: block;
+  margin: 8rpx 0 12rpx;
+  color: $ink;
+  font-size: 27rpx;
+  line-height: 1.3;
+}
+
+.traditionalBalls {
+  display: flex;
+}
+
+.traditionalBall {
+  display: flex;
+  width: 18rpx;
+  height: 44rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8rpx;
+  background: $green;
+
+  & + & {
+    margin-left: 4rpx;
   }
 }
 
-// 卡片内容层：白底遮住旋转渐变中心，只露出 3rpx 流光边框
-.cardBody {
-  position: relative;
-  z-index: 1;
-  padding: $spacing-md;
-  border-radius: calc(#{$radius-lg} - 3rpx);
-  background: $color-bg-card;
+.traditionalBallText {
+  color: #ffffff;
+  font-size: 16rpx;
+  font-weight: $font-weight-semibold;
+  line-height: 1;
 }
 
-.resultHeader {
+/* ============ 最新开奖卡 ============ */
+.lotteryCard {
+  margin-top: 24rpx;
+  padding: 4rpx 28rpx;
+  border-radius: 28rpx;
+  background: #ffffff;
+}
+
+.lotteryRow {
+  padding: 21rpx 0;
+
+  & + & {
+    border-top: 2rpx solid $divider;
+  }
+
+  &:first-child {
+    padding-top: 20rpx;
+  }
+
+  &:last-child {
+    padding-bottom: 26rpx;
+  }
+}
+
+.lotteryHead {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: $spacing-sm;
 }
 
-.resultMeta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+.lotteryName {
+  color: $ink;
+  font-size: 36rpx;
+  font-weight: $font-weight-bold;
+  line-height: 1.3;
 }
 
-.drawDate {
-  color: $color-text-tertiary;
-  font-size: $font-size-xs;
+.lotteryIssue {
+  margin-left: 12rpx;
+  color: $ink;
+  font-size: 27rpx;
+  line-height: 1.3;
 }
 
-.gameName {
-  color: $color-text-primary;
-  font-size: $font-size-md;
-  font-weight: $font-weight-semibold;
-}
-
-.issue {
-  color: $color-text-secondary;
-  font-size: $font-size-sm;
+.lotteryDate {
+  margin-left: auto;
+  color: #5c5c60;
+  font-size: 26rpx;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .numbers {
   display: flex;
+  max-width: 344rpx;
   flex-wrap: wrap;
   align-items: center;
+  margin-top: 12rpx;
 }
 
-.singleNumber {
-  display: flex;
-  width: 48rpx;
-  height: 48rpx;
-  align-items: center;
-  justify-content: center;
-  margin: 0 8rpx 0 0;
-  border: 1rpx solid $color-lottery-red;
+.blueGap {
+  width: 16rpx;
+  flex-shrink: 0;
+}
+
+.skeletonBall {
+  width: 30rpx;
+  height: 30rpx;
+  margin-right: 7rpx;
   border-radius: $radius-round;
-  background: $color-bg-card;
+  background: #f2f2f4;
 }
 
-.singleNumberText {
-  color: $color-lottery-red;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-}
-
-.gameStatus {
-  color: $color-text-secondary;
-  font-size: $font-size-sm;
-  line-height: $line-height-normal;
+.lotteryEmpty {
+  display: block;
+  margin-top: 10rpx;
+  color: $muted;
+  font-size: 22rpx;
+  line-height: 1.4;
 }

@@ -33,3 +33,16 @@ navigator {
   font-size: 30px !important;
   line-height: 1.4 !important;
 }
+
+// 3. 隐藏内部滚动容器（页面容器 / scroll-view）的滚动条，保留滚动手势
+.taro_page,
+taro-scroll-view-core {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}

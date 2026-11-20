@@ -1,0 +1,1186 @@
+@use '@/styles/variables.scss' as *;
+
+// 竞彩足球 / 竞篮：方案计算器
+$jc-border: #4a90d9;
+$jc-header: #a8d4f0;
+$jc-red: #e60012;
+
+@keyframes panelIn {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes popup-grow {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+// ============ 容器：page 变体 ============
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  background: $color-bg-page;
+}
+
+// H5 页面还包含底部导航，以路由容器的实际可用高度布局。
+.pageH5 {
+  height: 100%;
+}
+
+// H5 路由容器默认强制显示滚动条，仅关闭计算器所在页面的外层滚动。
+:global(.taro_page):has(.page) {
+  overflow: hidden;
+}
+
+// ============ 容器：sheet 变体 ============
+.overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+
+// H5 的 tabbar 是页面内浮层，面板需要让开它
+.overlayH5 {
+  bottom: 100rpx;
+}
+
+.mask {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(15, 18, 24, 0.48);
+}
+
+.sheet {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 88vh;
+  max-height: 88vh;
+  overflow: hidden;
+  background: $color-bg-page;
+  border-radius: 28rpx 28rpx 0 0;
+  animation: panelIn 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.handle {
+  width: 72rpx;
+  height: 8rpx;
+  margin: 16rpx auto 0;
+  background: #e5e6eb;
+  border-radius: $radius-round;
+  flex-shrink: 0;
+}
+
+// ============ 顶部工具栏 ============
+.toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $page-padding;
+  background: $color-bg-card;
+  box-shadow: $shadow-float;
+  z-index: 20;
+}
+
+.sheetHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-md $spacing-sm $page-padding;
+  background: $color-bg-card;
+  z-index: 20;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.close {
+  @include flex-center;
+  width: 56rpx;
+  height: 56rpx;
+  flex-shrink: 0;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+}
+
+.closeText {
+  font-size: $font-size-sm;
+  line-height: 1;
+  color: $color-text-secondary;
+}
+
+.toolbarTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-shrink: 0;
+}
+
+.headerAction {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  padding: $spacing-xs $spacing-sm;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-button;
+
+  &.headerActionActive {
+    color: $color-primary;
+    border-color: $color-primary;
+  }
+}
+
+// ============ 通用下拉选择 ============
+.ddTrigger {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-button;
+  background: $color-bg-card;
+  max-width: 260rpx;
+}
+
+.ddLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.ddValue {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.ddArrow {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  transition: transform $transition-fast;
+
+  &.ddArrowOpen {
+    transform: rotate(180deg);
+  }
+}
+
+.ddMenu {
+  position: absolute;
+  top: calc(100% + 8rpx);
+  left: 0;
+  min-width: 200rpx;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  box-shadow: $shadow-popup;
+  padding: $spacing-xs;
+  z-index: 60;
+
+  // 底部栏的下拉向上弹出
+  &.ddMenuUp {
+    top: auto;
+    bottom: calc(100% + 8rpx);
+  }
+}
+
+.ddItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-sm;
+
+  &.ddItemActive {
+    background: rgba($color-primary, 0.08);
+
+    .ddItemText {
+      color: $color-primary;
+      font-weight: $font-weight-semibold;
+    }
+  }
+}
+
+.ddItemText {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.ddCheck {
+  font-size: $font-size-sm;
+  color: $color-primary;
+}
+
+// 游戏类型下拉（竞足/竞篮）
+.gameDd {
+  position: relative;
+}
+
+// ============ 联赛筛选条 ============
+.leagueBar {
+  flex-shrink: 0;
+  background: $color-bg-card;
+  border-bottom: 1rpx solid $color-divider;
+  white-space: nowrap;
+}
+
+.leagueList {
+  display: inline-flex;
+  gap: $spacing-sm;
+  padding: $spacing-sm $page-padding;
+}
+
+.leagueChip {
+  display: inline-flex;
+  align-items: center;
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-button;
+  background: $color-bg-hover;
+  flex-shrink: 0;
+
+  &.leagueChipActive {
+    background: $color-primary;
+
+    .leagueChipText {
+      color: $color-text-white;
+    }
+  }
+}
+
+.leagueChipText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+// ============ 列表区 ============
+.body {
+  flex: 1;
+  min-height: 0;
+  height: 0;
+  overscroll-behavior-y: contain;
+}
+
+.stateBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-xl $page-padding;
+}
+
+.stateText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}
+
+.stateHint {
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $color-text-disabled;
+  text-align: center;
+}
+
+.retryBtn {
+  padding: $spacing-xs $spacing-lg;
+  border-radius: $radius-button;
+  background: $color-primary;
+}
+
+.retryText {
+  font-size: $font-size-sm;
+  color: $color-text-white;
+}
+
+// ============ 日期分组 ============
+.dateGroup {
+  margin-bottom: $spacing-sm;
+}
+
+.dateHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-xs $page-padding;
+  background: $jc-header;
+}
+
+.dateHeaderText {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.dateArrow {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  transition: transform $transition-fast;
+
+  &.dateArrowCollapsed {
+    transform: rotate(-90deg);
+  }
+}
+
+.matchList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-sm $page-padding 0;
+}
+
+// ============ 比赛卡片 ============
+.matchCard {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  box-shadow: $shadow-card;
+  padding: $spacing-sm;
+  overflow: hidden;
+}
+
+.matchHead {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.matchNo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 72rpx;
+}
+
+.matchWeek {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.matchNum {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.matchTeams {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.teamSide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.teamRank {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  @include text-ellipsis;
+  max-width: 100%;
+}
+
+.teamName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  max-width: 100%;
+}
+
+.vs {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  flex-shrink: 0;
+  margin: 0 $spacing-xs;
+}
+
+.matchMeta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.matchBody {
+  display: flex;
+  align-items: stretch;
+  gap: $spacing-sm;
+
+  .oddsBoard {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.matchAside {
+  width: 96rpx;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+
+  .leagueTag {
+    max-width: 100%;
+    white-space: normal;
+    overflow: visible;
+    text-align: center;
+    line-height: $line-height-tight;
+  }
+}
+
+.page .matchNo {
+  width: 96rpx;
+}
+
+.leagueTag {
+  font-size: $font-size-xs;
+  color: $color-text-white;
+  padding: 2rpx $spacing-sm;
+  border-radius: $radius-xs;
+  @include text-ellipsis;
+  max-width: 200rpx;
+}
+
+.matchTime {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.singleTag {
+  font-size: $font-size-xs;
+  color: $jc-red;
+  border: 1rpx solid $jc-red;
+  border-radius: $radius-xs;
+  padding: 0 $spacing-xs;
+}
+
+.pickedText {
+  display: block;
+  margin-bottom: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-primary;
+  @include text-ellipsis;
+}
+
+// ============ 赔率面板 ============
+.oddsBoard {
+  display: flex;
+  border: 1rpx solid $jc-border;
+  border-radius: $radius-sm;
+  overflow: hidden;
+}
+
+.oddsRows {
+  flex: 1;
+  min-width: 0;
+}
+
+.oddsRow {
+  display: flex;
+  align-items: stretch;
+
+  & + .oddsRow {
+    border-top: 1rpx solid $jc-border;
+  }
+}
+
+.goalLine {
+  width: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  border-right: 1rpx solid $jc-border;
+  flex-shrink: 0;
+}
+
+.oddsCell {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm 0;
+  min-width: 0;
+
+  & + .oddsCell {
+    border-left: 1rpx solid $jc-border;
+  }
+
+  // 单关可投：红色边框
+  &.cellSingle {
+    box-shadow: inset 0 0 0 2rpx rgba($jc-red, 0.55);
+  }
+
+  // 需串关：蓝色边框
+  &.cellParlay {
+    box-shadow: inset 0 0 0 2rpx rgba($jc-border, 0.45);
+  }
+
+  &.cellActive {
+    background: rgba($color-primary, 0.12);
+
+    .oddsLabel,
+    .oddsValue {
+      color: $color-primary;
+      font-weight: $font-weight-bold;
+    }
+  }
+
+  &.cellDisabled {
+    opacity: 0.45;
+  }
+}
+
+.oddsLabel {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.oddsValue {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.morePlays {
+  width: 88rpx;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  border-left: 1rpx solid $jc-border;
+  background: rgba($jc-border, 0.08);
+}
+
+.morePlaysText {
+  font-size: $font-size-xs;
+  color: $jc-border;
+  writing-mode: vertical-rl;
+  letter-spacing: 4rpx;
+}
+
+.morePlaysCount {
+  font-size: $font-size-xs;
+  color: $color-text-white;
+  background: $jc-border;
+  border-radius: $radius-round;
+  min-width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  text-align: center;
+}
+
+.updateTime {
+  display: block;
+  text-align: center;
+  font-size: $font-size-xs;
+  color: $color-text-disabled;
+  padding: $spacing-md 0 0;
+}
+
+.bottomPlaceholder {
+  height: $spacing-lg;
+}
+
+// ============ 底部计算栏 ============
+.bottomBar {
+  position: relative;
+  flex-shrink: 0;
+  background: $color-bg-card;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.08);
+  padding: $spacing-sm $page-padding calc(#{$spacing-sm} + env(safe-area-inset-bottom));
+  z-index: 30;
+}
+
+.barRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-bottom: $spacing-sm;
+}
+
+.passDd {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+
+  .ddTrigger {
+    box-sizing: border-box;
+    max-width: none;
+  }
+
+  .ddLabel,
+  .ddArrow {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .ddValue {
+    min-width: 0;
+  }
+}
+
+.multBox {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-shrink: 0;
+}
+
+.multDd {
+  position: relative;
+}
+
+.multipleBtn {
+  width: 52rpx;
+  height: 52rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+}
+
+.multipleBtnText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: 1;
+}
+
+// 倍数下拉菜单内容
+.multMenu {
+  right: 0;
+  left: auto;
+  min-width: 420rpx;
+  padding: $spacing-md;
+}
+
+.presetRow {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.presetChip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xs 0;
+  border-radius: $radius-button;
+  border: 1rpx solid $color-border;
+
+  &.presetChipActive {
+    border-color: $color-primary;
+    background: rgba($color-primary, 0.08);
+
+    .presetChipText {
+      color: $color-primary;
+      font-weight: $font-weight-semibold;
+    }
+  }
+}
+
+.presetChipText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.keypad {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.keypadKey {
+  box-sizing: border-box;
+  flex: 0 0 calc((100% - #{$spacing-sm} * 2) / 3);
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  background: $color-bg-hover;
+
+  &:active {
+    opacity: 0.7;
+  }
+
+  &.keypadNum {
+    background: $color-bg-page;
+    border: 1rpx solid $color-border;
+  }
+}
+
+.keypadConfirm {
+  background: $color-primary;
+
+  .keypadKeyText {
+    font-size: $font-size-xs;
+    color: $color-text-white;
+  }
+}
+
+.keypadKeyText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.passChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-button;
+  border: 1rpx solid $color-border;
+  flex-shrink: 0;
+
+  &.passChipActive {
+    border-color: $color-primary;
+    background: rgba($color-primary, 0.08);
+
+    .passChipText {
+      color: $color-primary;
+      font-weight: $font-weight-semibold;
+    }
+  }
+}
+
+.passChipText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.calcRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.calcInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.calcLine {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.calcBonus {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  @include text-ellipsis;
+}
+
+.amountBox {
+  display: flex;
+  align-items: baseline;
+  gap: 4rpx;
+  flex-shrink: 0;
+}
+
+.amountValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+}
+
+.amountUnit {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.bonusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-xs $spacing-sm;
+}
+
+.legendText {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-xs;
+  color: $jc-red;
+}
+
+.maxBonus {
+  margin-left: auto;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+  text-align: right;
+}
+
+// 整页计算器：信息集中在左侧，清空和保存纵向排列在右侧。
+.pageBottomBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+
+  .barRow {
+    position: relative;
+    justify-content: flex-start;
+    gap: $spacing-xs;
+    margin-bottom: 12rpx;
+  }
+
+  .passDd {
+    flex: 0 1 auto;
+  }
+
+  .ddTrigger {
+    gap: 4rpx;
+    padding: 10rpx 12rpx;
+  }
+
+  .ddLabel,
+  .ddArrow {
+    flex-shrink: 0;
+  }
+
+  .ddValue {
+    min-width: 0;
+  }
+
+  .multBox {
+    gap: 4rpx;
+  }
+
+  .multDd {
+    position: static;
+  }
+
+  .multMenu {
+    left: 0;
+    right: auto;
+  }
+
+  .bonusRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4rpx;
+  }
+
+  .maxBonus {
+    margin-left: 0;
+    text-align: left;
+  }
+
+  .legendText {
+    flex: none;
+  }
+}
+
+.pageBonusAmounts {
+  order: -1;
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-sm;
+  width: 100%;
+
+  .ticketAmount,
+  .maxBonus {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    overflow-wrap: anywhere;
+  }
+}
+
+.ticketAmount {
+  color: $color-text-secondary;
+}
+
+.footerMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.pageActions {
+  width: 104rpx;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.clearButton {
+  @include button-reset;
+  width: 100%;
+  height: 64rpx;
+  border: 1rpx solid rgba($color-primary, 0.24);
+  border-radius: $radius-sm;
+  background: rgba($color-primary, 0.08);
+  font-size: $font-size-sm;
+  color: $color-primary-dark;
+
+  &[disabled] {
+    border-color: $color-border;
+    color: $color-text-disabled;
+    background: $color-bg-page;
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.pageActions .saveButton {
+  background: $color-primary-dark;
+  color: $color-text-white;
+
+  &[disabled] {
+    background: rgba($color-primary, 0.08);
+    color: rgba($color-primary-dark, 0.4);
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+// ============ 底部操作按钮（sheet 变体） ============
+.footerActions {
+  display: flex;
+  margin-top: $spacing-sm;
+}
+
+.cancelBtn,
+.confirmBtn {
+  flex: 1;
+  height: $button-height-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-button;
+}
+
+.cancelBtn {
+  margin-right: $spacing-sm;
+  background: $color-bg-page;
+}
+
+.cancelText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
+}
+
+.confirmBtn {
+  background: linear-gradient(135deg, $color-primary-light 0%, $color-primary 100%);
+  box-shadow: 0 8rpx 20rpx rgba(229, 57, 53, 0.28);
+}
+
+.confirmBtnDisabled {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+.confirmText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+}
+
+// ============ 更多玩法弹窗（由小到大弹出） ============
+.popupMask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.popupPanel {
+  width: 88%;
+  max-height: 76vh;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-popup;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: popup-grow $transition-base forwards;
+  transform-origin: center center;
+}
+
+.popupHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.popupTitleBox {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.popupTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.popupSubtitle {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.popupClose {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  padding: $spacing-xs;
+  flex-shrink: 0;
+}
+
+.popupBody {
+  flex: 1;
+  min-height: 0;
+  padding: $spacing-md $spacing-lg $spacing-lg;
+}
+
+.popupSection {
+  margin-bottom: $spacing-lg;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.popupSectionTitle {
+  display: block;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+}
+
+.popupGrid {
+  display: flex;
+  flex-wrap: wrap;
+  border: 1rpx solid $jc-border;
+  border-radius: $radius-sm;
+  overflow: hidden;
+
+  .oddsCell {
+    padding: $spacing-sm 0;
+    border-top: 1rpx solid $jc-border;
+
+    & + .oddsCell {
+      border-left: 1rpx solid $jc-border;
+    }
+  }
+
+  &.grid2 .oddsCell {
+    flex: 0 0 50%;
+
+    &:nth-child(-n + 2) {
+      border-top: none;
+    }
+
+    &:nth-child(2n + 1) {
+      border-left: none;
+    }
+  }
+
+  &.grid3 .oddsCell {
+    flex: 0 0 33.33%;
+
+    &:nth-child(-n + 3) {
+      border-top: none;
+    }
+
+    &:nth-child(3n + 1) {
+      border-left: none;
+    }
+  }
+
+  &.grid4 .oddsCell {
+    flex: 0 0 25%;
+
+    &:nth-child(-n + 4) {
+      border-top: none;
+    }
+
+    &:nth-child(4n + 1) {
+      border-left: none;
+    }
+  }
+}
+
+.popupEmpty {
+  display: block;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  padding: $spacing-xl 0;
+}

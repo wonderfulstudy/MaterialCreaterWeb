@@ -1,0 +1,194 @@
+@use '@/styles/variables.scss' as *;
+
+@keyframes rename-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rename-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1200;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 $spacing-xl;
+  transition: padding-bottom 0.2s ease;
+}
+
+.backdrop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(17, 20, 26, 0.55);
+  animation: rename-fade-in 0.2s ease both;
+}
+
+.panel {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 600rpx;
+  padding: 40rpx 36rpx 32rpx;
+  border-radius: $radius-xl;
+  background: $color-bg-card;
+  box-shadow: 0 24rpx 64rpx rgba(0, 0, 0, 0.22);
+  animation: rename-pop-in 0.24s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
+  color: $color-text-primary;
+}
+
+.close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48rpx;
+  height: 48rpx;
+  margin: -6rpx -6rpx 0 $spacing-sm;
+  border-radius: $radius-round;
+  background: $color-bg-page;
+
+  &:active {
+    background: $color-bg-hover;
+  }
+}
+
+.closeText {
+  font-size: $font-size-sm;
+  line-height: 1;
+  color: $color-text-tertiary;
+}
+
+.inputBox {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: $spacing-lg;
+  padding: 0 $spacing-md;
+  border-radius: $radius-md;
+  background: $color-bg-page;
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 96rpx;
+  min-height: 96rpx;
+  padding: 0;
+  font-size: $font-size-lg;
+  line-height: 96rpx;
+  color: $color-text-primary;
+  background: transparent;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+  padding: 0 4rpx;
+}
+
+.hint {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $color-text-tertiary;
+}
+
+.counter {
+  flex-shrink: 0;
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $color-text-tertiary;
+}
+
+.counterFull {
+  color: $color-primary;
+}
+
+.actions {
+  display: flex;
+  margin-top: $spacing-lg;
+}
+
+.cancel,
+.ok {
+  flex: 1;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  border-radius: $radius-button;
+
+  &:active {
+    opacity: 0.88;
+  }
+}
+
+.cancel {
+  margin-right: $spacing-md;
+  background: $color-bg-page;
+}
+
+.cancelText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+}
+
+.ok {
+  background: linear-gradient(135deg, $color-primary-light 0%, $color-primary 100%);
+  box-shadow: 0 8rpx 20rpx rgba(229, 57, 53, 0.28);
+}
+
+.okDisabled {
+  background: $color-bg-hover;
+  box-shadow: none;
+}
+
+.okText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+}
+
+.okDisabledText {
+  color: $color-text-disabled;
+}

@@ -1,202 +1,461 @@
 import { useMemo, useRef, useState } from 'react'
-import { Image, Text, View } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import { Button, Text, View } from '@tarojs/components'
+import Taro, { useRouter, useShareAppMessage } from '@tarojs/taro'
 import classnames from 'classnames'
 import { isOcrSupported, recognizeImage } from '@/services/ocr'
-import { groupRecentSummaries, summarize, type SummaryRow } from './summary'
+import PlanCalculator, {
+  SPORTS,
+  formatAmount,
+  sportLabel,
+  useSportSchedule,
+  type PlanLeg,
+  type SelectionSummary,
+  type SportKey,
+} from '@/components/PlanCalculator'
+import SharePoster from '@/components/SharePoster'
+import RenameDialog from '@/components/RenameDialog'
+import TabBar from '@/components/TabBar'
+import { matchRecognizedPicks, parseRecommendationText } from './plan-ocr'
+import {
+  createPlan,
+  pushHistory,
+  summarizePlan,
+  toSharePlan,
+  type RecommendPlan,
+} from './plan'
 import styles from './index.module.scss'
 
-type MaterialStatus = 'pending' | 'recognizing' | 'done' | 'error'
-
-interface Material {
-  id: string
-  path: string
-  status: MaterialStatus
+interface PlanCard extends RecommendPlan {
   error: string
-  summary?: SummaryRow
 }
 
-const STATUS_LABEL: Record<MaterialStatus, string> = {
-  pending: '待识别',
-  recognizing: '识别中',
-  done: '已识别',
-  error: '识别失败',
+interface PanelState {
+  open: boolean
+  mode: 'create' | 'pick'
+  targetId: string
 }
 
-export default function SharePage() {
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
+  }
+  if (error && typeof error === 'object' && 'errMsg' in error) {
+    return String((error as { errMsg?: string }).errMsg || '')
+  }
+  return '识别失败'
+}
+
+export default function RecommendPage() {
   const supported = useMemo(() => isOcrSupported(), [])
-  const [materials, setMaterials] = useState<Material[]>([])
-  const [activeId, setActiveId] = useState('')
-  const [busy, setBusy] = useState(false)
+  const router = useRouter()
+  const initialSport: SportKey =
+    router.params?.sport === 'basketball' ? 'basketball' : 'football'
+
+  const [sport, setSport] = useState<SportKey>(initialSport)
+  const [sportOpen, setSportOpen] = useState(false)
+  const { states, load } = useSportSchedule(sport)
+  const [cards, setCards] = useState<Record<SportKey, PlanCard[]>>({
+    football: [{ ...createPlan('football', '方案 1'), error: '' }],
+    basketball: [{ ...createPlan('basketball', '方案 1'), error: '' }],
+  })
+
+  const [panel, setPanel] = useState<PanelState>({ open: false, mode: 'create', targetId: '' })
+  const [recognizingId, setRecognizingId] = useState('')
   const [statusText, setStatusText] = useState('')
   const [errorText, setErrorText] = useState('')
-  const seq = useRef(0)
+  const [deleteMode, setDeleteMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [renameId, setRenameId] = useState('')
+  const [posterPlanId, setPosterPlanId] = useState('')
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** 长按触发时刻：用于吞掉长按松手后补发的幽灵 click */
+  const longPressFiredAt = useRef(0)
 
-  const activeIndex = Math.max(0, materials.findIndex((item) => item.id === activeId))
-  const recognizedCount = materials.filter((item) => item.status === 'done').length
-  const pendingCount = materials.filter((item) => item.status === 'pending' || item.status === 'error').length
+  const current = states[sport]
+  const currentCards = cards[sport]
 
-  const groups = useMemo(() => {
-    const rows = materials
-      .map((item) => item.summary)
-      .filter((row): row is SummaryRow => Boolean(row))
-    return groupRecentSummaries(rows, new Date(), 2)
-  }, [materials])
-
-  const updateMaterial = (id: string, patch: Partial<Material>) => {
-    setMaterials((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)))
+  const updateCard = (key: SportKey, id: string, patch: Partial<PlanCard>) => {
+    setCards((prev) => ({
+      ...prev,
+      [key]: prev[key].map((card) => (card.id === id ? { ...card, ...patch } : card)),
+    }))
   }
 
-  const handleChooseImages = async () => {
-    if (busy) {
+  const handleSportChange = (next: SportKey) => {
+    setSportOpen(false)
+    if (next === sport) {
+      return
+    }
+    setSport(next)
+    setDeleteMode(false)
+    setSelectedIds([])
+    setStatusText('')
+    setErrorText('')
+  }
+
+  const openCreate = () => {
+    if (states[sport].status !== 'ready') {
+      void load(sport)
+    }
+    setPanel({ open: true, mode: 'create', targetId: '' })
+  }
+
+  const openPicker = (id: string) => {
+    if (states[sport].status !== 'ready') {
+      void load(sport)
+    }
+    setPanel({ open: true, mode: 'pick', targetId: id })
+  }
+
+  const closePanel = () => {
+    setPanel({ open: false, mode: 'create', targetId: '' })
+  }
+
+  const handlePanelConfirm = (legs: PlanLeg[], summary: SelectionSummary) => {
+    if (panel.mode === 'create') {
+      const name = `方案 ${cards[sport].length + 1}`
+      const card: PlanCard = { ...createPlan(sport, name, legs), summary, error: '' }
+      setCards((prev) => ({ ...prev, [sport]: [...prev[sport], card] }))
+      setStatusText(`已新增方案「${name}」`)
+    } else if (panel.targetId) {
+      const target = cards[sport].find((card) => card.id === panel.targetId)
+      updateCard(sport, panel.targetId, {
+        legs,
+        summary,
+        note: '手动选择方案',
+        error: '',
+        history: target ? pushHistory(target, legs) : undefined,
+        results: undefined,
+      })
+      setStatusText('方案已更新')
+    }
+    closePanel()
+  }
+
+  /** 底部「新增方案」：直接追加一张名为「新增方案」的空卡片 */
+  const handleAddPlan = () => {
+    const card: PlanCard = { ...createPlan(sport, '新增方案'), error: '' }
+    setCards((prev) => ({ ...prev, [sport]: [...prev[sport], card] }))
+    setStatusText('已新增方案「新增方案」')
+  }
+
+  const clearLongPressTimer = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  const startLongPress = (id: string) => {
+    clearLongPressTimer()
+    longPressTimer.current = setTimeout(() => {
+      longPressTimer.current = null
+      longPressFiredAt.current = Date.now()
+      setRenameId(id)
+      try {
+        Taro.vibrateShort?.({ type: 'light' })?.catch?.(() => undefined)
+      } catch {
+        // 部分平台不支持震动反馈，忽略
+      }
+    }, 500)
+  }
+
+  const confirmRename = (name: string) => {
+    if (renameId && name) {
+      updateCard(sport, renameId, { name })
+    }
+    setRenameId('')
+  }
+
+  /** 长按触发后 touchend 之后可能补发 click，这里吞掉它避免误开抽屉 */
+  const swallowGhostClick = () => Date.now() - longPressFiredAt.current < 400
+
+  const openPoster = (card: PlanCard) => {
+    if (!card.legs.length) {
+      Taro.showToast({ title: '请先为方案选择比赛', icon: 'none' })
+      return
+    }
+    setPosterPlanId(card.id)
+  }
+
+  useShareAppMessage(() => {
+    const card = currentCards[0]
+    if (!card) {
+      return { title: '竞彩推荐方案', path: '/pages/recommend/index' }
+    }
+    const summary = card.summary ?? summarizePlan(card.legs)
+    return {
+      title: `${card.name}｜投注金额 ${formatAmount(summary.amount)}，最高可中 ${formatAmount(summary.maxBonus)}`,
+      path: '/pages/recommend/index',
+    }
+  })
+
+  const handleUpload = async (card: PlanCard) => {
+    if (recognizingId) {
+      Taro.showToast({ title: '正在识别中，请稍候', icon: 'none' })
+      return
+    }
+    if (!supported) {
+      setErrorText('当前环境不支持本地识别，请使用微信小程序打开')
       return
     }
 
     try {
       const result = await Taro.chooseImage({
-        count: 9,
+        count: 1,
         sizeType: ['original'],
         sourceType: ['album', 'camera'],
       })
-      const paths = result.tempFilePaths ?? []
-      if (!paths.length) {
+      const path = result.tempFilePaths?.[0]
+      if (!path) {
         return
       }
 
-      const appended: Material[] = paths.map((path) => {
-        seq.current += 1
-        return { id: `material-${seq.current}`, path, status: 'pending', error: '' }
+      setErrorText('')
+      setRecognizingId(card.id)
+      setStatusText('正在识别推荐单…')
+
+      const ocr = await recognizeImage(path, {
+        onProgress: (progress) => {
+          if (progress.stage === 'downloading') {
+            setStatusText(`正在下载识别模型 ${progress.percent ?? 0}%（仅首次）…`)
+          } else if (progress.stage === 'recognizing') {
+            setStatusText(`正在识别文字 ${progress.current}/${progress.total}…`)
+          }
+        },
       })
 
-      setMaterials((prev) => [...prev, ...appended])
-      setActiveId((current) => current || appended[0].id)
-      setErrorText('')
-      setStatusText(`已添加 ${appended.length} 张图片`)
-    } catch {
-      // 用户取消选择，无需提示
-    }
-  }
+      const key = card.sport
+      const schedule =
+        states[key].status === 'ready' ? states[key].schedule : (await load(key)) ?? states[key].schedule
 
-  const handleRecognize = async () => {
-    if (busy) {
-      return
-    }
-    if (!supported) {
-      setErrorText('当前环境不支持本地识别，请在微信小程序中打开')
-      return
-    }
+      const now = new Date()
+      const parsed = parseRecommendationText(ocr.text, key, now)
+      const matched = matchRecognizedPicks(parsed, key, schedule.matches, now)
 
-    const targets = materials.filter((item) => item.status === 'pending' || item.status === 'error')
-    if (!targets.length) {
-      setErrorText('没有待识别的图片')
-      return
-    }
+      updateCard(key, card.id, {
+        imagePath: path,
+        recognizedText: ocr.text,
+        legs: matched.legs,
+        summary: matched.legs.length ? summarizePlan(matched.legs) : undefined,
+        note: matched.note,
+        error: '',
+        history: pushHistory(card, matched.legs),
+        results: undefined,
+      })
 
-    setBusy(true)
-    setErrorText('')
-
-    const recognized: SummaryRow[] = []
-
-    try {
-      for (let index = 0; index < targets.length; index += 1) {
-        const target = targets[index]
-        setStatusText(`正在识别第 ${index + 1}/${targets.length} 张…`)
-        updateMaterial(target.id, { status: 'recognizing', error: '' })
-
-        try {
-          const result = await recognizeImage(target.path, {
-            onProgress: (progress) => {
-              if (progress.stage === 'downloading') {
-                setStatusText(`正在下载识别模型 ${progress.percent ?? 0}%（仅首次）…`)
-              }
-            },
-          })
-
-          const summary: SummaryRow = {
-            id: target.id,
-            ...summarize(result.text, `素材 ${index + 1}`),
-          }
-          updateMaterial(target.id, { status: 'done', summary })
-          recognized.push(summary)
-
-          console.log(`[share] 素材汇总（第 ${index + 1}/${targets.length} 张）`, {
-            文件: target.path,
-            图片标题: summary.title,
-            日期: summary.date,
-            方案: summary.plan,
-            识别全文: result.text,
-          })
-        } catch (error) {
-          const message = error instanceof Error ? error.message : '识别失败'
-          console.warn(`[share] 第 ${index + 1} 张识别失败：${target.path}`, message)
-          updateMaterial(target.id, { status: 'error', error: message })
-        }
+      if (matched.legs.length) {
+        setStatusText(`识别完成，已匹配 ${matched.legs.length} 场比赛`)
+      } else {
+        setStatusText('识别完成，但未匹配到赛程，请手动选择方案')
+        Taro.showToast({ title: '未匹配到赛程，请手动选择', icon: 'none' })
       }
-
-      setStatusText('识别完成，汇总见下方表格')
-      console.log('[share] 近两日汇总（本次识别）', groupRecentSummaries(recognized, new Date(), 2))
+    } catch (error) {
+      const message = getErrorMessage(error)
+      if (message.includes('cancel')) {
+        return
+      }
+      updateCard(card.sport, card.id, { error: message })
+      setErrorText(message)
+      setStatusText('识别失败，可重新上传')
     } finally {
-      setBusy(false)
+      setRecognizingId('')
     }
   }
 
-  const renderDeck = () => {
-    if (!materials.length) {
-      return (
-        <View className={styles.emptyCard} onClick={handleChooseImages}>
-          <Text className={styles.emptyIcon}>＋</Text>
-          <Text className={styles.emptyText}>上传图片（支持多选）</Text>
-        </View>
-      )
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    )
+  }
+
+  const allSelected = currentCards.length > 0 && selectedIds.length === currentCards.length
+
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? [] : currentCards.map((card) => card.id))
+  }
+
+  const exitDeleteMode = () => {
+    setDeleteMode(false)
+    setSelectedIds([])
+  }
+
+  const enterDeleteMode = () => {
+    setDeleteMode(true)
+    setSelectedIds([])
+  }
+
+  const handleDeleteSelected = () => {
+    if (!selectedIds.length) {
+      return
+    }
+    const count = selectedIds.length
+    setCards((prev) => ({
+      ...prev,
+      [sport]: prev[sport].filter((card) => !selectedIds.includes(card.id)),
+    }))
+    setSelectedIds([])
+    setDeleteMode(false)
+    setStatusText(`已删除 ${count} 个方案`)
+  }
+
+  const panelCard = currentCards.find((card) => card.id === panel.targetId)
+  const posterCard = currentCards.find((card) => card.id === posterPlanId)
+  const renameCard = currentCards.find((card) => card.id === renameId)
+
+  const renderPlanInfo = (card: PlanCard) => {
+    if (!card.legs.length) {
+      return <View className={styles.planBlank} />
     }
 
-    return materials.map((item, index) => {
-      const offset = index - activeIndex
-      const isActive = offset === 0
-      const depth = Math.abs(offset)
-      const shift = Math.max(-3, Math.min(3, offset))
-
-      const style = isActive
-        ? { transform: 'translate3d(0, 0, 0) scale(1)', zIndex: 30, opacity: 1 }
-        : {
-            transform: `translate3d(${shift * 30}rpx, ${Math.min(depth, 3) * 14}rpx, 0) scale(${Math.max(
-              0.48,
-              0.7 - depth * 0.06
-            )})`,
-            zIndex: 30 - depth,
-            opacity: depth > 3 ? 0 : 1,
-          }
-
-      return (
-        <View
-          key={item.id}
-          className={classnames(styles.card, isActive && styles.cardActive)}
-          style={style}
-          onClick={() => setActiveId(item.id)}
-        >
-          <Image className={styles.cardImage} src={item.path} mode='aspectFill' />
-          <View
-            className={classnames(
-              styles.cardBadge,
-              item.status === 'error' && styles.cardBadgeError,
-              item.status === 'done' && styles.cardBadgeDone
-            )}
+    return (
+      <View className={styles.planArea}>
+        {card.legs.map((leg) => (
+          <Text
+            key={`${leg.matchId}-${leg.poolCode}-${leg.optionKey}`}
+            className={styles.planLine}
           >
-            <Text className={styles.cardBadgeText}>{STATUS_LABEL[item.status]}</Text>
+            {`${leg.homeTeam} ${leg.optionLabel} ${leg.odds.toFixed(2)}`}
+          </Text>
+        ))}
+      </View>
+    )
+  }
+
+  const renderCard = (card: PlanCard) => {
+    const busy = recognizingId === card.id
+    const selected = selectedIds.includes(card.id)
+    const summary = card.summary ?? summarizePlan(card.legs)
+
+    return (
+      <View
+        key={card.id}
+        className={classnames(styles.card, deleteMode && selected && styles.cardSelected)}
+        onTouchStart={() => startLongPress(card.id)}
+        onTouchMove={clearLongPressTimer}
+        onTouchEnd={clearLongPressTimer}
+        onTouchCancel={clearLongPressTimer}
+        onClick={() => {
+          if (deleteMode || swallowGhostClick()) {
+            return
+          }
+          openPicker(card.id)
+        }}
+      >
+        <View className={styles.cardRow}>
+          <View className={styles.cardNameBox}>
+            <Text className={styles.cardName}>{card.name}</Text>
           </View>
-          {isActive && item.summary && (
-            <View className={styles.cardCaption}>
-              <Text className={styles.cardCaptionTitle}>{item.summary.title}</Text>
-              <Text className={styles.cardCaptionText}>{item.summary.date}</Text>
+          <View className={styles.cardMain}>
+            {renderPlanInfo(card)}
+            <View className={styles.amountRow}>
+              <View className={styles.amountItem}>
+                <Text className={styles.amountLabel}>投注金额：</Text>
+                <Text className={styles.amountValue}>{formatAmount(summary.amount)}</Text>
+              </View>
+              <View className={styles.amountItem}>
+                <Text className={styles.amountLabel}>最高可中：</Text>
+                <Text className={classnames(styles.amountValue, styles.bonusValue)}>
+                  {formatAmount(summary.maxBonus)}
+                </Text>
+              </View>
+            </View>
+            {card.error ? <Text className={styles.cardError}>{card.error}</Text> : null}
+          </View>
+
+          {!deleteMode && (
+            <View
+              className={styles.cardSide}
+              onTouchStart={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <Button
+                className={classnames(styles.sideBtn, busy && styles.btnDisabled)}
+                disabled={busy}
+                onClick={() => handleUpload(card)}
+              >
+                <Text className={styles.sideBtnText}>{busy ? '识别中' : '上传图片'}</Text>
+              </Button>
+              <Button
+                className={styles.sideBtn}
+                onClick={() => openPoster(card)}
+              >
+                <Text className={styles.sideBtnText}>分享方案</Text>
+              </Button>
             </View>
           )}
         </View>
-      )
-    })
+
+        {deleteMode && (
+          <View className={styles.cardTail} onClick={() => toggleSelected(card.id)}>
+            <Text className={styles.cardTailText}>选择删除这个方案</Text>
+            <View className={classnames(styles.checkbox, selected && styles.checkboxChecked)}>
+              <Text className={styles.checkboxMark}>{selected ? '✓' : ''}</Text>
+            </View>
+          </View>
+        )}
+      </View>
+    )
   }
 
   return (
     <View className={styles.page}>
+      <View className={styles.topBar}>
+        <View className={styles.sportDd}>
+          <View className={styles.ddTrigger} onClick={() => setSportOpen((prev) => !prev)}>
+            <Text className={styles.ddValue}>{sportLabel(sport)}</Text>
+            <Text className={classnames(styles.ddArrow, sportOpen && styles.ddArrowOpen)}>▾</Text>
+          </View>
+          {sportOpen ? (
+            <>
+              <View className={styles.ddMask} onClick={() => setSportOpen(false)} />
+              <View className={styles.ddMenu}>
+                {SPORTS.map((option) => (
+                  <View
+                    key={option.key}
+                    className={classnames(
+                      styles.ddItem,
+                      option.key === sport && styles.ddItemActive
+                    )}
+                    onClick={() => handleSportChange(option.key)}
+                  >
+                    <Text className={styles.ddItemText}>{option.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : null}
+        </View>
+
+        <View className={styles.scheduleBar}>
+          <Text
+            className={classnames(
+              styles.scheduleText,
+              current.status === 'error' && styles.scheduleError
+            )}
+          >
+            {current.status === 'loading' && '赛程加载中…'}
+            {current.status === 'ready' &&
+              `${current.schedule.matches.length} 场赛程${
+                current.schedule.updateTime ? ` · ${current.schedule.updateTime}` : ''
+              }`}
+            {current.status === 'error' && (current.error || '赛程加载失败')}
+          </Text>
+          {current.status === 'error' && (
+            <Text className={styles.scheduleRetry} onClick={() => void load(sport)}>
+              重试
+            </Text>
+          )}
+        </View>
+
+        <View
+          className={styles.calcBtn}
+          onClick={() => void Taro.navigateTo({ url: '/pages/selector/index' })}
+        >
+          <Text className={styles.calcBtnText}>计算器</Text>
+        </View>
+      </View>
+
       {!supported && (
         <View className={styles.notice}>
           <Text className={styles.noticeText}>
@@ -205,71 +464,107 @@ export default function SharePage() {
         </View>
       )}
 
-      <View className={styles.deck}>{renderDeck()}</View>
-
-      {materials.length > 0 && (
-        <Text className={styles.deckHint}>点击图片可放大查看，其余图片会缩到后方</Text>
+      {deleteMode && (
+        <View className={styles.deleteTip}>
+          <Text className={styles.deleteTipText}>勾选要删除的方案</Text>
+          <Text className={styles.deleteTipAction} onClick={toggleSelectAll}>
+            {allSelected ? '取消全选' : '全选'}
+          </Text>
+        </View>
       )}
 
-      <View className={styles.actions}>
-        <View
-          className={classnames(styles.secondaryButton, busy && styles.buttonDisabled)}
-          onClick={handleChooseImages}
-        >
-          <Text className={styles.secondaryButtonText}>上传图片</Text>
-        </View>
-        <View
-          className={classnames(
-            styles.primaryButton,
-            (busy || !pendingCount || !supported) && styles.buttonDisabled
-          )}
-          onClick={handleRecognize}
-        >
-          <Text className={styles.primaryButtonText}>
-            {busy ? '识别中…' : pendingCount > 1 ? `开始识别（${pendingCount}）` : '开始识别'}
-          </Text>
-        </View>
-      </View>
-
-      {statusText && <Text className={styles.statusText}>{statusText}</Text>}
-      {errorText && <Text className={styles.errorText}>{errorText}</Text>}
-
-      <View className={styles.summary}>
-        <View className={styles.summaryHeader}>
-          <Text className={styles.summaryTitle}>近两日汇总</Text>
-          <Text className={styles.summaryMeta}>已识别 {recognizedCount} 张</Text>
-        </View>
-
-        {groups.length === 0 ? (
-          <Text className={styles.summaryEmpty}>
-            识别完成后，这里会按日期展示图片标题、日期和方案
-          </Text>
+      <View className={styles.cardList}>
+        {currentCards.length === 0 ? (
+          <View className={styles.emptyCard} onClick={openCreate}>
+            <Text className={styles.emptyIcon}>＋</Text>
+            <Text className={styles.emptyTitle}>还没有推荐单</Text>
+            <Text className={styles.emptyHint}>点击这里从计算器新增一个方案</Text>
+          </View>
         ) : (
-          groups.map((group) => (
-            <View className={styles.group} key={group.date}>
-              <View className={styles.groupHeader}>
-                <Text className={styles.groupDate}>{group.date}</Text>
-                <Text className={styles.groupCount}>{group.rows.length} 条</Text>
-              </View>
-
-              <View className={styles.table}>
-                <View className={classnames(styles.row, styles.rowHead)}>
-                  <Text className={classnames(styles.cell, styles.cellTitle)}>图片标题</Text>
-                  <Text className={classnames(styles.cell, styles.cellDate)}>日期</Text>
-                  <Text className={classnames(styles.cell, styles.cellPlan)}>方案</Text>
-                </View>
-                {group.rows.map((row) => (
-                  <View className={styles.row} key={row.id} onClick={() => setActiveId(row.id)}>
-                    <Text className={classnames(styles.cell, styles.cellTitle)}>{row.title}</Text>
-                    <Text className={classnames(styles.cell, styles.cellDate)}>{row.date.slice(5)}</Text>
-                    <Text className={classnames(styles.cell, styles.cellPlan)}>{row.plan}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ))
+          currentCards.map(renderCard)
         )}
       </View>
+
+      {(statusText || errorText) && (
+        <View className={styles.statusWrap}>
+          {statusText ? <Text className={styles.statusText}>{statusText}</Text> : null}
+          {errorText ? <Text className={styles.errorText}>{errorText}</Text> : null}
+        </View>
+      )}
+
+      <View className={styles.bottomBar}>
+        {deleteMode ? (
+          <>
+            <View
+              className={classnames(styles.bottomBtn, styles.bottomBtnGhost)}
+              onClick={exitDeleteMode}
+            >
+              <Text className={styles.bottomBtnText}>取消</Text>
+            </View>
+            <View
+              className={classnames(
+                styles.bottomBtn,
+                styles.bottomBtnDanger,
+                !selectedIds.length && styles.btnDisabled
+              )}
+              onClick={handleDeleteSelected}
+            >
+              <Text className={styles.bottomBtnText}>
+                删除{selectedIds.length ? `(${selectedIds.length})` : ''}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <View
+              className={classnames(styles.bottomBtn, styles.bottomBtnPrimary)}
+              onClick={handleAddPlan}
+            >
+              <Text className={styles.bottomBtnText}>新增方案</Text>
+            </View>
+            <View
+              className={classnames(
+                styles.bottomBtn,
+                styles.bottomBtnGhost,
+                !currentCards.length && styles.btnDisabled
+              )}
+              onClick={currentCards.length ? enterDeleteMode : undefined}
+            >
+              <Text className={styles.bottomBtnText}>删除方案</Text>
+            </View>
+          </>
+        )}
+      </View>
+
+      <TabBar active='material' />
+
+      <RenameDialog
+        visible={Boolean(renameId)}
+        name={renameCard?.name ?? ''}
+        onCancel={() => setRenameId('')}
+        onConfirm={confirmRename}
+      />
+
+      <PlanCalculator
+        visible={panel.open}
+        variant="sheet"
+        title={panel.mode === 'create' ? '新增方案' : '选择方案'}
+        sport={sport}
+        schedule={current.schedule}
+        status={current.status}
+        error={current.error}
+        initialLegs={panel.mode === 'pick' ? panelCard?.legs ?? [] : []}
+        confirmText="保存"
+        onRetry={() => void load(sport)}
+        onCancel={closePanel}
+        onConfirm={handlePanelConfirm}
+      />
+
+      <SharePoster
+        visible={Boolean(posterPlanId)}
+        plan={posterCard ? toSharePlan(posterCard) : null}
+        onClose={() => setPosterPlanId('')}
+      />
     </View>
   )
 }

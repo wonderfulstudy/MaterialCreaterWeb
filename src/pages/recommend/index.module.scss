@@ -1,15 +1,157 @@
 @use '@/styles/variables.scss' as *;
 
+$plan-navy: #102c67;
+$plan-navy-deep: #0b2051;
+$plan-red: #df3540;
+$plan-border: #c9d6ef;
+$plan-muted: #627595;
+$tabbar-height: 132rpx;
+
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: $spacing-md $page-padding $spacing-xl;
-  background: linear-gradient(180deg, #fff1f0 0%, $color-bg-page 300rpx, $color-bg-page 100%);
+  padding: $spacing-md $page-padding calc(300rpx + env(safe-area-inset-bottom));
+  background: $color-bg-page;
+}
+
+// ============ 顶部：项目下拉 + 赛程状态 ============
+.topBar {
+  position: relative;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.sportDd {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ddTrigger {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  min-width: 140rpx;
+  height: 68rpx;
+  padding: 0 $spacing-md;
+  background: $color-bg-card;
+  border: 2rpx solid rgba(229, 57, 53, 0.2);
+  border-radius: $radius-button;
+  box-sizing: border-box;
+  box-shadow: $shadow-card;
+}
+
+.ddValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.ddArrow {
+  font-size: 20rpx;
+  line-height: 1;
+  color: $color-primary;
+  transition: transform $transition-fast;
+}
+
+.ddArrowOpen {
+  transform: rotate(180deg);
+}
+
+// 下拉展开时用于关闭菜单的透明遮罩，铺满触发按钮以下区域
+.ddMask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+}
+
+.ddMenu {
+  position: absolute;
+  top: calc(100% + 8rpx);
+  left: 0;
+  z-index: 50;
+  min-width: 160rpx;
+  padding: $spacing-xs;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  box-shadow: $shadow-popup;
+}
+
+.ddItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-sm;
+}
+
+.ddItemActive {
+  background: rgba(229, 57, 53, 0.08);
+
+  .ddItemText {
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+  }
+}
+
+.ddItemText {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.scheduleBar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: $spacing-sm;
+}
+
+.scheduleText {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  @include text-ellipsis;
+}
+
+.scheduleError {
+  color: $color-error;
+}
+
+.scheduleRetry {
+  flex-shrink: 0;
+  margin-left: $spacing-xs;
+  font-size: 20rpx;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.calcBtn {
+  display: flex;
+  height: 56rpx;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin-left: $spacing-sm;
+  padding: 0 16rpx;
+  border: 2rpx solid #e5e6eb;
+  border-radius: $radius-round;
+  background: $color-bg-card;
+}
+
+.calcBtnText {
+  color: $color-text-secondary;
+  font-size: 20rpx;
+  line-height: 1;
 }
 
 .notice {
-  margin-bottom: $spacing-md;
-  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
   background: #fff7ed;
   border-radius: $radius-md;
 }
@@ -20,31 +162,248 @@
   color: #b45309;
 }
 
-// ============ 卡片堆叠区 ============
-.deck {
-  position: relative;
-  height: 460rpx;
-  margin: $spacing-sm 0 0;
+.deleteTip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+  padding: $spacing-xs $spacing-md;
+  background: #fff1f0;
+  border-radius: $radius-sm;
+}
+
+.deleteTipText {
+  font-size: $font-size-xs;
+  color: $color-primary;
+}
+
+.deleteTipAction {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+// ============ 推荐单卡片 ============
+.cardList {
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  margin-bottom: $spacing-sm;
+  overflow: hidden;
+  background: linear-gradient(115deg, #ffffff 0%, #f5f8ff 56%, #edf2fd 100%);
+  border: 2rpx solid $plan-border;
+  border-radius: 24rpx;
+  box-shadow: 0 6rpx 20rpx rgba($plan-navy, 0.08);
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+}
+
+.cardSelected {
+  border-color: $plan-red;
+  box-shadow: 0 6rpx 20rpx rgba($plan-red, 0.12);
+}
+
+.cardRow {
+  display: flex;
+  align-items: stretch;
+  min-height: 184rpx;
+}
+
+.cardNameBox {
+  display: flex;
+  flex: 0 0 120rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx 8rpx;
+  background: linear-gradient(150deg, $plan-navy 0%, $plan-navy-deep 100%);
+}
+
+.cardMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24rpx 20rpx;
+}
+
+.cardName {
+  display: block;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+  line-height: $line-height-normal;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+// 每场比赛作为完整条目换行，避免较多场次或窄屏时丢失方案内容。
+.planArea {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8rpx 0;
+  min-width: 0;
+}
+
+.planBlank {
+  flex: 1;
+}
+
+.planLine {
+  display: block;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-normal;
+  color: $plan-navy;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  & + & {
+    margin-left: 12rpx;
+    padding-left: 12rpx;
+    border-left: 2rpx solid $plan-border;
+  }
+}
+
+.cardError {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: $color-error;
+}
+
+.cardSide {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 20rpx 20rpx 20rpx 0;
+}
+
+// 投注金额 / 最高可中：方案内容下方一行展示
+.amountRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4rpx 20rpx;
+  margin-top: 16rpx;
+}
+
+.amountItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.amountLabel {
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $plan-navy;
+  white-space: nowrap;
+}
+
+.amountValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-normal;
+  color: $plan-navy;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.bonusValue {
+  font-size: 45rpx;
+  line-height: 1.15;
+  letter-spacing: -1rpx;
+  color: $plan-red;
+}
+
+.sideBtn {
+  @include button-reset;
+  width: 128rpx;
+  min-height: 64rpx;
+  padding: 10rpx 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2rpx solid $plan-red;
+  border-radius: $radius-round;
+  transition: background $transition-fast, opacity $transition-fast;
+
+  & + & {
+    margin-top: 12rpx;
+  }
+
+  &:active {
+    background: #fff0f1;
+    opacity: 0.85;
+  }
+
+  &:focus-visible {
+    outline: 4rpx solid $plan-navy;
+    outline-offset: 4rpx;
+  }
+}
+
+.sideBtnText {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $plan-red;
+}
+
+.btnDisabled {
+  opacity: 0.45;
+}
+
+// ============ 删除模式 ============
+.cardTail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  border-top: 2rpx solid $plan-border;
+}
+
+.cardTailText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.checkbox {
+  @include flex-center;
+  width: 40rpx;
+  height: 40rpx;
+  border: 2rpx solid $color-text-disabled;
+  border-radius: $radius-round;
+  box-sizing: border-box;
+  transition: background $transition-fast, border-color $transition-fast;
+}
+
+.checkboxChecked {
+  background: $color-primary;
+  border-color: $color-primary;
+}
+
+.checkboxMark {
+  font-size: 24rpx;
+  line-height: 1;
+  color: $color-text-white;
 }
 
 .emptyCard {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 320rpx;
-  height: 400rpx;
-  margin-left: -160rpx;
-  margin-top: -200rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: $spacing-sm;
+  height: 320rpx;
   background: $color-bg-card;
   border: 2rpx dashed #d9dce3;
   border-radius: $radius-lg;
-  box-shadow: $shadow-card;
-  transition: border-color $transition-fast;
 
   &:active {
     border-color: $color-primary;
@@ -52,278 +411,113 @@
 }
 
 .emptyIcon {
-  font-size: 64rpx;
+  font-size: 56rpx;
   line-height: 1;
   color: $color-text-disabled;
 }
 
-.emptyText {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-}
-
-.card {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 320rpx;
-  height: 400rpx;
-  margin-left: -160rpx;
-  margin-top: -200rpx;
-  overflow: hidden;
-  background: $color-bg-card;
-  border-radius: $radius-lg;
-  box-shadow: 0 6rpx 24rpx rgba(0, 0, 0, 0.14);
-  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.32s ease,
-    box-shadow 0.32s ease;
-  will-change: transform;
-}
-
-.cardActive {
-  box-shadow: 0 12rpx 32rpx rgba(229, 57, 53, 0.24);
-}
-
-.cardImage {
-  width: 100%;
-  height: 100%;
-}
-
-.cardBadge {
-  position: absolute;
-  top: $spacing-xs;
-  left: $spacing-xs;
-  padding: 4rpx 14rpx;
-  border-radius: $radius-round;
-  background: rgba(29, 33, 41, 0.6);
-}
-
-.cardBadgeDone {
-  background: rgba(0, 180, 42, 0.85);
-}
-
-.cardBadgeError {
-  background: rgba(245, 63, 63, 0.85);
-}
-
-.cardBadgeText {
-  font-size: 20rpx;
-  color: $color-text-white;
-  line-height: 1.4;
-}
-
-.cardCaption {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  padding: $spacing-sm;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.62) 100%);
-}
-
-.cardCaptionTitle {
-  display: block;
-  font-size: $font-size-sm;
+.emptyTitle {
+  margin-top: $spacing-sm;
+  font-size: $font-size-md;
   font-weight: $font-weight-semibold;
-  color: $color-text-white;
-  @include text-ellipsis;
+  color: $color-text-secondary;
 }
 
-.cardCaptionText {
-  display: block;
-  margin-top: 2rpx;
-  font-size: 20rpx;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.deckHint {
-  display: block;
+.emptyHint {
   margin-top: $spacing-xs;
   font-size: $font-size-xs;
   color: $color-text-tertiary;
-  text-align: center;
 }
 
-// ============ 操作区 ============
-.actions {
+// ============ 状态提示 ============
+.statusWrap {
+  margin-top: $spacing-xs;
+  padding: 0 $spacing-xs;
+}
+
+.statusText {
+  display: block;
+  font-size: 20rpx;
+  line-height: $line-height-normal;
+  color: $plan-muted;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .sideBtn {
+    transition: none;
+  }
+}
+
+.errorText {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  line-height: $line-height-normal;
+  color: $color-error;
+}
+
+// ============ 底部操作栏 ============
+.bottomBar {
+  position: fixed;
+  right: 0;
+  bottom: calc(#{$tabbar-height} + env(safe-area-inset-bottom));
+  left: 0;
+  z-index: 100;
   display: flex;
-  gap: $spacing-md;
-  margin-top: $spacing-md;
+  padding: $spacing-sm $page-padding;
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 2rpx solid $color-divider;
+  box-shadow: 0 -6rpx 24rpx rgba(0, 0, 0, 0.06);
 }
 
-.secondaryButton,
-.primaryButton {
+.bottomBtn {
   flex: 1;
-  height: 78rpx;
+  height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: $radius-button;
   transition: opacity $transition-fast;
-}
 
-.secondaryButton {
-  background: $color-bg-card;
-  border: 2rpx solid $color-primary;
+  & + & {
+    margin-left: $spacing-sm;
+  }
 
   &:active {
-    background: #fff1f0;
+    opacity: 0.85;
   }
 }
 
-.secondaryButtonText {
-  font-size: $font-size-md;
-  font-weight: $font-weight-semibold;
-  color: $color-primary;
-}
-
-.primaryButton {
+.bottomBtnPrimary {
   background: linear-gradient(135deg, $color-primary-light 0%, $color-primary 100%);
   box-shadow: 0 8rpx 20rpx rgba(229, 57, 53, 0.28);
 
-  &:active {
-    transform: scale(0.98);
+  .bottomBtnText {
+    color: $color-text-white;
   }
 }
 
-.primaryButtonText {
+.bottomBtnGhost {
+  background: $color-bg-card;
+  border: 2rpx solid $color-primary;
+
+  .bottomBtnText {
+    color: $color-primary;
+  }
+}
+
+.bottomBtnDanger {
+  background: linear-gradient(135deg, #ff7875 0%, #f53f3f 100%);
+  box-shadow: 0 8rpx 20rpx rgba(245, 63, 63, 0.24);
+
+  .bottomBtnText {
+    color: $color-text-white;
+  }
+}
+
+.bottomBtnText {
   font-size: $font-size-md;
   font-weight: $font-weight-semibold;
-  color: $color-text-white;
-}
-
-.buttonDisabled {
-  opacity: 0.45;
-  box-shadow: none;
-
-  &:active {
-    transform: none;
-  }
-}
-
-.statusText {
-  display: block;
-  margin-top: $spacing-sm;
-  font-size: $font-size-xs;
-  line-height: $line-height-normal;
-  color: $color-text-secondary;
-}
-
-.errorText {
-  display: block;
-  margin-top: $spacing-xs;
-  font-size: $font-size-xs;
-  line-height: $line-height-normal;
-  color: $color-error;
-}
-
-// ============ 汇总表格 ============
-.summary {
-  margin-top: $spacing-lg;
-  padding: $spacing-md;
-  background: $color-bg-card;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-card;
-}
-
-.summaryHeader {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: $spacing-sm;
-}
-
-.summaryTitle {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
   color: $color-text-primary;
-}
-
-.summaryMeta {
-  font-size: $font-size-xs;
-  color: $color-text-tertiary;
-}
-
-.summaryEmpty {
-  display: block;
-  padding: $spacing-lg 0;
-  font-size: $font-size-xs;
-  line-height: $line-height-loose;
-  color: $color-text-tertiary;
-  text-align: center;
-}
-
-.group {
-  & + & {
-    margin-top: $spacing-lg;
-  }
-}
-
-.groupHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 $spacing-xs $spacing-xs;
-}
-
-.groupDate {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  color: $color-primary;
-}
-
-.groupCount {
-  font-size: $font-size-xs;
-  color: $color-text-tertiary;
-}
-
-.table {
-  overflow: hidden;
-  border: 2rpx solid $color-divider;
-  border-radius: $radius-md;
-}
-
-.row {
-  display: flex;
-  align-items: flex-start;
-  padding: $spacing-sm $spacing-xs;
-  border-top: 2rpx solid $color-divider;
-
-  &:first-child {
-    border-top: none;
-  }
-}
-
-.rowHead {
-  background: #fafbfc;
-
-  .cell {
-    font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
-  }
-}
-
-.cell {
-  font-size: $font-size-xs;
-  line-height: $line-height-normal;
-  color: $color-text-primary;
-  word-break: break-all;
-}
-
-.cellTitle {
-  flex: 4;
-  min-width: 0;
-  padding-right: $spacing-xs;
-}
-
-.cellDate {
-  flex: 2;
-  text-align: center;
-  color: $color-text-secondary;
-}
-
-.cellPlan {
-  flex: 5;
-  min-width: 0;
-  padding-left: $spacing-xs;
-  color: $color-text-secondary;
 }
