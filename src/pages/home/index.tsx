@@ -1,13 +1,21 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Text, View } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import classnames from 'classnames'
 import BallNumber from '@/components/BallNumber'
+import ResultPoster, { type ResultPosterInput } from '@/components/ResultPoster'
+import {
+  DEFAULT_BRAND_NAME,
+  DEFAULT_QR_CAPTION,
+  DEFAULT_QR_IMAGE,
+  DEFAULT_SLOGAN,
+} from '@/components/ResultPoster/config'
 import TabBar from '@/components/TabBar'
 import { loadLatestGame } from '@/api/latest-lottery'
 import { LATEST_LOTTERIES } from '@/models/lottery.model'
 import {
   IS_DEMO_MODE,
+  OPEN_SHARE_ON_LOAD,
   SPORT_REPORTS,
   TRADITIONAL_REPORT,
   createDemoCards,
@@ -40,6 +48,38 @@ export default function HomePage() {
   const requestId = useRef(0)
   const [cards, setCards] = useState<LotteryCardView[]>(createLoadingCards)
   const [topInset, setTopInset] = useState(IS_H5 ? 20 : 64)
+  const [shareOpen, setShareOpen] = useState(OPEN_SHARE_ON_LOAD)
+
+  // 只把已开奖的彩种交给海报组件：加载中与无数据的彩种没有号码可画
+  const posterInputs = useMemo<ResultPosterInput[]>(
+    () =>
+      cards.flatMap((card) =>
+        card.status === 'drawn'
+          ? [
+              {
+                gameName: card.name,
+                issue: formatIssue(card.issue),
+                drawDate: formatDrawDate(card.drawDate),
+                redNumbers: card.redNumbers,
+                blueNumbers: card.blueNumbers,
+                qrImage: DEFAULT_QR_IMAGE,
+                qrCaption: DEFAULT_QR_CAPTION,
+                brandName: DEFAULT_BRAND_NAME,
+                slogan: DEFAULT_SLOGAN,
+              },
+            ]
+          : []
+      ),
+    [cards]
+  )
+
+  const openShare = () => {
+    if (!posterInputs.length) {
+      void Taro.showToast({ title: '开奖数据还没回来', icon: 'none' })
+      return
+    }
+    setShareOpen(true)
+  }
 
   useEffect(() => {
     if (IS_H5) {
@@ -103,6 +143,14 @@ export default function HomePage() {
   return (
     <View className={styles.page}>
       <View className={styles.content} style={{ paddingTop: `${topInset}px` }}>
+        <View className={styles.pageHead}>
+          <Text className={styles.pageTitle}>开奖速览</Text>
+          <View className={styles.shareEntry} onClick={openShare}>
+            <Text className={styles.shareIcon}>↗</Text>
+            <Text className={styles.shareText}>分享开奖</Text>
+          </View>
+        </View>
+
         <View className={styles.summaryCard}>
           {SPORT_REPORTS.map((report, index) => (
             <Fragment key={report.key}>
@@ -208,6 +256,12 @@ export default function HomePage() {
       </View>
 
       <TabBar active='home' />
+
+      <ResultPoster
+        visible={shareOpen}
+        results={posterInputs}
+        onClose={() => setShareOpen(false)}
+      />
     </View>
   )
 }

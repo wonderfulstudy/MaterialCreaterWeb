@@ -232,3 +232,44 @@ $green: #34c759;
   font-size: 22rpx;
   line-height: 1.4;
 }
+/* ============ 页头与分享入口 ============ */
+.pageHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 8rpx 20rpx;
+}
+
+.pageTitle {
+  color: $ink;
+  font-size: 40rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.shareEntry {
+  display: flex;
+  align-items: center;
+  height: 64rpx;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  background: #ffffff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.shareIcon {
+  margin-right: 6rpx;
+  color: $red;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.shareText {
+  color: $ink;
+  font-size: 26rpx;
+  font-weight: 600;
+}

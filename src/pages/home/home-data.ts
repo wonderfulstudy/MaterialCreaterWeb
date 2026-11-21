@@ -61,6 +61,14 @@ const HAS_DEMO_FLAG =
 export const IS_DEMO_MODE =
   (process.env.TARO_ENV === 'h5' && process.env.NODE_ENV === 'development') || HAS_DEMO_FLAG
 
+const HAS_SHARE_FLAG =
+  process.env.TARO_ENV === 'h5' &&
+  typeof window !== 'undefined' &&
+  window.location.search.includes('share=1')
+
+/** 仅预览用：?demo=1&share=1 时首页直接打开分享弹层，方便看海报与截图 */
+export const OPEN_SHARE_ON_LOAD = IS_DEMO_MODE && HAS_SHARE_FLAG
+
 interface DemoDraw {
   code: LotteryGameCode
   issue: string
