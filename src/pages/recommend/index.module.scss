@@ -198,37 +198,77 @@ $tabbar-height: 132rpx;
   margin-bottom: 24rpx;
   overflow: hidden;
   background: #fff;
-  border-left: 8rpx solid $red;
-  border-radius: 32rpx;
+  border-radius: 28rpx;
   box-shadow: $card-shadow;
   transition: box-shadow $transition-fast;
 }
 
-// 空态卡片：不带强调色与阴影
-.cardEmpty {
-  border-left-color: #fff;
-  box-shadow: none;
-}
-
 .cardSelected {
-  border-left-color: #e02027;
   box-shadow: 0 4rpx 28rpx rgba(255, 56, 60, 0.2);
 }
 
+// 卡头：方案名 + 展开箭头｜过关方式 + 场次倍数
 .cardHead {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 16rpx;
-  padding: 28rpx 28rpx 20rpx;
+  padding: 28rpx 28rpx 24rpx;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex: 1;
+  min-width: 0;
 }
 
 .cardName {
-  flex: 1;
   min-width: 0;
   font-size: 32rpx;
   font-weight: $font-weight-semibold;
   color: $ink;
   @include text-ellipsis;
+}
+
+.toggle {
+  @include flex-center;
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: $radius-round;
+  background: #f2f2f5;
+
+  &:active {
+    background: #e8e8ed;
+  }
+}
+
+.toggleIcon {
+  font-size: 22rpx;
+  line-height: 1;
+  color: #627595;
+  transition: transform $transition-fast;
+}
+
+.toggleIconOpen {
+  transform: rotate(180deg);
+}
+
+.headMeta {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex-shrink: 0;
+  padding-top: 6rpx;
+}
+
+.headCount {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: $muted;
+  font-variant-numeric: tabular-nums;
 }
 
 .passPill {
@@ -247,49 +287,67 @@ $tabbar-height: 132rpx;
   background: #dcdce0;
 }
 
-// 场次块：两列
-.chips {
+// 展开后的场次行
+.legs {
+  border-top: 2rpx solid #f5f5f7;
+}
+
+.leg {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-  padding: 0 28rpx 24rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 20rpx 28rpx;
+  border-bottom: 2rpx solid #f5f5f7;
+
+  &:last-child {
+    border-bottom: 0;
+  }
 }
 
-.chip {
-  width: calc(50% - 8rpx);
-  padding: 16rpx 18rpx;
-  box-sizing: border-box;
-  background: #f7f7f9;
-  border-radius: 18rpx;
+.legLeft {
+  flex: 1;
+  min-width: 0;
 }
 
-.chipTeams {
+.legTeams {
   display: block;
-  font-size: 22rpx;
+  font-size: 26rpx;
   font-weight: $font-weight-medium;
   line-height: 1.35;
   color: $ink;
   @include text-ellipsis;
 }
 
-.chipFoot {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: $spacing-xs;
-  margin-top: 8rpx;
+.legVs {
+  font-size: 20rpx;
+  color: #b9b9be;
 }
 
-.chipOption {
-  min-width: 0;
+.legSub {
+  display: block;
+  margin-top: 6rpx;
   font-size: 20rpx;
-  font-weight: $font-weight-semibold;
-  color: $navy;
+  color: $muted;
   @include text-ellipsis;
 }
 
-.chipOdds {
+.legRight {
   flex-shrink: 0;
+  text-align: right;
+}
+
+.legOption {
+  display: block;
+  font-size: 24rpx;
+  font-weight: $font-weight-semibold;
+  line-height: 1.35;
+  color: $navy;
+}
+
+.legOdds {
+  display: block;
+  margin-top: 2rpx;
   font-size: 28rpx;
   font-weight: $font-weight-semibold;
   color: $ink;
@@ -298,7 +356,8 @@ $tabbar-height: 132rpx;
 
 // 未选比赛的空卡内容
 .emptyLegs {
-  padding: 6rpx 28rpx 24rpx;
+  padding: 20rpx 28rpx 28rpx;
+  border-top: 2rpx solid #f5f5f7;
   text-align: center;
 }
 
@@ -316,19 +375,18 @@ $tabbar-height: 132rpx;
   color: $muted;
 }
 
-// 金额条
+// 金额条：通栏，上边细线分隔
 .moneyBar {
   display: flex;
   align-items: stretch;
-  margin: 0 28rpx 24rpx;
   background: #fafafb;
-  border-radius: 20rpx;
+  border-top: 2rpx solid #f5f5f7;
 }
 
 .moneyCell {
   flex: 1;
   min-width: 0;
-  padding: 18rpx 22rpx;
+  padding: 20rpx 28rpx;
 }
 
 .moneyCellRight {
@@ -337,7 +395,7 @@ $tabbar-height: 132rpx;
 
 .moneyLabel {
   display: block;
-  margin-bottom: 6rpx;
+  margin-bottom: 4rpx;
   font-size: 20rpx;
   color: $muted;
 }
@@ -351,64 +409,59 @@ $tabbar-height: 132rpx;
 }
 
 .bonusValue {
-  font-size: 38rpx;
+  font-size: 40rpx;
   font-weight: $font-weight-bold;
   color: $red;
 }
 
 .moneySep {
   width: 2rpx;
-  margin: 18rpx 0;
+  align-self: stretch;
   background: $hair;
 }
 
 .cardError {
   display: block;
-  margin: 0 28rpx 24rpx;
+  padding: 20rpx 28rpx;
   font-size: 22rpx;
   color: $red;
 }
 
-// 操作行
+// 操作行：左右等分，中间细线
 .cardActions {
   display: flex;
-  gap: 16rpx;
-  padding: 0 28rpx 28rpx;
+  border-top: 2rpx solid $hair;
 }
 
 .actionBtn {
   @include button-reset;
   flex: 1;
   min-width: 0;
-  height: 76rpx;
-  border-radius: 18rpx;
-  transition: opacity $transition-fast;
+  height: 84rpx;
+  border-radius: 0;
+  background: #fff;
+  transition: background $transition-fast;
 
   &:active {
-    opacity: 0.85;
+    background: #f7f7f9;
   }
 }
 
-.actionBtnPrimary {
-  background: $ink;
-
-  .actionBtnText {
-    color: #fff;
-  }
-}
-
-.actionBtnGhost {
-  background: #fff;
-  border: 2rpx solid #dcdce0;
-
-  .actionBtnText {
-    color: $ink;
-  }
+.actionBtnDivider {
+  border-left: 2rpx solid $hair;
 }
 
 .actionBtnText {
   font-size: 26rpx;
   font-weight: $font-weight-semibold;
+}
+
+.actionTextPrimary {
+  color: $red;
+}
+
+.actionTextShare {
+  color: #1c1c1e;
 }
 
 .btnDisabled {
