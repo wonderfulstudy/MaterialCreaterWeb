@@ -65,15 +65,20 @@ export default function RenameDialog({
       return
     }
     const handleKeyboard = (res: { height: number }) => setKeyboardHeight(res.height || 0)
+    /** 未实现该 API 的平台会返回 reject 的 Promise，必须吞掉，否则抛未处理 rejection */
+    const silence = (result: unknown) => {
+      const maybePromise = result as { catch?: (handler: () => void) => void } | undefined
+      maybePromise?.catch?.(() => undefined)
+    }
     try {
-      Taro.onKeyboardHeightChange(handleKeyboard)
+      silence(Taro.onKeyboardHeightChange(handleKeyboard))
     } catch {
       // 部分平台不支持键盘高度监听，退化为居中展示
       return
     }
     return () => {
       try {
-        Taro.offKeyboardHeightChange?.(handleKeyboard)
+        silence(Taro.offKeyboardHeightChange?.(handleKeyboard))
       } catch {
         // 忽略不支持监听的平台
       }
