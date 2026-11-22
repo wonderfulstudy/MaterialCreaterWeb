@@ -1,48 +1,19 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Text, View } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import classnames from 'classnames'
 import BallNumber from '@/components/BallNumber'
-import ResultPoster, { type ResultPosterInput } from '@/components/ResultPoster'
-import {
-  DEFAULT_BRAND_NAME,
-  DEFAULT_QR_CAPTION,
-  DEFAULT_QR_IMAGE,
-  DEFAULT_SLOGAN,
-} from '@/components/ResultPoster/config'
+import ResultPoster from '@/components/ResultPoster'
 import TabBar from '@/components/TabBar'
 import { loadLatestGame } from '@/api/latest-lottery'
+import { IS_DEMO_MODE, OPEN_SHARE_ON_LOAD } from '@/config/demo'
 import { LATEST_LOTTERIES } from '@/models/lottery.model'
-import {
-  IS_DEMO_MODE,
-  OPEN_SHARE_ON_LOAD,
-  SPORT_REPORTS,
-  TRADITIONAL_REPORT,
-  createDemoCards,
-} from './home-data'
+import { formatDrawDate, formatIssue } from '@/utils/lottery-format'
+import { SPORT_REPORTS, TRADITIONAL_REPORT, createDemoCards } from './home-data'
 import { createLoadingCards, toCardView, type LotteryCardView } from './lottery-view-model'
 import styles from './index.module.scss'
 
 const IS_H5 = process.env.TARO_ENV === 'h5'
-const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
-
-function pad(value: number): string {
-  return String(value).padStart(2, '0')
-}
-
-/** '2026-11-17' → '11-17 周二' */
-function formatDrawDate(value: string): string {
-  const [year, month, day] = value.split('-').map(Number)
-  if (!year || !month || !day) {
-    return value
-  }
-  const weekday = new Date(year, month - 1, day).getDay()
-  return `${pad(month)}-${pad(day)} 周${WEEKDAYS[weekday]}`
-}
-
-function formatIssue(issue: string): string {
-  return issue.endsWith('期') ? issue : `${issue}期`
-}
 
 export default function HomePage() {
   const requestId = useRef(0)
@@ -50,36 +21,8 @@ export default function HomePage() {
   const [topInset, setTopInset] = useState(IS_H5 ? 20 : 64)
   const [shareOpen, setShareOpen] = useState(OPEN_SHARE_ON_LOAD)
 
-  // 只把已开奖的彩种交给海报组件：加载中与无数据的彩种没有号码可画
-  const posterInputs = useMemo<ResultPosterInput[]>(
-    () =>
-      cards.flatMap((card) =>
-        card.status === 'drawn'
-          ? [
-              {
-                gameName: card.name,
-                issue: formatIssue(card.issue),
-                drawDate: formatDrawDate(card.drawDate),
-                redNumbers: card.redNumbers,
-                blueNumbers: card.blueNumbers,
-                qrImage: DEFAULT_QR_IMAGE,
-                qrCaption: DEFAULT_QR_CAPTION,
-                brandName: DEFAULT_BRAND_NAME,
-                slogan: DEFAULT_SLOGAN,
-              },
-            ]
-          : []
-      ),
-    [cards]
-  )
-
-  const openShare = () => {
-    if (!posterInputs.length) {
-      void Taro.showToast({ title: '开奖数据还没回来', icon: 'none' })
-      return
-    }
-    setShareOpen(true)
-  }
+  /** 海报组件自己取当期开奖数据，这里只负责打开弹层 */
+  const openShare = () => setShareOpen(true)
 
   useEffect(() => {
     if (IS_H5) {
@@ -257,11 +200,7 @@ export default function HomePage() {
 
       <TabBar active='home' />
 
-      <ResultPoster
-        visible={shareOpen}
-        results={posterInputs}
-        onClose={() => setShareOpen(false)}
-      />
+      <ResultPoster visible={shareOpen} onClose={() => setShareOpen(false)} />
     </View>
   )
 }

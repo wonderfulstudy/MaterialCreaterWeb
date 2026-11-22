@@ -1,6 +1,8 @@
 # 开奖结果分享海报
 
-首页「分享开奖」入口把当期开奖号码绘制成一张 PNG 海报，默认把全部已开奖彩种排进同一张图，附微信二维码引流，可直接保存到相册或转发好友。
+首页右上角「分享开奖」把当期开奖号码绘制成一张 PNG 海报，默认把全部已开奖彩种排进同一张图，附微信二维码引流，可直接保存到相册或转发好友。
+
+弹层组件自己负责取数：任何页面写一行 `<ResultPoster visible={open} onClose={close} />` 就能用，首页不再拼数据。
 
 ## 结构
 
@@ -9,9 +11,14 @@
 | `src/components/ResultPoster/types.ts` | 方案契约：`ResultPosterInput`、`PosterImages`、`PosterScheme` |
 | `src/components/ResultPoster/canvas-kit.ts` | 公共画笔（750 逻辑宽度）：圆角矩形、渐变、文本截断、号码球、虚线、二维码卡片 |
 | `src/components/ResultPoster/config.ts` | 二维码占位图与默认文案 |
-| `src/components/ResultPoster/ResultPoster.tsx` | 弹层：彩种多选、离屏绘制、导出、保存/分享 |
+| `src/components/ResultPoster/latest-results.ts` | 自取开奖数据：逐彩种请求、只留已开奖、格式化期号与日期 |
+| `src/components/ResultPoster/use-share-results.ts` | 取数 hook：`idle/loading/ready/empty/error` 状态、防竞态、可选外部数据覆盖 |
+| `src/components/ResultPoster/poster-inputs.ts` | 纯映射：开奖数据 + 默认文案 → `ResultPosterInput` |
+| `src/components/ResultPoster/ResultPoster.tsx` | 弹层：取数、彩种多选、离屏绘制、导出、保存/分享 |
 | `src/components/ResultPoster/schemes/red-ticket.ts` | 红金票据方案：纯布局函数 + 绘制函数，可单测 |
-| `src/pages/home/index.tsx` | 首页「分享开奖」入口，只把已开奖的彩种传进海报 |
+| `src/utils/lottery-format.ts` | 期号补「期」、日期转「11-17 周二」 |
+| `src/config/demo.ts` | 设计稿数据与 demo 开关（`demo=1`、`share=1`） |
+| `src/pages/home/index.tsx` | 首页只放一个「分享开奖」按钮和 `<ResultPoster />` |
 
 方案层是纯 Canvas 2D：不 import Taro/React，因此可以单独跑布局单测，也能在任意画布环境复用。
 
@@ -25,7 +32,8 @@
 - 每个彩种一段：彩种名（34 号，左）+ 期号（22 号，右）同一行 → 号码球 → 开奖日期（22 号）。
 - 相邻两个「号码数 ≤ 3」的彩种（3D、排列 3 这类）自动并成两列，列宽 255、列间距 32；其余情况独占整行。并排时两段共用同一个 top，海报高度按一行算。
 - 段与段之间画一条虚线发丝线，接口是 `layout.separators`。
-- 号码球按号码数量自适应：球径在 76 与 46 之间收缩、每行最多 6 个、超过 12 个号码压成两行小球（快乐8 为两行各 10 个）。
+- 红球与蓝球排成同一条号码带（先红后蓝），一个彩种的号码通常一行放完：球径在 76 与 46 之间按号码总数收缩，间距 14 → 8，每行最多 10 个。
+- 只有快乐8 的 20 个号码会折成两行、每行 10 个；其余彩种（含 7 个号码的双色球、7 个的七星彩与七乐彩）都在一行里。
 - 所有彩种之后是一条撕线与左右缺口，票根里只放一个二维码：左侧「微信扫码」+ 文案 + 店名，右侧二维码卡片 200 见方。
 - 高度 = 卡片底 + 118，随彩种数量与号码行数变化；`measure(items)` 与 `draw(ctx, items, …)` 用同一个 `redTicketLayout(items)`，不会与成图错位。
 
@@ -41,7 +49,7 @@ H5 开发模式默认走设计稿数据，首页点右上角「分享开奖」�
 http://127.0.0.1:<port>/?demo=1&share=1#/pages/home/index
 ```
 
-`share=1` 由 `home-data.ts` 的 `OPEN_SHARE_ON_LOAD` 解析，只在 demo 模式下生效，小程序端忽略。
+`share=1` 由 `src/config/demo.ts` 的 `OPEN_SHARE_ON_LOAD` 解析，只在 demo 模式下生效，小程序端忽略。demo 数据同样在 `config/demo.ts`（`DEMO_DRAWS`，8 个彩种）。
 
 ## 换成真实微信二维码
 
@@ -56,8 +64,9 @@ http://127.0.0.1:<port>/?demo=1&share=1#/pages/home/index
 ## 数据流
 
 ```
-loadLatestGame(code) → LotteryCardView(status: 'drawn')
-  → 首页 map 成 ResultPosterInput（期号/日期已格式化）
+<ResultPoster visible /> → useShareResults → loadShareResults()
+  → LATEST_LOTTERIES 逐个 loadLatestGame(code)，只保留已开奖的
+  → toPosterInputs(draws, DEFAULT_*)：期号/日期已格式化，二维码与落款从 config 补齐
   → ResultPoster 过滤掉被关掉的彩种，得到 items
   → scheme.measure(items) 决定逻辑高度 750×N
   → scheme.draw(ctx, items, { qr })  按像素比 ≤2 放大绘制
@@ -67,28 +76,32 @@ loadLatestGame(code) → LotteryCardView(status: 'drawn')
 
 ## 边界与已知限制
 
-- 只分享已开奖彩种；加载中或无数据的彩种不出现在弹层里，全部未开奖时点入口只提示。
-- 默认全部彩种一起出图，彩种越多图越长（8 个彩种实测 750×2957），需要短图就在弹层里关掉几个。
+- 只分享已开奖彩种：加载中显示「正在获取本期开奖…」，无已开奖彩种显示「本期还没有可分享的开奖结果」，请求失败显示「开奖数据获取失败」。
+- 默认全部彩种一起出图，彩种越多图越长（8 个彩种实测 750×2417），需要短图就在弹层里关掉几个。
+- 单个彩种请求失败不影响其他彩种；`loadShareResults` 用 `Promise.all` 并发拉取。
 - 二维码加载失败时不会整张失败，方案会画灰底「二维码」占位（`drawQrCard` 内置降级）。
 - 小程序端二维码使用 `canvas.createImage()` 加载本地资源；若某基础库版本不支持，成图会退化为占位块，接真机二维码时需回归一次。
 - 画布按 pixelRatio 放大并封顶 2 倍，避免长图在小程序端占用过多内存。
 
-## 验收记录（2026-11-22）
+## 验收记录（2026-11-22 第二轮：独立组件 + 单行号码带）
 
 | 检查 | 结果 |
 | --- | --- |
-| 布局单测 | `npx jest src/components/ResultPoster --runInBand` → 1 套 24 例全绿 |
+| 单测 | `npx jest src/components/ResultPoster src/utils/lottery-format.test.ts --runInBand` → 3 套 44 例全绿；全量 `npx jest --runInBand` → 6 套 63 例全绿 |
 | 类型 | `npx tsc --noEmit` 在 `src/` 下零报错（node_modules 的 Taro 声明噪音与本功能无关） |
 | H5 构建 | `npm run build:h5` → webpack 5.78.0 compiled，2 warnings |
-| 真实渲染 | `?demo=1&share=1` 弹层：8 个 chip 默认全选中，逐个关掉即从海报里消失，关到最后一个提示「至少保留一个彩种」 |
+| 真实渲染 | `?demo=1&share=1`：弹层自动打开并自取 demo 数据，8 个 chip 默认全选中，点掉快乐8 后海报即时变短 |
+| 单行号码 | 实测双色球 7 个号码（6 红 + 1 蓝）在同一行、3D 与排列3 仍并成两列；快乐8 为 10 + 10 两行 |
 
-实测成图高度（750 宽，逻辑像素）：
+实测成图高度（750 宽，逻辑像素，由 `measure()` 与 H5 导出互证）：
 
-| 内容 | 8 个彩种全选 | 关掉 3D（7 个） | 只有 3D | 3D + 排列3（并两列） |
-| --- | --- | --- | --- | --- |
-| 高度 | 2957 | 2735 | 881 | 880 |
+| 内容 | 8 个彩种全选 | 关掉快乐8（7 个） | 双色球 / 大乐透 / 七星彩 | 快乐8 | 3D / 排列5 | 七乐彩 | 3D + 排列3（并两列） |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 高度 | 2417 | 2159 | 870 | 917 | 881 | 860 | 880 |
 
-并两列时高度与单独画 3D 相差 1 像素：并排段球径 75、独占段 76，说明两个短号码彩种确实共用一行。
+- 单行号码带让 8 彩种全选从上一轮的 2957 降到 2417，短号码彩种（3D、排列3）高度与独占时几乎相同。
+- 并两列时高度比单独画 3D 少 1 像素：并排段球径 75、独占段 76，说明两个短号码彩种确实共用一行。
+- H5 下载落盘实测 PNG 750×2417，与 `measure()` 一致；浏览器里图片按 CSS 等比缩放到 303×978，比例核对无误。
 
 H5 下载落盘实测：按钮为「保存图片」，落盘文件名 `双色球等8个彩种-开奖海报.png`（单个彩种为 `3D-开奖海报.png`），PNG 头尺寸与上表一致。
 

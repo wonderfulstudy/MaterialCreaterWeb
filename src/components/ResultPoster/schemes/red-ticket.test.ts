@@ -45,12 +45,30 @@ const PL3: ResultPosterInput = {
   ...SHARED,
 }
 
+const QXC: ResultPosterInput = {
+  gameName: '七星彩',
+  issue: '26132 期',
+  drawDate: '11-18 周二',
+  redNumbers: ['0', '2', '3', '5', '7', '0'],
+  blueNumbers: ['4'],
+  ...SHARED,
+}
+
 const QLC: ResultPosterInput = {
   gameName: '七乐彩',
   issue: '2026132 期',
   drawDate: '11-18 周二',
   redNumbers: ['02', '09', '13', '18', '22', '27', '30'],
   blueNumbers: ['11'],
+  ...SHARED,
+}
+
+const PL5: ResultPosterInput = {
+  gameName: '排列5',
+  issue: '26308 期',
+  drawDate: '11-18 周二',
+  redNumbers: ['9', '4', '5', '1', '2'],
+  blueNumbers: [],
   ...SHARED,
 }
 
@@ -63,11 +81,21 @@ const KL8: ResultPosterInput = {
   ...SHARED,
 }
 
-const CASES: readonly ResultPosterInput[] = [SSQ, DLT, FC3D, PL3, KL8, QLC]
+const CASES: readonly ResultPosterInput[] = [SSQ, DLT, FC3D, PL3, QXC, QLC, PL5, KL8]
+/** 除快乐8 外，其余彩种的号码都必须排在一行里 */
+const SINGLE_ROW_CASES: readonly ResultPosterInput[] = [SSQ, DLT, FC3D, PL3, QXC, QLC, PL5]
 const ALL_GAMES: readonly ResultPosterInput[] = [SSQ, DLT, FC3D, PL3, QLC, KL8]
+
+function totalBalls(item: ResultPosterInput): number {
+  return item.redNumbers.length + item.blueNumbers.length
+}
 
 function rowWidth(row: TicketBallRow, area: TicketBallArea): number {
   return row.count * area.diameter + (row.count - 1) * area.gap
+}
+
+function drawnCount(area: TicketBallArea): number {
+  return area.rows.reduce((sum, row) => sum + row.count, 0)
 }
 
 describe('redTicketScheme 契约', () => {
@@ -76,11 +104,11 @@ describe('redTicketScheme 契约', () => {
   })
 
   CASES.forEach((input) => {
-    it(`${input.gameName}：measure 等于 layout.height，整数且在 860–1500`, () => {
+    it(`${input.gameName}：measure 等于 layout.height，整数且在 700–1500`, () => {
       const layout = redTicketLayout([input])
       expect(redTicketScheme.measure([input])).toBe(layout.height)
       expect(Number.isInteger(layout.height)).toBe(true)
-      expect(layout.height).toBeGreaterThanOrEqual(860)
+      expect(layout.height).toBeGreaterThanOrEqual(700)
       expect(layout.height).toBeLessThanOrEqual(1500)
     })
   })
@@ -155,53 +183,53 @@ describe('分节排版', () => {
 describe('号码排版', () => {
   CASES.forEach((input) => {
     it(`${input.gameName}：球都落在所属段内，数量与数据一致`, () => {
-      const layout = redTicketLayout([input])
-      const block = layout.games[0]
-      const areas: TicketBallArea[] = block.blueBalls ? [block.redBalls, block.blueBalls] : [block.redBalls]
-      areas.forEach((area) => {
-        area.rows.forEach((row) => {
-          expect(row.count).toBeGreaterThan(0)
-          expect(row.startX).toBeGreaterThanOrEqual(block.x)
-          expect(row.startX + rowWidth(row, area)).toBeLessThanOrEqual(block.x + block.width)
-        })
-        expect(area.diameter).toBeGreaterThanOrEqual(46)
-        expect(area.rows.length).toBeLessThanOrEqual(2)
+      const block = redTicketLayout([input]).games[0]
+      const area = block.balls
+      area.rows.forEach((row) => {
+        expect(row.count).toBeGreaterThan(0)
+        expect(row.startX).toBeGreaterThanOrEqual(block.x)
+        expect(row.startX + rowWidth(row, area)).toBeLessThanOrEqual(block.x + block.width)
+        expect(row.cy - area.diameter / 2).toBeGreaterThanOrEqual(area.top)
+        expect(row.cy + area.diameter / 2).toBeLessThanOrEqual(area.bottom)
       })
-      const drawn = block.redBalls.rows.reduce((sum, row) => sum + row.count, 0)
-      expect(drawn).toBe(input.redNumbers.length)
+      expect(area.diameter).toBeGreaterThanOrEqual(46)
+      expect(area.diameter).toBeLessThanOrEqual(76)
+      expect(drawnCount(area)).toBe(totalBalls(input))
+      expect(area.redCount).toBe(input.redNumbers.length)
     })
   })
 
-  it('快乐8 的 20 个红球压成两行、每行 10 个，球径不小于 46、间距不小于 8', () => {
-    const block = redTicketLayout([KL8]).games[0]
-    expect(block.redBalls.rows.map((row) => row.count)).toEqual([10, 10])
-    expect(block.redBalls.diameter).toBeGreaterThanOrEqual(46)
-    expect(block.redBalls.gap).toBeGreaterThanOrEqual(8)
-    expect(block.blueBalls).toBeNull()
+  SINGLE_ROW_CASES.forEach((input) => {
+    it(`${input.gameName}：${totalBalls(input)} 个号码排在同一行`, () => {
+      const area = redTicketLayout([input]).games[0].balls
+      expect(area.rows).toHaveLength(1)
+      expect(area.rows[0].count).toBe(totalBalls(input))
+    })
   })
 
-  it('有蓝号时蓝号整体排在红球区下方，且不越出卡边', () => {
-    const ssq = redTicketLayout([SSQ]).games[0]
-    const ssqBlue = ssq.blueBalls as TicketBallArea
-    expect(ssqBlue).not.toBeNull()
-    expect(ssqBlue.rows).toHaveLength(1)
-    expect(ssqBlue.rows[0].cy - ssqBlue.diameter / 2).toBeGreaterThanOrEqual(ssq.redBalls.bottom)
-
-    const dlt = redTicketLayout([DLT]).games[0]
-    const dltBlue = dlt.blueBalls as TicketBallArea
-    expect(dltBlue.rows[0].count).toBe(2)
-    expect(dltBlue.rows[0].cy + dltBlue.diameter / 2).toBeLessThanOrEqual(dlt.drawDate.y)
+  it('快乐8 的 20 个号码占两行、每行 10 个，球径不小于 46、间距不小于 8', () => {
+    const area = redTicketLayout([KL8]).games[0].balls
+    expect(area.rows.map((row) => row.count)).toEqual([10, 10])
+    expect(area.diameter).toBeGreaterThanOrEqual(46)
+    expect(area.gap).toBeGreaterThanOrEqual(8)
+    expect(area.redCount).toBe(20)
   })
 
-  it('无蓝号时不产生空行：日期到号码区的间距与带蓝号方案一致', () => {
-    const fc3d = redTicketLayout([FC3D]).games[0]
-    const kl8 = redTicketLayout([KL8]).games[0]
+  it('蓝球不再单独成行：与红球同一行、同一球径，靠 redCount 区分颜色', () => {
+    const area = redTicketLayout([SSQ]).games[0].balls
+    expect(area.rows).toHaveLength(1)
+    expect(area.rows[0].count).toBe(7)
+    expect(area.redCount).toBe(6)
+  })
+
+  it('号码行收在日期之上，且日期到号码区留白固定', () => {
     const ssq = redTicketLayout([SSQ]).games[0]
-    expect(fc3d.blueBalls).toBeNull()
-    expect(kl8.blueBalls).toBeNull()
-    const gapWithoutBlue = fc3d.drawDate.y - fc3d.redBalls.bottom
-    expect(kl8.drawDate.y - kl8.redBalls.bottom).toBe(gapWithoutBlue)
-    expect(ssq.drawDate.y - (ssq.blueBalls as TicketBallArea).bottom).toBe(gapWithoutBlue)
+    expect(ssq.balls.bottom).toBeLessThanOrEqual(ssq.drawDate.y)
+    const gap = ssq.drawDate.y - ssq.balls.bottom
+    CASES.forEach((input) => {
+      const block = redTicketLayout([input]).games[0]
+      expect(block.drawDate.y - block.balls.bottom).toBe(gap)
+    })
   })
 
   it('并排的两段各自收尾在自身上下界，不互相撑高', () => {

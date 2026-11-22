@@ -1,13 +1,14 @@
 /**
  * 「红金票据」方案：红金渐变底 + 米色票券卡 + 票根撕口。
- * 一张卡里可以纵向排多个彩种（每个彩种一段），号码少的彩种相邻时自动并成两列。
+ * 一张卡里可以纵向排多个彩种（每个彩种一段），号码少的彩种相邻时自动并成两列；
+ * 每个彩种的号码尽量排在一行里（红蓝同排），只有快乐8 的 20 个号会占两行。
  * 高度与全部坐标都由 redTicketLayout 一次算清，draw 只照着这份数据画；
  * 两处各算一套的话，成图就会与 measure 的高度错位（被裁切或底部留白）。
  */
 import type { PosterScheme, ResultPosterInput } from '../types'
 import {
   POSTER_WIDTH,
-  drawBallRow,
+  drawBall,
   drawCircle,
   drawDashedLine,
   drawQrCard,
@@ -67,12 +68,9 @@ const BALL_MAX = 76
 const BALL_MIN = 46
 const BALL_GAP_MAX = 14
 const BALL_GAP_MIN = 8
-/** 常规球径下一行放得下 6 个；快乐8 的 20 个才需要压成两行缩小球 */
-const BALL_PER_ROW = 6
-const BALL_ROWS_MAX = 2
+/** 一行最多 10 个：快乐8 的 20 个正好两行，其余彩种全部挤在一行里 */
+const BALLS_PER_ROW = 10
 const BALL_ROW_GAP = 18
-const BLUE_GAP = 22
-const BLUE_PER_ROW = 2
 
 const TEAR_GAP_TOP = 44
 const TEAR_GAP_BOTTOM = 52
@@ -113,6 +111,8 @@ export interface TicketBallArea {
   diameter: number
   gap: number
   rows: readonly TicketBallRow[]
+  /** 全部号码里前多少个是红球，之后的是蓝球：同一个球行按序混排，颜色区分 */
+  redCount: number
   top: number
   bottom: number
 }
@@ -131,9 +131,8 @@ export interface TicketGameBlock {
   columns: number
   gameName: TicketTextLine
   issue: TicketTextLine
-  redBalls: TicketBallArea
-  /** 无蓝号时为 null，draw 据此整段跳过，不留空行 */
-  blueBalls: TicketBallArea | null
+  /** 红球与蓝球按序排在同一条（快乐8 为两条）球行里 */
+  balls: TicketBallArea
   drawDate: TicketTextLine
   top: number
   bottom: number
@@ -167,10 +166,11 @@ interface RowFit {
 
 /**
  * 把号码压进内容宽：先试标准间距，放不下再收到最小间距；
- * 球径只缩到 BALL_MIN 为止（再小号码就不可读），行数上限 2。
+ * 球径只缩到 BALL_MIN 为止（再小号码就不可读）。
+ * 行数只由每行上限推出：≤10 个一行，快乐8 的 20 个正好两行。
  */
 function fitRows(count: number, contentWidth: number): RowFit {
-  const rows = count <= BALL_PER_ROW ? 1 : Math.min(BALL_ROWS_MAX, Math.ceil(count / BALL_PER_ROW))
+  const rows = Math.ceil(count / BALLS_PER_ROW)
   const perRow = Math.ceil(count / rows)
   const diameterFor = (gap: number): number =>
     Math.min(BALL_MAX, Math.floor((contentWidth - (perRow - 1) * gap) / perRow))
@@ -202,45 +202,25 @@ function layoutBlock(item: ResultPosterInput, x: number, width: number, top: num
 
   let cursor = top + NAME_SIZE + NAME_BALLS_GAP
   const redCount = item.redNumbers.length
-  const redFit = redCount > 0 ? fitRows(redCount, width) : null
-  const redRows: TicketBallRow[] = []
-  if (redFit) {
-    for (let row = 0; row < redFit.rows; row += 1) {
-      const count = Math.min(redFit.perRow, redCount - row * redFit.perRow)
-      const cy = cursor + redFit.diameter / 2 + row * (redFit.diameter + BALL_ROW_GAP)
-      redRows.push(centeredRow(count, x, width, redFit.diameter, redFit.gap, cy))
+  const total = redCount + item.blueNumbers.length
+  const fit = total > 0 ? fitRows(total, width) : null
+  const rows: TicketBallRow[] = []
+  if (fit) {
+    for (let row = 0; row < fit.rows; row += 1) {
+      const count = Math.min(fit.perRow, total - row * fit.perRow)
+      const cy = cursor + fit.diameter / 2 + row * (fit.diameter + BALL_ROW_GAP)
+      rows.push(centeredRow(count, x, width, fit.diameter, fit.gap, cy))
     }
   }
-  const redBottom = redFit ? cursor + redFit.rows * redFit.diameter + (redFit.rows - 1) * BALL_ROW_GAP : cursor
-  const redBalls: TicketBallArea = {
-    diameter: redFit ? redFit.diameter : BALL_MAX,
-    gap: redFit ? redFit.gap : BALL_GAP_MAX,
-    rows: redRows,
+  const ballsBottom = fit ? cursor + fit.rows * fit.diameter + (fit.rows - 1) * BALL_ROW_GAP : cursor
+  // 红蓝同排：球径按总个数收，颜色区分区间，不再为蓝球单开一行
+  const balls: TicketBallArea = {
+    diameter: fit ? fit.diameter : BALL_MAX,
+    gap: fit ? fit.gap : BALL_GAP_MAX,
+    rows,
+    redCount,
     top: cursor,
-    bottom: redBottom,
-  }
-
-  let blueBalls: TicketBallArea | null = null
-  let ballsBottom = redBottom
-  const blueCount = item.blueNumbers.length
-  if (blueCount > 0) {
-    // 蓝球与红球是两种号码体系，间距固定；红球为空时不额外留白
-    const blueTop = redCount > 0 ? redBottom + BLUE_GAP : redBottom
-    const blueRowCount = Math.ceil(blueCount / BLUE_PER_ROW)
-    const blueRows: TicketBallRow[] = []
-    for (let row = 0; row < blueRowCount; row += 1) {
-      const count = Math.min(BLUE_PER_ROW, blueCount - row * BLUE_PER_ROW)
-      const cy = blueTop + BALL_MAX / 2 + row * (BALL_MAX + BALL_ROW_GAP)
-      blueRows.push(centeredRow(count, x, width, BALL_MAX, BALL_GAP_MAX, cy))
-    }
-    blueBalls = {
-      diameter: BALL_MAX,
-      gap: BALL_GAP_MAX,
-      rows: blueRows,
-      top: blueTop,
-      bottom: blueTop + blueRowCount * BALL_MAX + (blueRowCount - 1) * BALL_ROW_GAP,
-    }
-    ballsBottom = blueBalls.bottom
+    bottom: ballsBottom,
   }
 
   cursor = ballsBottom + BALLS_META_GAP
@@ -252,8 +232,7 @@ function layoutBlock(item: ResultPosterInput, x: number, width: number, top: num
     columns,
     gameName,
     issue,
-    redBalls,
-    blueBalls,
+    balls,
     drawDate,
     top,
     bottom: cursor + META_SIZE,
@@ -399,10 +378,19 @@ function drawRing(ctx: CanvasRenderingContext2D, ring: TicketRing): void {
   ctx.restore()
 }
 
-function drawBalls(ctx: CanvasRenderingContext2D, numbers: readonly string[], area: TicketBallArea, background: string): void {
+/** 球行内逐球上色：前 redCount 个是红球，其余是蓝球 */
+function drawBalls(ctx: CanvasRenderingContext2D, numbers: readonly string[], area: TicketBallArea): void {
   let offset = 0
   area.rows.forEach((row) => {
-    drawBallRow(ctx, numbers.slice(offset, offset + row.count), row.startX, row.cy, area.diameter, area.gap, background, COLORS.white)
+    for (let column = 0; column < row.count; column += 1) {
+      const text = numbers[offset + column]
+      if (!text) {
+        continue
+      }
+      const cx = row.startX + column * (area.diameter + area.gap) + area.diameter / 2
+      const background = offset + column < area.redCount ? COLORS.redBall : COLORS.blueBall
+      drawBall(ctx, cx, row.cy, area.diameter, text, background, COLORS.white)
+    }
     offset += row.count
   })
 }
@@ -423,10 +411,7 @@ function drawBlock(ctx: CanvasRenderingContext2D, item: ResultPosterInput, block
     maxWidth: block.issue.maxWidth,
   })
 
-  drawBalls(ctx, item.redNumbers, block.redBalls, COLORS.redBall)
-  if (block.blueBalls) {
-    drawBalls(ctx, item.blueNumbers, block.blueBalls, COLORS.blueBall)
-  }
+  drawBalls(ctx, [...item.redNumbers, ...item.blueNumbers], block.balls)
 
   drawText(ctx, item.drawDate, block.drawDate.x, block.drawDate.y, {
     size: block.drawDate.size,

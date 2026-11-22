@@ -3,6 +3,7 @@ import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import classnames from 'classnames'
 import { DEFAULT_SCHEME_ID, getPosterScheme } from './schemes'
+import { useShareResults } from './use-share-results'
 import { POSTER_WIDTH } from './canvas-kit'
 import type { PosterImages, ResultPosterInput } from './types'
 import styles from './index.module.scss'
@@ -13,12 +14,15 @@ const posterScheme = getPosterScheme(DEFAULT_SCHEME_ID)
 export interface ResultPosterProps {
   /** 是否展示弹层 */
   visible: boolean
-  /** 可分享的开奖结果，只传已开奖彩种；默认全部画进同一张海报 */
-  results: ResultPosterInput[]
+  /**
+   * 可选的现成数据：传入时以它为准（预览/测试），不传则由组件自己拉取当期开奖结果。
+   * 只放已开奖彩种，默认全部画进同一张海报。
+   */
+  results?: readonly ResultPosterInput[]
   onClose: () => void
 }
 
-type PosterStatus = 'idle' | 'drawing' | 'ready' | 'error'
+type PaintStatus = 'idle' | 'drawing' | 'ready' | 'error'
 
 /** 彩种在弹层里的稳定标识：同名同期的两条数据视为同一项 */
 function posterKey(item: ResultPosterInput): string {
@@ -113,13 +117,14 @@ function loadQrImage(canvas: OffscreenLike, src: string): Promise<CanvasImageSou
  * 开奖结果分享海报：把当期开奖号码绘制成图片，附微信二维码引流。
  * 方案（视觉风格）由 schemes/ 提供，这里只管取数据、画布、导出与保存分享。
  *
- * 用法：
+ * 用法：数据自己取，调用方只管显隐
  * ```tsx
- * <ResultPoster visible={open} results={posterInputs} onClose={() => setOpen(false)} />
+ * <ResultPoster visible={open} onClose={() => setOpen(false)} />
  * ```
  */
-export default function ResultPoster({ visible, results, onClose }: ResultPosterProps) {
-  const [status, setStatus] = useState<PosterStatus>('idle')
+export default function ResultPoster({ visible, results: providedResults, onClose }: ResultPosterProps) {
+  const share = useShareResults(visible, providedResults)
+  const [status, setStatus] = useState<PaintStatus>('idle')
   const [imagePath, setImagePath] = useState('')
   const [posterHeight, setPosterHeight] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -129,10 +134,11 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
   const requestId = useRef(0)
 
   const items = useMemo(() => {
-    const picked = results.filter((item) => !deselected.includes(posterKey(item)))
+    const all = share.results
+    const picked = all.filter((item) => !deselected.includes(posterKey(item)))
     // 全部关掉时兜底画第一个，避免空海报
-    return picked.length > 0 ? picked : results.slice(0, 1)
-  }, [results, deselected])
+    return picked.length > 0 ? picked : all.slice(0, 1)
+  }, [share.results, deselected])
 
   // 用内容签名而非对象引用作为绘制依赖，调用方每次渲染新建对象也不会重复绘制
   const signature = JSON.stringify(items)
@@ -297,9 +303,9 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
           </View>
         </View>
 
-        {results.length > 1 ? (
+        {share.results.length > 1 ? (
           <ScrollView scrollX className={styles.gameBar}>
-            {results.map((item) => {
+            {share.results.map((item) => {
               const key = posterKey(item)
               const active = !deselected.includes(key)
               return (
@@ -317,6 +323,24 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
 
         <ScrollView scrollY className={styles.scrollBody}>
           <View className={styles.posterWrap}>
+            {share.status === 'loading' && (
+              <View className={styles.placeholder}>
+                <View className={styles.spinner} />
+                <Text className={styles.placeholderText}>正在获取本期开奖…</Text>
+              </View>
+            )}
+            {share.status === 'empty' && (
+              <View className={styles.placeholder}>
+                <Text className={styles.placeholderText}>本期还没有可分享的开奖结果</Text>
+                <Text className={styles.placeholderHint}>开奖后重新打开即可分享</Text>
+              </View>
+            )}
+            {share.status === 'error' && (
+              <View className={styles.placeholder}>
+                <Text className={styles.placeholderText}>开奖数据获取失败</Text>
+                <Text className={styles.placeholderHint}>请关闭后重试</Text>
+              </View>
+            )}
             {status === 'drawing' && (
               <View className={styles.placeholder}>
                 <View className={styles.spinner} />
@@ -358,7 +382,7 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
           ) : null}
         </View>
         <Text className={styles.tip}>
-          {results.length > 1 ? '点击彩种可增减内容，' : ''}
+          {share.results.length > 1 ? '点击彩种可增减内容，' : ''}
           {isWeapp ? '长按海报可保存或转发，二维码换成门店微信后即可引流' : '保存后可发送给好友或朋友圈'}
         </Text>
       </View>
