@@ -4,8 +4,12 @@ import Taro, { useRouter, useShareAppMessage } from '@tarojs/taro'
 import classnames from 'classnames'
 import { isOcrSupported, recognizeImage } from '@/services/ocr'
 import PlanCalculator, {
+  MAX_MATCH,
   SPORTS,
   formatAmount,
+  formatGoalLine,
+  formatOdds,
+  passLabel,
   sportLabel,
   useSportSchedule,
   type PlanLeg,
@@ -67,6 +71,8 @@ export default function RecommendPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [renameId, setRenameId] = useState('')
   const [posterPlanId, setPosterPlanId] = useState('')
+  /** 已展开的方案 id：默认全部收起 */
+  const [expandedIds, setExpandedIds] = useState<string[]>([])
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** 长按触发时刻：用于吞掉长按松手后补发的幽灵 click */
   const longPressFiredAt = useRef(0)
@@ -303,29 +309,48 @@ export default function RecommendPage() {
   const posterCard = currentCards.find((card) => card.id === posterPlanId)
   const renameCard = currentCards.find((card) => card.id === renameId)
 
-  const renderPlanInfo = (card: PlanCard) => {
-    if (!card.legs.length) {
-      return <View className={styles.planBlank} />
-    }
+  /** 场次副标题：联赛 · 场次号 · 玩法(+盘口) */
+  const legMetaText = (leg: PlanLeg) => {
+    const line = formatGoalLine(leg.goalLine)
+    const pool = line ? `${leg.poolName} ${line}` : leg.poolName
+    return [leg.league, leg.matchNumStr, pool].filter(Boolean).join(' · ')
+  }
 
-    return (
-      <View className={styles.planArea}>
-        {card.legs.map((leg) => (
-          <Text
-            key={`${leg.matchId}-${leg.poolCode}-${leg.optionKey}`}
-            className={styles.planLine}
-          >
-            {`${leg.homeTeam} ${leg.optionLabel} ${leg.odds.toFixed(2)}`}
-          </Text>
-        ))}
-      </View>
+  const toggleExpanded = (id: string) => {
+    setExpandedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     )
   }
+
+  /** 展开后按行列出全部场次 */
+  const renderLegs = (card: PlanCard) => (
+    <View className={styles.legs}>
+      {card.legs.map((leg) => (
+        <View key={`${leg.matchId}-${leg.poolCode}-${leg.optionKey}`} className={styles.leg}>
+          <View className={styles.legLeft}>
+            <Text className={styles.legTeams}>
+              {leg.homeTeam}
+              <Text className={styles.legVs}> vs </Text>
+              {leg.awayTeam}
+            </Text>
+            <Text className={styles.legSub}>{legMetaText(leg)}</Text>
+          </View>
+          <View className={styles.legRight}>
+            <Text className={styles.legOption}>{leg.optionLabel}</Text>
+            <Text className={styles.legOdds}>{formatOdds(leg.odds)}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  )
 
   const renderCard = (card: PlanCard) => {
     const busy = recognizingId === card.id
     const selected = selectedIds.includes(card.id)
     const summary = card.summary ?? summarizePlan(card.legs)
+    const passSize = Math.min(MAX_MATCH, Math.max(1, summary.matchCount))
+    const hasLegs = card.legs.length > 0
+    const expanded = expandedIds.includes(card.id)
 
     return (
       <View
@@ -342,56 +367,92 @@ export default function RecommendPage() {
           openPicker(card.id)
         }}
       >
-        <View className={styles.cardRow}>
-          <View className={styles.cardNameBox}>
+        <View className={styles.cardHead}>
+          <View className={styles.nameRow}>
             <Text className={styles.cardName}>{card.name}</Text>
-          </View>
-          <View className={styles.cardMain}>
-            {renderPlanInfo(card)}
-            <View className={styles.amountRow}>
-              <View className={styles.amountItem}>
-                <Text className={styles.amountLabel}>投注金额：</Text>
-                <Text className={styles.amountValue}>{formatAmount(summary.amount)}</Text>
-              </View>
-              <View className={styles.amountItem}>
-                <Text className={styles.amountLabel}>最高可中：</Text>
-                <Text className={classnames(styles.amountValue, styles.bonusValue)}>
-                  {formatAmount(summary.maxBonus)}
+            {hasLegs && (
+              <View
+                className={styles.toggle}
+                onTouchStart={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  toggleExpanded(card.id)
+                }}
+              >
+                <Text className={classnames(styles.toggleIcon, expanded && styles.toggleIconOpen)}>
+                  {'▾'}
                 </Text>
               </View>
-            </View>
-            {card.error ? <Text className={styles.cardError}>{card.error}</Text> : null}
+            )}
           </View>
-
-          {!deleteMode && (
+          <View className={styles.headMeta}>
+            <Text className={classnames(styles.passPill, !hasLegs && styles.passPillEmpty)}>
+              {hasLegs ? passLabel(passSize) : '未选比赛'}
+            </Text>
+            {hasLegs && (
+              <Text className={styles.headCount}>{`${summary.matchCount} 场 · ${summary.multiple} 倍`}</Text>
+            )}
+          </View>
+          {deleteMode && (
             <View
-              className={styles.cardSide}
-              onTouchStart={(event) => event.stopPropagation()}
-              onClick={(event) => event.stopPropagation()}
+              className={classnames(styles.checkbox, selected && styles.checkboxChecked)}
+              onClick={(event) => {
+                event.stopPropagation()
+                toggleSelected(card.id)
+              }}
             >
-              <Button
-                className={classnames(styles.sideBtn, busy && styles.btnDisabled)}
-                disabled={busy}
-                onClick={() => handleUpload(card)}
-              >
-                <Text className={styles.sideBtnText}>{busy ? '识别中' : '上传图片'}</Text>
-              </Button>
-              <Button
-                className={styles.sideBtn}
-                onClick={() => openPoster(card)}
-              >
-                <Text className={styles.sideBtnText}>分享方案</Text>
-              </Button>
+              <Text className={styles.checkboxMark}>{selected ? '✓' : ''}</Text>
             </View>
           )}
         </View>
 
-        {deleteMode && (
-          <View className={styles.cardTail} onClick={() => toggleSelected(card.id)}>
-            <Text className={styles.cardTailText}>选择删除这个方案</Text>
-            <View className={classnames(styles.checkbox, selected && styles.checkboxChecked)}>
-              <Text className={styles.checkboxMark}>{selected ? '✓' : ''}</Text>
+        {hasLegs ? (
+          expanded ? (
+            renderLegs(card)
+          ) : null
+        ) : (
+          <View className={styles.emptyLegs}>
+            <Text className={styles.emptyLegsTitle}>还没有选择比赛</Text>
+            <Text className={styles.emptyLegsHint}>点击卡片去挑选赛程</Text>
+          </View>
+        )}
+
+        {hasLegs && (
+          <View className={styles.moneyBar}>
+            <View className={styles.moneyCell}>
+              <Text className={styles.moneyLabel}>投注金额</Text>
+              <Text className={styles.moneyValue}>{`¥${formatAmount(summary.amount)}`}</Text>
             </View>
+            <View className={styles.moneySep} />
+            <View className={classnames(styles.moneyCell, styles.moneyCellRight)}>
+              <Text className={styles.moneyLabel}>最高可中</Text>
+              <Text className={classnames(styles.moneyValue, styles.bonusValue)}>
+                {`¥${formatAmount(summary.maxBonus)}`}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {card.error ? <Text className={styles.cardError}>{card.error}</Text> : null}
+
+        {!deleteMode && (
+          <View
+            className={styles.cardActions}
+            onTouchStart={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Button
+              className={classnames(styles.actionBtn, busy && styles.btnDisabled)}
+              disabled={busy}
+              onClick={() => handleUpload(card)}
+            >
+              <Text className={classnames(styles.actionBtnText, styles.actionTextPrimary)}>
+                {busy ? '识别中' : '上传图片'}
+              </Text>
+            </Button>
+            <Button className={classnames(styles.actionBtn, styles.actionBtnDivider)} onClick={() => openPoster(card)}>
+              <Text className={classnames(styles.actionBtnText, styles.actionTextShare)}>分享方案</Text>
+            </Button>
           </View>
         )}
       </View>
@@ -447,13 +508,6 @@ export default function RecommendPage() {
             </Text>
           )}
         </View>
-
-        <View
-          className={styles.calcBtn}
-          onClick={() => void Taro.navigateTo({ url: '/pages/selector/index' })}
-        >
-          <Text className={styles.calcBtnText}>计算器</Text>
-        </View>
       </View>
 
       {!supported && (
@@ -473,12 +527,21 @@ export default function RecommendPage() {
         </View>
       )}
 
+      {currentCards.length > 0 && (
+        <View className={styles.caption}>
+          <Text className={styles.captionCount}>
+            <Text className={styles.captionStrong}>{currentCards.length}</Text> 个方案
+          </Text>
+          <Text className={styles.captionHint}>长按卡片可改名</Text>
+        </View>
+      )}
+
       <View className={styles.cardList}>
         {currentCards.length === 0 ? (
           <View className={styles.emptyCard} onClick={openCreate}>
             <Text className={styles.emptyIcon}>＋</Text>
             <Text className={styles.emptyTitle}>还没有推荐单</Text>
-            <Text className={styles.emptyHint}>点击这里从计算器新增一个方案</Text>
+            <Text className={styles.emptyHint}>点击下方「新增方案」添加</Text>
           </View>
         ) : (
           currentCards.map(renderCard)

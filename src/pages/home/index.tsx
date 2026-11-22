@@ -3,43 +3,26 @@ import { Text, View } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import classnames from 'classnames'
 import BallNumber from '@/components/BallNumber'
+import ResultPoster from '@/components/ResultPoster'
 import TabBar from '@/components/TabBar'
 import { loadLatestGame } from '@/api/latest-lottery'
+import { IS_DEMO_MODE, OPEN_SHARE_ON_LOAD } from '@/config/demo'
 import { LATEST_LOTTERIES } from '@/models/lottery.model'
-import {
-  IS_DEMO_MODE,
-  SPORT_REPORTS,
-  TRADITIONAL_REPORT,
-  createDemoCards,
-} from './home-data'
+import { formatDrawDate, formatIssue } from '@/utils/lottery-format'
+import { SPORT_REPORTS, TRADITIONAL_REPORT, createDemoCards } from './home-data'
 import { createLoadingCards, toCardView, type LotteryCardView } from './lottery-view-model'
 import styles from './index.module.scss'
 
 const IS_H5 = process.env.TARO_ENV === 'h5'
-const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
-
-function pad(value: number): string {
-  return String(value).padStart(2, '0')
-}
-
-/** '2026-11-17' → '11-17 周二' */
-function formatDrawDate(value: string): string {
-  const [year, month, day] = value.split('-').map(Number)
-  if (!year || !month || !day) {
-    return value
-  }
-  const weekday = new Date(year, month - 1, day).getDay()
-  return `${pad(month)}-${pad(day)} 周${WEEKDAYS[weekday]}`
-}
-
-function formatIssue(issue: string): string {
-  return issue.endsWith('期') ? issue : `${issue}期`
-}
 
 export default function HomePage() {
   const requestId = useRef(0)
   const [cards, setCards] = useState<LotteryCardView[]>(createLoadingCards)
   const [topInset, setTopInset] = useState(IS_H5 ? 20 : 64)
+  const [shareOpen, setShareOpen] = useState(OPEN_SHARE_ON_LOAD)
+
+  /** 海报组件自己取当期开奖数据，这里只负责打开弹层 */
+  const openShare = () => setShareOpen(true)
 
   useEffect(() => {
     if (IS_H5) {
@@ -103,6 +86,14 @@ export default function HomePage() {
   return (
     <View className={styles.page}>
       <View className={styles.content} style={{ paddingTop: `${topInset}px` }}>
+        <View className={styles.pageHead}>
+          <Text className={styles.pageTitle}>开奖速览</Text>
+          <View className={styles.shareEntry} onClick={openShare}>
+            <Text className={styles.shareIcon}>↗</Text>
+            <Text className={styles.shareText}>分享开奖</Text>
+          </View>
+        </View>
+
         <View className={styles.summaryCard}>
           {SPORT_REPORTS.map((report, index) => (
             <Fragment key={report.key}>
@@ -208,6 +199,8 @@ export default function HomePage() {
       </View>
 
       <TabBar active='home' />
+
+      <ResultPoster visible={shareOpen} onClose={() => setShareOpen(false)} />
     </View>
   )
 }

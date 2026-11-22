@@ -1,0 +1,217 @@
+@use '@/styles/variables.scss' as *;
+
+@keyframes poster-grow {
+  from {
+    opacity: 0;
+    transform: scale(0.86) translateY(24rpx);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes poster-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-md;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+}
+
+.backdrop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(15, 18, 24, 0.62);
+}
+
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 680rpx;
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+  box-shadow: $shadow-popup;
+  transform-origin: center;
+  animation: poster-grow 0.28s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.heading {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1rpx solid $color-border;
+}
+
+.title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.closeButton {
+  @include flex-center;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+}
+
+.closeIcon {
+  font-size: $font-size-xl;
+  line-height: 1;
+  color: $color-text-tertiary;
+}
+
+.gameBar {
+  flex-shrink: 0;
+  padding: $spacing-sm $spacing-md 0;
+  white-space: nowrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 56rpx;
+  padding: 0 $spacing-md;
+  margin-right: $spacing-sm;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+}
+
+.chipActive {
+  background: rgba(229, 57, 53, 0.1);
+}
+
+.chipOff {
+  opacity: 0.45;
+}
+
+.chipText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.chipActive .chipText {
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.scrollBody {
+  flex: 1;
+  min-height: 0;
+  max-height: 62vh;
+  padding: $spacing-md;
+}
+
+.posterWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 520rpx;
+  border-radius: $radius-md;
+  background: $color-bg-page;
+}
+
+.posterImage {
+  width: 100%;
+  border-radius: $radius-md;
+  box-shadow: $shadow-card;
+}
+
+.placeholder {
+  @include flex-center;
+  flex-direction: column;
+  padding: $spacing-xl 0;
+}
+
+.spinner {
+  width: 44rpx;
+  height: 44rpx;
+  margin-bottom: $spacing-sm;
+  border: 4rpx solid $color-border;
+  border-top-color: $color-primary;
+  border-radius: $radius-round;
+  animation: poster-spin 0.9s linear infinite;
+}
+
+.placeholderText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.placeholderHint {
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: $spacing-sm;
+  padding: 0 $spacing-md;
+}
+
+.actionBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-button;
+}
+
+.actionGhost {
+  border: 2rpx solid $color-border;
+  background: $color-bg-card;
+}
+
+.actionGhost .actionText {
+  color: $color-text-primary;
+}
+
+.actionPrimary {
+  background: $color-primary;
+}
+
+.actionPrimary .actionText {
+  color: $color-text-white;
+}
+
+.actionDisabled {
+  opacity: 0.5;
+}
+
+.actionText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+}
+
+.tip {
+  flex-shrink: 0;
+  padding: $spacing-sm $spacing-md calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $color-text-tertiary;
+  text-align: center;
+}
