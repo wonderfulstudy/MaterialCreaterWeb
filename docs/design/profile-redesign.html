@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>「我的」页改版 · 四状态视觉样稿（375 画板 / 750rpx）</title>
+<style>
+:root{
+  --page:#e5e5ea; --card:#ffffff; --ink:#1c1c1e; --muted:#8e8e93; --hair:#f0f0f2;
+  --yellow:#ecc97a; --red:#ff383c; --blue:#0088ff; --tab:#f2f2f5; --green:#34c759;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{overflow-x:hidden}
+body{background:var(--ink);color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+.stage{width:375px;margin:0 auto;padding:0 0 26px}
+
+.doc{padding:24px 14px 18px}
+.doc-kicker{color:var(--yellow);font-size:11px;font-weight:700;letter-spacing:1.2px}
+.doc h1{margin:8px 0 10px;font-size:20px;font-weight:700;line-height:1.35;color:#ffffff}
+.doc-meta{color:var(--muted);font-size:11px;line-height:1.7}
+.doc-meta b{color:#ffffff;font-weight:600}
+
+.state+.state{margin-top:20px}
+.state-cap{display:flex;align-items:baseline;gap:8px;padding:0 14px 10px}
+.cap-idx{color:var(--yellow);font-size:11px;font-weight:700;letter-spacing:1px}
+.cap-name{color:#ffffff;font-size:13px;font-weight:600}
+.cap-note{color:var(--muted);font-size:11px}
+.screen{display:flex;flex-direction:column;min-height:700px;overflow:hidden;border-radius:14px;background:var(--page);color:var(--ink)}
+
+.statusbar{display:flex;align-items:center;justify-content:space-between;height:22px;padding:0 16px;color:var(--ink);font-size:10px;font-weight:600}
+.sb-icons{display:flex;align-items:center;gap:5px}
+.sb-bars{display:flex;align-items:flex-end;gap:2px;height:8px}
+.sb-bars i{display:block;width:2px;border-radius:1px;background:var(--ink)}
+.sb-bars i:nth-child(1){height:3px}
+.sb-bars i:nth-child(2){height:5px}
+.sb-bars i:nth-child(3){height:7px}
+.sb-bars i:nth-child(4){height:8px}
+.sb-batt{position:relative;display:block;width:20px;height:9px;border:1px solid var(--muted);border-radius:2px}
+.sb-batt::before{content:"";position:absolute;left:1px;top:1px;right:6px;bottom:1px;border-radius:1px;background:var(--ink)}
+.sb-batt::after{content:"";position:absolute;right:-3px;top:2px;width:2px;height:5px;border-radius:0 1px 1px 0;background:var(--muted)}
+
+.content{flex:1;padding:0 14px 15px}
+.page-title{margin:9px 0 13px;font-size:24px;font-weight:700;line-height:1.25;color:var(--ink)}
+.card{border-radius:14px;background:var(--card)}
+
+.id-card{display:flex;align-items:center;min-height:80px;padding:16px}
+.avatar{display:flex;width:48px;height:48px;flex-shrink:0;align-items:center;justify-content:center;border-radius:999px;background:var(--yellow);color:var(--ink);font-size:20px;font-weight:700;line-height:1}
+.avatar-empty{background:var(--tab)}
+.person{position:relative;display:block;width:26px;height:26px}
+.person::before{content:"";position:absolute;left:9px;top:2px;width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.person::after{content:"";position:absolute;left:4px;top:13px;width:18px;height:9px;border-radius:9px 9px 0 0;background:var(--muted)}
+.id-main{display:flex;min-width:0;flex:1;flex-direction:column;margin-left:12px}
+.id-name{font-size:17px;font-weight:600;line-height:1.3;color:var(--ink)}
+.id-name-quiet{font-weight:500;color:var(--muted)}
+.id-flag{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:11px;line-height:1.3;color:var(--green)}
+.dot{display:block;width:5px;height:5px;flex-shrink:0;border-radius:50%;background:var(--green)}
+.id-sub{margin-top:4px;font-size:11px;line-height:1.35;color:var(--muted)}
+.id-act{display:flex;flex-shrink:0;align-items:center;gap:3px;margin-left:8px;font-size:12px;font-weight:500;line-height:1.3;color:var(--blue)}
+.chev{display:block;width:4px;height:4px;margin-top:-2px;border-top:1px solid var(--blue);border-right:1px solid var(--blue);transform:rotate(45deg)}
+
+.btn{display:flex;width:100%;align-items:center;justify-content:center;border:0;border-radius:24px;background:transparent;color:var(--ink);font-family:inherit;font-weight:600;cursor:pointer;-webkit-appearance:none;appearance:none}
+.btn:active{opacity:.86}
+.btn-primary{background:var(--yellow);color:var(--ink)}
+.btn-soft{background:var(--tab);color:var(--ink);font-weight:500}
+.btn-lg{height:48px;font-size:14px}
+.btn-md{height:40px;font-size:13px}
+.btn-sm{height:32px;font-size:13px}
+.btn-auto{width:auto;flex-shrink:0;margin-left:8px;padding:0 12px}
+
+.qr-card{margin-top:12px;padding:14px}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.card-title{font-size:14px;font-weight:600;line-height:1.3;color:var(--ink)}
+.card-meta{font-size:11px;line-height:1.3;color:var(--muted)}
+.qr-slot{display:flex;width:210px;height:210px;margin:0 auto;flex-direction:column;align-items:center;justify-content:center;border:1px dashed var(--muted);border-radius:8px;background:var(--tab)}
+.slot-t{margin-top:8px;font-size:13px;font-weight:600;line-height:1.3;color:var(--ink)}
+.slot-s{margin-top:4px;font-size:11px;line-height:1.4;color:var(--muted)}
+.slot-t-weak{font-weight:500;color:var(--muted)}
+.pic{position:relative;display:block;width:36px;height:36px;border:2px solid var(--muted);border-radius:6px}
+.pic::before{content:"";position:absolute;left:6px;top:6px;width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.pic::after{content:"";position:absolute;left:5px;bottom:5px;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:12px solid var(--muted)}
+.lock{position:relative;display:block;width:20px;height:16px;border:2px solid var(--muted);border-radius:3px}
+.lock::before{content:"";position:absolute;left:3px;top:-9px;width:10px;height:9px;border:2px solid var(--muted);border-bottom:0;border-radius:6px 6px 0 0}
+.qr-cta{margin-top:12px}
+.qr-hint{margin-top:8px;font-size:12px;line-height:1.4;text-align:center;color:var(--muted)}
+.steps{margin-top:12px;padding-top:12px;border-top:1px solid var(--hair)}
+.steps-h{display:block;margin-bottom:6px;font-size:11px;line-height:1.4;color:var(--muted)}
+.step{display:flex;align-items:flex-start;gap:6px;margin-top:6px}
+.num{display:flex;width:16px;height:16px;flex-shrink:0;align-items:center;justify-content:center;border-radius:50%;background:var(--tab);color:var(--ink);font-size:11px;font-style:normal;line-height:1}
+.step span:last-child{flex:1;font-size:11px;line-height:1.5;color:var(--muted)}
+.qr-frame{width:238px;margin:0 auto;padding:14px;border-radius:10px;background:var(--card);box-shadow:0 0 0 1px var(--hair)}
+.qr-grid{display:grid;width:210px;height:210px;grid-template-columns:repeat(25,1fr);grid-template-rows:repeat(25,1fr);background:var(--card)}
+.qr-grid i{display:block}
+.qr-grid i.on{background:var(--ink)}
+.btn-row{display:flex;gap:10px;margin-top:8px}
+.btn-row .btn{width:auto;flex:1}
+
+.menu{margin-top:12px;padding:0 14px}
+.menu-row{display:flex;height:54px;align-items:center}
+.menu-icon{display:flex;width:28px;height:28px;flex-shrink:0;align-items:center;justify-content:center;border-radius:7px;background:var(--hair);color:var(--ink);font-size:12px;font-weight:600;line-height:1}
+.menu-label{margin-left:10px;font-size:14px;line-height:1.3;color:var(--ink)}
+.menu-arrow{display:block;width:6px;height:6px;margin-left:auto;border-top:2px solid var(--muted);border-right:2px solid var(--muted);transform:rotate(45deg)}
+.menu-hair{height:1px;margin-left:38px;background:var(--hair)}
+.ver{margin-top:20px;font-size:11px;line-height:1.4;text-align:center;color:var(--muted)}
+
+.tabbar{display:flex;height:75px;margin-top:auto;background:var(--tab)}
+.tab{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center}
+.pill{display:flex;width:60px;height:28px;align-items:center;justify-content:center;border-radius:999px}
+.pill-on{background:var(--yellow)}
+.tab-label{margin-top:5px;font-size:13px;line-height:1.2;color:var(--muted)}
+.tab-label-on{font-weight:600;color:var(--ink)}
+.ico{position:relative;display:block;width:22px;height:22px;--ic:var(--muted)}
+.ico-on{--ic:var(--ink)}
+.ico-home::before{content:"";position:absolute;left:3px;top:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:8px solid var(--ic)}
+.ico-home::after{content:"";position:absolute;left:5px;top:7px;width:12px;height:12px;border-radius:2px;background:var(--ic)}
+.ico-mat::before{content:"";position:absolute;left:3px;top:2px;width:16px;height:18px;border:2px solid var(--ic);border-radius:3px}
+.ico-mat::after{content:"";position:absolute;left:7px;top:8px;width:8px;height:2px;background:var(--ic);box-shadow:0 4px 0 0 var(--ic)}
+.ico-me::before{content:"";position:absolute;left:7px;top:2px;width:8px;height:8px;border-radius:50%;background:var(--ic)}
+.ico-me::after{content:"";position:absolute;left:4px;top:12px;width:14px;height:8px;border-radius:7px 7px 0 0;background:var(--ic)}
+
+.legend{padding:6px 14px 0}
+.legend-h{margin-bottom:10px;font-size:11px;line-height:1.6;color:var(--muted)}
+.swatches{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;list-style:none}
+.swatches li{display:flex;align-items:center;gap:6px;font-size:11px;line-height:1.3;color:var(--muted)}
+.sw{display:block;width:12px;height:12px;flex-shrink:0;border-radius:3px;box-shadow:0 0 0 1px var(--muted)}
+</style>
+</head>
+<body>
+  <!-- 375px 画板 = 750rpx，1rpx = 0.5px；本文件所有 px 值 = docs/profile-redesign-spec.md 中的 rpx ÷ 2 -->
+  <div class="stage">
+    <header class="doc">
+      <p class="doc-kicker">彩店管理助手 · Taro 小程序</p>
+      <h1>「我的」页改版 · 四状态样稿</h1>
+      <p class="doc-meta">画板 375px = 750rpx · 1rpx = 0.5px · 尺寸/文案/验收全部见 <b>docs/profile-redesign-spec.md</b></p>
+      <p class="doc-meta">四段自上而下按状态编号；TabBar 实际 fixed 于视口底部，样稿按整页长图渲染。</p>
+    </header>
+
+  <section class="state">
+    <div class="state-cap"><span class="cap-idx">01</span><span class="cap-name">未登录 / 登录失败</span><span class="cap-note">身份卡「— 未登录 —」+ 二维码卡弱化引导</span></div>
+    <div class="screen">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="sb-icons"><span class="sb-bars"><i></i><i></i><i></i><i></i></span><span class="sb-batt"></span></span>
+      </div>
+      <div class="content">
+        <h2 class="page-title">我的</h2>
+        <div class="card id-card">
+          <div class="avatar avatar-empty"><i class="person"></i></div>
+          <div class="id-main">
+            <span class="id-name id-name-quiet">— 未登录 —</span>
+            <span class="id-sub">登录后可同步昵称与头像</span>
+          </div>
+          <button type="button" class="btn btn-primary btn-md btn-auto">微信一键登录</button>
+        </div>
+        <div class="card qr-card">
+          <div class="card-head"><span class="card-title">我的微信二维码</span><span class="card-meta">未登录</span></div>
+          <div class="qr-slot">
+            <i class="lock"></i>
+            <span class="slot-t slot-t-weak">登录后可管理你的二维码</span>
+            <span class="slot-s">完成上方登录即可导入</span>
+          </div>
+        </div>
+        <div class="card menu">
+          <div class="menu-row"><span class="menu-icon">素</span><span class="menu-label">推荐单素材</span><i class="menu-arrow"></i></div>
+          <div class="menu-hair"></div>
+          <div class="menu-row"><span class="menu-icon">算</span><span class="menu-label">场次计算器</span><i class="menu-arrow"></i></div>
+          <div class="menu-hair"></div>
+          <div class="menu-row"><span class="menu-icon">i</span><span class="menu-label">关于小程序</span><i class="menu-arrow"></i></div>
+        </div>
+        <p class="ver">彩店管理助手 · v1.0.0</p>
+      </div>
+      <div class="tabbar">
+        <div class="tab"><span class="pill"><i class="ico ico-home"></i></span><span class="tab-label">首页</span></div>
+        <div class="tab"><span class="pill"><i class="ico ico-mat"></i></span><span class="tab-label">素材</span></div>
+        <div class="tab"><span class="pill pill-on"><i class="ico ico-me ico-on"></i></span><span class="tab-label tab-label-on">我的</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="state">
+    <div class="state-cap"><span class="cap-idx">02</span><span class="cap-name">已登录</span><span class="cap-note">绿色登录标识 · openid 脱敏 · 编辑昵称头像入口</span></div>
+    <div class="screen">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="sb-icons"><span class="sb-bars"><i></i><i></i><i></i><i></i></span><span class="sb-batt"></span></span>
+      </div>
+      <div class="content">
+        <h2 class="page-title">我的</h2>
+        <div class="card id-card">
+          <div class="avatar">王</div>
+          <div class="id-main">
+            <span class="id-name">老王彩店</span>
+            <span class="id-flag"><i class="dot"></i>微信已登录</span>
+            <span class="id-sub">openid …jklmn</span>
+          </div>
+          <span class="id-act">编辑昵称头像<i class="chev"></i></span>
+        </div>
+        <div class="card qr-card">
+          <div class="card-head"><span class="card-title">我的微信二维码</span><span class="card-meta">未导入</span></div>
+          <div class="qr-slot">
+            <i class="pic"></i>
+            <span class="slot-t">还没有导入二维码</span>
+            <span class="slot-s">导入后客户可直接扫码加你</span>
+          </div>
+          <button type="button" class="btn btn-primary btn-lg qr-cta">从相册导入我的微信二维码</button>
+          <div class="steps">
+            <span class="steps-h">操作步骤</span>
+            <div class="step"><i class="num">1</i><span>打开微信 → 我 → 点击顶部头像</span></div>
+            <div class="step"><i class="num">2</i><span>进入「二维码名片」，截图保存到相册</span></div>
+            <div class="step"><i class="num">3</i><span>回到这里，从相册选择刚才的截图</span></div>
+          </div>
+        </div>
+        <div class="card menu">
+          <div class="menu-row"><span class="menu-icon">素</span><span class="menu-label">推荐单素材</span><i class="menu-arrow"></i></div>
+          <div class="menu-hair"></div>
+          <div class="menu-row"><span class="menu-icon">算</span><span class="menu-label">场次计算器</span><i class="menu-arrow"></i></div>
+          <div class="menu-hair"></div>
+          <div class="menu-row"><span class="menu-icon">i</span><span class="menu-label">关于小程序</span><i class="menu-arrow"></i></div>
+        </div>
+        <p class="ver">彩店管理助手 · v1.0.0</p>
+      </div>
+      <div class="tabbar">
+        <div class="tab"><span class="pill"><i class="ico ico-home"></i></span><span class="tab-label">首页</span></div>
+        <div class="tab"><span class="pill"><i class="ico ico-mat"></i></span><span class="tab-label">素材</span></div>
+        <div class="tab"><span class="pill pill-on"><i class="ico ico-me ico-on"></i></span><span class="tab-label tab-label-on">我的</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="state">
+    <div class="state-cap"><span class="cap-idx">03</span><span class="cap-name">二维码空态</span><span class="cap-note">420rpx 虚线占位 + 导入主按钮 + 三行操作说明</span></div>
+    <div class="screen">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="sb-icons"><span class="sb-bars"><i></i><i></i><i></i><i></i></span><span class="sb-batt"></span></span>
+      </div>
+      <div class="content">
+        <h2 class="page-title">我的</h2>
+        <div class="card id-card">
+          <div class="avatar">王</div>
+          <div class="id-main">
+            <span class="id-name">老王彩店</span>
+            <span class="id-flag"><i class="dot"></i>微信已登录</span>
+            <span class="id-sub">openid …jklmn</span>
+          </div>
+          <span class="id-act">编辑昵称头像<i class="chev"></i></span>
+        </div>
+        <div class="card qr-card">
+          <div class="card-head"><span class="card-title">我的微信二维码</span><span class="card-meta">未导入</span></div>
+          <div class="qr-slot">
+            <i class="pic"></i>
+            <span class="slot-t">还没有导入二维码</span>
+            <span class="slot-s">导入后客户可直接扫码加你</span>
+          </div>
+          <button type="button" class="btn btn-primary btn-lg qr-cta">从相册导入我的微信二维码</button>
+          <div class="steps">
+            <span class="steps-h">操作步骤</span>
+            <div class="step"><i class="num">1</i><span>打开微信 → 我 → 点击顶部头像</span></div>
+            <div class="step"><i class="num">2</i><span>进入「二维码名片」，截图保存到相册</span></div>
+            <div class="step"><i class="num">3</i><span>回到这里，从相册选择刚才的截图</span></div>
+          </div>
+        </div>
+        <div class="card menu">
+          <div class="menu-row"><span class="menu-icon">素</span><span class="menu-label">推荐单素材</span><i class="menu-arrow"></i></div>
+          <div class="menu-hair"></div>
+          <div class="menu-row"><span class="menu-icon">算</span><span class="menu-label">场次计算器</span><i class="menu-arrow"></i></div>
+          <div class="menu-hair"></div>
+          <div class="menu-row"><span class="menu-icon">i</span><span class="menu-label">关于小程序</span><i class="menu-arrow"></i></div>
+        </div>
+        <p class="ver">彩店管理助手 · v1.0.0</p>
+      </div>
+      <div class="tabbar">
+        <div class="tab"><span class="pill"><i class="ico ico-home"></i></span><span class="tab-label">首页</span></div>
+        <div class="tab"><span class="pill"><i class="ico ico-mat"></i></span><span class="tab-label">素材</span></div>
+        <div class="tab"><span class="pill pill-on"><i class="ico ico-me ico-on"></i></span><span class="tab-label tab-label-on">我的</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="state">
+    <div class="state-cap"><span class="cap-idx">04</span><span class="cap-name">二维码已导入</span><span class="cap-note">420rpx 二维码（28rpx 白底内边距）+ 三个动作按钮</span></div>
+    <div class="screen">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="sb-icons"><span class="sb-bars"><i></i><i></i><i></i><i></i></span><span class="sb-batt"></span></span>
+      </div>
+      <div class="content">
+        <h2 class="page-title">我的</h2>
+        <div class="card id-card">
+          <div class="avatar">王</div>
+          <div class="id-main">
+            <span class="id-name">老王彩店</span>
+            <span class="id-flag"><i class="dot"></i>微信已登录</span>
+            <span class="id-sub">openid …jklmn</span>
+          </div>
+          <span class="id-act">编辑昵称头像<i class="chev"></i></span>
+        </div>
+        <div class="card qr-card">
+          <div class="card-head"><span class="card-title">我的微信二维码</span><span class="card-meta">已导入</span></div>
+          <div class="qr-frame"><div class="qr-grid" data-qr></div></div>
+          <p class="qr-hint">客户扫码即可加我微信</p>
+          <button type="button" class="btn btn-primary btn-lg qr-cta">保存到相册</button>
+          <div class="btn-row">
+            <button type="button" class="btn btn-soft btn-sm">生成分享海报</button>
+            <button type="button" class="btn btn-soft btn-sm">更换</button>
+          </div>
+        </div>
+        <div class="card menu">
+          <div class="menu-row"><span class="menu-icon">素</span><span class="menu-label">推荐单素材</span><i class="menu-arrow"></i></div>
+          <div class="menu-hair"></div>
+          <div class="menu-row"><span class="menu-icon">算</span><span class="menu-label">场次计算器</span><i class="menu-arrow"></i></div>
+          <div class="menu-hair"></div>
+          <div class="menu-row"><span class="menu-icon">i</span><span class="menu-label">关于小程序</span><i class="menu-arrow"></i></div>
+        </div>
+        <p class="ver">彩店管理助手 · v1.0.0</p>
+      </div>
+      <div class="tabbar">
+        <div class="tab"><span class="pill"><i class="ico ico-home"></i></span><span class="tab-label">首页</span></div>
+        <div class="tab"><span class="pill"><i class="ico ico-mat"></i></span><span class="tab-label">素材</span></div>
+        <div class="tab"><span class="pill pill-on"><i class="ico ico-me ico-on"></i></span><span class="tab-label tab-label-on">我的</span></div>
+      </div>
+    </div>
+  </section>
+
+    <footer class="legend">
+      <p class="legend-h">视觉令牌：全文件仅出现下列 10 个十六进制色值，未新增任何颜色（含 rgba / hsl / 命名色）。</p>
+      <ul class="swatches">
+        <li><i class="sw" style="background:#e5e5ea"></i>页面底 #e5e5ea</li>
+        <li><i class="sw" style="background:#ffffff"></i>卡片 #ffffff</li>
+        <li><i class="sw" style="background:#1c1c1e"></i>主文字 #1c1c1e</li>
+        <li><i class="sw" style="background:#8e8e93"></i>次要 #8e8e93</li>
+        <li><i class="sw" style="background:#f0f0f2"></i>分隔 #f0f0f2</li>
+        <li><i class="sw" style="background:#ecc97a"></i>强调黄 #ecc97a</li>
+        <li><i class="sw" style="background:#ff383c"></i>红 #ff383c</li>
+        <li><i class="sw" style="background:#0088ff"></i>蓝 #0088ff</li>
+        <li><i class="sw" style="background:#f2f2f5"></i>TabBar #f2f2f5</li>
+        <li><i class="sw" style="background:#34c759"></i>已登录绿 #34c759</li>
+      </ul>
+    </footer>
+  </div>
+
+  <script>
+  /* 二维码占位：纯 CSS 方块格子（25×25 模块 + 三个定位图案 + 一个校正图案），无任何图片资源 */
+  (function () {
+    var N = 25;
+    var box = document.querySelector('.qr-grid');
+    if (!box) return;
+    var seed = 20261121;
+    function rnd() {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    }
+    function finder(lr, lc) {
+      if (lr === 0 || lr === 6 || lc === 0 || lc === 6) return true;
+      if (lr === 1 || lr === 5 || lc === 1 || lc === 5) return false;
+      return lr >= 2 && lr <= 4 && lc >= 2 && lc <= 4;
+    }
+    function aligner(lr, lc) {
+      if (lr === 0 || lr === 4 || lc === 0 || lc === 4) return true;
+      return lr === 2 && lc === 2;
+    }
+    var out = '';
+    for (var r = 0; r < N; r++) {
+      for (var c = 0; c < N; c++) {
+        var on;
+        if (r < 7 && c < 7) on = finder(r, c);
+        else if (r < 7 && c >= N - 7) on = finder(r, c - (N - 7));
+        else if (r >= N - 7 && c < 7) on = finder(r - (N - 7), c);
+        else if (r >= N - 9 && r <= N - 5 && c >= N - 9 && c <= N - 5) on = aligner(r - (N - 9), c - (N - 9));
+        else if (r === 6 || c === 6) on = (r + c) % 2 === 0;
+        else on = rnd() < 0.46;
+        out += on ? '<i class="on"></i>' : '<i></i>';
+      }
+    }
+    box.innerHTML = out;
+  })();
+  </script>
+</body>
+</html>

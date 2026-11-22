@@ -11,6 +11,8 @@ export interface GameType {
 export interface AppConfigType {
   app : {
     name: string
+    api_base_url: string
+    auth_mock: boolean
     lottery_base_url: string
     cwl_base_url: string
     football_base_url: string

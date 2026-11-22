@@ -11,6 +11,8 @@ import type { AppConfigType } from './types'
 const config: AppConfigType = {
   app: {
     name: "彩店管理助手",
+    api_base_url: "",
+    auth_mock: true,
     lottery_base_url: "https://webapi.sporttery.cn/gateway/lottery/getHistoryPageListV1.qry",
     cwl_base_url: "https://www.cwl.gov.cn/cwl_admin/front/cwlkj/search/kjxx/findDrawNotice",
     football_base_url: "https://webapi.sporttery.cn/gateway/jc/football/getMatchCalculatorV1.qry",
