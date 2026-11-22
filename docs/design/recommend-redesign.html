@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>素材页改版 · 方案细节卡片</title>
+<style>
+  :root{
+    --page:#e5e5ea; --card:#fff; --ink:#111; --muted:#8e8e93; --hair:#f0f0f2;
+    --red:#ff383c; --navy:#102c67; --tab:#f2f2f5; --yellow:#ecc97a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0; background:#17181c; color:#e9e9ee;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:28px 20px 40px}
+  header h1{font-size:20px;margin:0 0 8px;font-weight:600;letter-spacing:.2px}
+  header p{margin:0;color:#9a9aa4;font-size:13px;line-height:1.65}
+  header p b{color:#e9e9ee;font-weight:600}
+  .frames{display:flex;gap:36px;justify-content:center;flex-wrap:wrap;margin-top:26px;align-items:flex-start}
+  .variant{width:375px}
+  .vhead{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+  .tag{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:#2a2b31;color:#c9c9d2}
+  .tag.rec{background:var(--red);color:#fff}
+  .vhead h2{font-size:14px;margin:0;font-weight:600;color:#e9e9ee}
+  .why{margin:12px 0 0;padding:0 0 0 16px;color:#9a9aa4;font-size:12px;line-height:1.85}
+  .why li{margin-bottom:2px}
+  .why b{color:#d7d7de;font-weight:600}
+  .pick{
+    width:100%;margin-top:14px;height:44px;border:0;border-radius:12px;font-size:14px;font-weight:600;
+    background:#2a2b31;color:#fff;cursor:pointer;font-family:inherit;
+  }
+  .pick.primary{background:var(--red)}
+  .pick:active{opacity:.85}
+
+  /* ===== 手机壳 ===== */
+  .phone{
+    width:375px;height:636px;background:var(--page);border-radius:26px;overflow-y:auto;overflow-x:hidden;
+    position:relative;box-shadow:0 18px 50px rgba(0,0,0,.5);color:var(--ink);
+    scrollbar-width:none;
+  }
+  .phone::-webkit-scrollbar{display:none}
+  .statusbar{height:22px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:10px;font-weight:600;color:#111;background:var(--tab)}
+  .navbar{height:44px;background:var(--tab);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#111}
+  .body{padding:12px 14px 210px}
+
+  /* 顶部：项目下拉 + 赛程状态（计算器按钮已移除） */
+  .topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .dd{display:flex;align-items:center;gap:4px;height:34px;padding:0 14px;background:#fff;border:1px solid rgba(255,56,60,.18);border-radius:999px;font-size:15px;font-weight:600;color:var(--red)}
+  .dd svg{opacity:.7}
+  .sched{flex:1;min-width:0;text-align:right;font-size:10px;color:var(--muted)}
+
+  .caption{display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;font-size:11px;color:var(--muted)}
+  .caption b{color:#111;font-weight:600}
+
+  /* ===== 方案 A：票据式 ===== */
+  .a-card{background:var(--card);border-radius:14px;overflow:hidden;margin-bottom:12px;box-shadow:0 1px 2px rgba(16,44,103,.05)}
+  .a-head{display:flex;align-items:center;justify-content:space-between;padding:13px 14px 11px}
+  .a-name{font-size:15px;font-weight:600;letter-spacing:.2px}
+  .a-meta{display:flex;align-items:center;gap:8px}
+  .pill{font-size:10px;font-weight:600;color:var(--navy);background:#eef2fb;border-radius:5px;padding:3px 7px;letter-spacing:.3px}
+  .a-count{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .a-leg{display:flex;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid var(--hair)}
+  .a-leg-main{flex:1;min-width:0}
+  .a-teams{font-size:13px;font-weight:500;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .a-teams i{color:#c7c7cc;font-style:normal;font-size:10px;margin:0 3px}
+  .a-sub{margin-top:2px;font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+  .a-opt{font-size:12px;font-weight:600;color:var(--navy);text-align:right;white-space:nowrap}
+  .a-odds{font-size:14px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;line-height:1.3}
+  .a-leg-right{flex:0 0 88px}
+  .a-money{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:11px 14px;background:#fafafb;border-top:1px solid var(--hair)}
+  .a-mlabel{display:block;font-size:10px;color:var(--muted);margin-bottom:2px}
+  .a-mvalue{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+  .a-bonus{font-size:22px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums;letter-spacing:-.4px}
+  .a-right{text-align:right}
+  .a-actions{display:flex;border-top:1px solid var(--hair)}
+  .a-act{flex:1;height:42px;border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:600;color:#111;cursor:pointer}
+  .a-act.primary{color:var(--red)}
+  .a-act+.a-act{border-left:1px solid var(--hair)}
+  .a-act:active{background:#f7f7f9}
+
+  /* 空卡：未选比赛 */
+  .empty-legs{padding:16px 14px;border-top:1px solid var(--hair);text-align:center}
+  .empty-legs div:first-child{font-size:13px;color:#111;font-weight:500}
+  .empty-legs div:last-child{margin-top:3px;font-size:11px;color:var(--muted)}
+
+  /* ===== 方案 B：卡片式指标 ===== */
+  .b-card{background:var(--card);border-radius:16px;overflow:hidden;margin-bottom:12px;box-shadow:0 2px 14px rgba(16,44,103,.06);border-left:4px solid var(--red)}
+  .b-head{display:flex;align-items:center;gap:8px;padding:14px 14px 10px}
+  .b-name{font-size:16px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .b-pass{font-size:10px;font-weight:700;color:#fff;background:var(--navy);border-radius:5px;padding:3px 7px}
+  .b-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 12px}
+  .b-chip{width:calc(50% - 4px);background:#f7f7f9;border-radius:9px;padding:8px 9px}
+  .b-chip-t{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
+  .b-chip-f{display:flex;align-items:baseline;justify-content:space-between;margin-top:4px}
+  .b-chip-f span{font-size:10px;color:var(--navy);font-weight:600}
+  .b-chip-f b{font-size:14px;font-variant-numeric:tabular-nums}
+  .b-money{display:flex;align-items:stretch;margin:0 14px 12px;background:#fafafb;border-radius:10px}
+  .b-cell{flex:1;padding:9px 11px}
+  .b-cell span{display:block;font-size:10px;color:var(--muted);margin-bottom:3px}
+  .b-cell b{font-size:17px;font-variant-numeric:tabular-nums;font-weight:600}
+  .b-cell b.red{color:var(--red);font-size:19px;font-weight:700}
+  .b-cell.right{text-align:right}
+  .b-sep{width:1px;background:var(--hair);margin:9px 0}
+  .b-actions{display:flex;gap:8px;padding:0 14px 14px}
+  .b-act{flex:1;height:38px;border-radius:9px;border:0;background:var(--ink);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .b-act.ghost{background:#fff;color:#111;border:1px solid #dcdce0}
+
+  /* ===== 底部操作栏 + TabBar ===== */
+  .bottom{
+    position:sticky;bottom:0;margin-top:10px;background:rgba(255,255,255,.97);border-top:1px solid var(--hair);
+    padding:10px 14px;display:flex;gap:10px;backdrop-filter:blur(8px)
+  }
+  .bbtn{flex:1;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600}
+  .bbtn.p{background:linear-gradient(135deg,#ff5a5e,#e02027);color:#fff;box-shadow:0 6px 16px rgba(255,56,60,.28)}
+  .bbtn.g{background:#fff;border:1px solid #dcdce0;color:#111}
+  .tabbar{
+    position:sticky;bottom:0;height:66px;background:rgba(242,242,245,.96);border-top:1px solid #e6e6ea;
+    display:flex;align-items:center;justify-content:space-around;padding-bottom:6px;backdrop-filter:blur(10px)
+  }
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:#8e8e93;width:74px}
+  .tab .ic{width:34px;height:26px;display:flex;align-items:center;justify-content:center}
+  .tab.on{color:#111;font-weight:600}
+  .tab.on .ic{background:var(--yellow);border-radius:999px}
+  .tab svg{display:block}
+
+  /* ===== 说明区 ===== */
+  .notes{max-width:790px;margin:36px auto 0;background:#202127;border:1px solid #2c2d34;border-radius:16px;padding:18px 20px}
+  .notes h3{margin:0 0 10px;font-size:14px;font-weight:600}
+  .notes ul{margin:0;padding-left:18px;color:#a9a9b3;font-size:12.5px;line-height:1.9}
+  .notes li b{color:#e2e2e8;font-weight:600}
+  .foot{display:flex;gap:12px;justify-content:center;margin-top:26px}
+  .foot button{height:40px;padding:0 20px;border-radius:10px;border:1px solid #3a3b43;background:#26272d;color:#d7d7de;font-family:inherit;font-size:13px;cursor:pointer}
+  .foot button:active{opacity:.85}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>素材页改版 · 方案细节卡片</h1>
+    <p>两种卡片方案用<b>同一组数据</b>对比。<b>「计算器」按钮已从右上角移除</b>（该页仍可从「我的 → 计算器」进入）。页面底色、白卡、圆角、红/黄点缀延续首页新稿。</p>
+  </header>
+
+  <div class="frames">
+    <!-- ============ 方案 A ============ -->
+    <section class="variant">
+      <div class="vhead"><span class="tag rec">方案 A · 推荐</span><h2>票据式：场次逐行 + 金额块</h2></div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮ ⌁</span></div>
+        <div class="navbar">素材</div>
+        <div class="body">
+          <div class="topbar">
+            <div class="dd">竞足
+              <svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 1l3 3 3-3" fill="none" stroke="#ff383c" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </div>
+            <div class="sched">24 场赛程 · 12:30</div>
+          </div>
+
+          <div class="caption"><span><b>3</b> 个方案</span><span>长按卡片可改名</span></div>
+
+          <article class="a-card">
+            <div class="a-head">
+              <div class="a-name">方案 1</div>
+              <div class="a-meta"><span class="pill">3串1</span><span class="a-count">3 场 · 10 倍</span></div>
+            </div>
+            <div class="a-leg">
+              <div class="a-leg-main">
+                <div class="a-teams">阿森纳<i>vs</i>切尔西</div>
+                <div class="a-sub">英超 · 001 · 胜平负</div>
+              </div>
+              <div class="a-leg-right"><div class="a-opt">主胜</div><div class="a-odds">1.85</div></div>
+            </div>
+            <div class="a-leg">
+              <div class="a-leg-main">
+                <div class="a-teams">国际米兰<i>vs</i>尤文图斯</div>
+                <div class="a-sub">意甲 · 002 · 让球胜平负 -1</div>
+              </div>
+              <div class="a-leg-right"><div class="a-opt">让胜</div><div class="a-odds">2.10</div></div>
+            </div>
+            <div class="a-leg">
+              <div class="a-leg-main">
+                <div class="a-teams">拜仁<i>vs</i>多特蒙德</div>
+                <div class="a-sub">德甲 · 003 · 胜平负</div>
+              </div>
+              <div class="a-leg-right"><div class="a-opt">主胜</div><div class="a-odds">1.62</div></div>
+            </div>
+            <div class="a-money">
+              <div><span class="a-mlabel">投注金额</span><span class="a-mvalue">¥20</span></div>
+              <div class="a-right"><span class="a-mlabel">最高可中</span><span class="a-bonus">¥125.87</span></div>
+            </div>
+            <div class="a-actions">
+              <button class="a-act primary">上传图片</button>
+              <button class="a-act">分享方案</button>
+            </div>
+          </article>
+
+          <article class="a-card">
+            <div class="a-head">
+              <div class="a-name">方案 2</div>
+              <div class="a-meta"><span class="pill">4串1</span><span class="a-count">4 场 · 1 倍</span></div>
+            </div>
+            <div class="a-leg">
+              <div class="a-leg-main">
+                <div class="a-teams">皇家马德里<i>vs</i>巴塞罗那</div>
+                <div class="a-sub">西甲 · 004 · 总进球</div>
+              </div>
+              <div class="a-leg-right"><div class="a-opt">3球</div><div class="a-odds">1.95</div></div>
+            </div>
+            <div class="a-leg">
+              <div class="a-leg-main">
+                <div class="a-teams">巴黎<i>vs</i>马赛</div>
+                <div class="a-sub">法甲 · 005 · 胜平负</div>
+              </div>
+              <div class="a-leg-right"><div class="a-opt">主胜</div><div class="a-odds">2.35</div></div>
+            </div>
+            <div class="a-leg">
+              <div class="a-leg-main">
+                <div class="a-teams">利兹联<i>vs</i>诺维奇</div>
+                <div class="a-sub">英冠 · 006 · 让球胜平负 +1</div>
+              </div>
+              <div class="a-leg-right"><div class="a-opt">让负</div><div class="a-odds">1.72</div></div>
+            </div>
+            <div class="a-leg">
+              <div class="a-leg-main">
+                <div class="a-teams">本菲卡<i>vs</i>波尔图</div>
+                <div class="a-sub">葡超 · 007 · 胜平负</div>
+              </div>
+              <div class="a-leg-right"><div class="a-opt">平</div><div class="a-odds">3.05</div></div>
+            </div>
+            <div class="a-money">
+              <div><span class="a-mlabel">投注金额</span><span class="a-mvalue">¥2</span></div>
+              <div class="a-right"><span class="a-mlabel">最高可中</span><span class="a-bonus">¥238.40</span></div>
+            </div>
+            <div class="a-actions">
+              <button class="a-act primary">上传图片</button>
+              <button class="a-act">分享方案</button>
+            </div>
+          </article>
+
+          <article class="a-card">
+            <div class="a-head">
+              <div class="a-name">方案 3</div>
+              <div class="a-meta"><span class="a-count">未选比赛</span></div>
+            </div>
+            <div class="empty-legs">
+              <div>还没有选择比赛</div>
+              <div>点击卡片去挑选赛程</div>
+            </div>
+          </article>
+
+          <div class="bottom">
+            <div class="bbtn p">新增方案</div>
+            <div class="bbtn g">删除方案</div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg></span>首页</div>
+          <div class="tab on"><span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg></span>素材</div>
+          <div class="tab"><span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-3.4 3.8-5 7-5s5.8 1.6 7 5"/></svg></span>我的</div>
+        </div>
+      </div>
+      <ul class="why">
+        <li><b>信息完整</b>：联赛 / 场次号 / 玩法 / 盘口 / 选项全保留，逐行对齐，扫一眼就是一张票。</li>
+        <li><b>腾出一整行</b>：原来的「上传图片 / 分享方案」竖排在右侧，挤掉 128rpx 正文宽度；移到底部后正文变宽。</li>
+        <li><b>金额分主次</b>：投注金额小、最高可中红色大字，符合买彩的决策顺序。</li>
+        <li><b>场次多也稳</b>：8 场只是卡片变高，不换行不挤压。</li>
+      </ul>
+      <button class="pick primary" onclick="pick('A')">采用方案 A</button>
+    </section>
+
+    <!-- ============ 方案 B ============ -->
+    <section class="variant">
+      <div class="vhead"><span class="tag">方案 B</span><h2>卡片式：选择块 + 指标条</h2></div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮ ⌁</span></div>
+        <div class="navbar">素材</div>
+        <div class="body">
+          <div class="topbar">
+            <div class="dd">竞足
+              <svg width="8" height="5" viewBox="0 0 8 5"><path d="M1 1l3 3 3-3" fill="none" stroke="#ff383c" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </div>
+            <div class="sched">24 场赛程 · 12:30</div>
+          </div>
+
+          <div class="caption"><span><b>3</b> 个方案</span><span>长按卡片可改名</span></div>
+
+          <article class="b-card">
+            <div class="b-head">
+              <div class="b-name">方案 1</div>
+              <span class="b-pass">3串1</span>
+            </div>
+            <div class="b-chips">
+              <div class="b-chip"><div class="b-chip-t">阿森纳 vs 切尔西</div><div class="b-chip-f"><span>主胜</span><b>1.85</b></div></div>
+              <div class="b-chip"><div class="b-chip-t">国米 vs 尤文</div><div class="b-chip-f"><span>让胜 -1</span><b>2.10</b></div></div>
+              <div class="b-chip"><div class="b-chip-t">拜仁 vs 多特</div><div class="b-chip-f"><span>主胜</span><b>1.62</b></div></div>
+            </div>
+            <div class="b-money">
+              <div class="b-cell"><span>投注金额 · 10 倍</span><b>¥20</b></div>
+              <div class="b-sep"></div>
+              <div class="b-cell right"><span>最高可中</span><b class="red">¥125.87</b></div>
+            </div>
+            <div class="b-actions">
+              <button class="b-act">上传图片</button>
+              <button class="b-act ghost">分享方案</button>
+            </div>
+          </article>
+
+          <article class="b-card">
+            <div class="b-head">
+              <div class="b-name">方案 2</div>
+              <span class="b-pass">4串1</span>
+            </div>
+            <div class="b-chips">
+              <div class="b-chip"><div class="b-chip-t">皇马 vs 巴萨</div><div class="b-chip-f"><span>3球</span><b>1.95</b></div></div>
+              <div class="b-chip"><div class="b-chip-t">巴黎 vs 马赛</div><div class="b-chip-f"><span>主胜</span><b>2.35</b></div></div>
+              <div class="b-chip"><div class="b-chip-t">利兹联 vs 诺维奇</div><div class="b-chip-f"><span>让负 +1</span><b>1.72</b></div></div>
+              <div class="b-chip"><div class="b-chip-t">本菲卡 vs 波尔图</div><div class="b-chip-f"><span>平</span><b>3.05</b></div></div>
+            </div>
+            <div class="b-money">
+              <div class="b-cell"><span>投注金额 · 1 倍</span><b>¥2</b></div>
+              <div class="b-sep"></div>
+              <div class="b-cell right"><span>最高可中</span><b class="red">¥238.40</b></div>
+            </div>
+            <div class="b-actions">
+              <button class="b-act">上传图片</button>
+              <button class="b-act ghost">分享方案</button>
+            </div>
+          </article>
+
+          <article class="b-card">
+            <div class="b-head">
+              <div class="b-name">方案 3</div>
+              <span class="b-pass" style="background:#dcdce0;color:#6b6b70">未选比赛</span>
+            </div>
+            <div class="empty-legs" style="border-top:0;padding:6px 14px 18px">
+              <div>还没有选择比赛</div>
+              <div>点击卡片去挑选赛程</div>
+            </div>
+          </article>
+
+          <div class="bottom">
+            <div class="bbtn p">新增方案</div>
+            <div class="bbtn g">删除方案</div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg></span>首页</div>
+          <div class="tab on"><span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg></span>素材</div>
+          <div class="tab"><span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-3.4 3.8-5 7-5s5.8 1.6 7 5"/></svg></span>我的</div>
+        </div>
+      </div>
+      <ul class="why">
+        <li><b>更轻</b>：两张卡片就能看清方案，一屏能看更多张。</li>
+        <li><b>取舍</b>：选择块只留主队简称，缺联赛、场次号；盘口挪进小字，缩到 <b>6–8 场</b>时块数翻倍、卡片反而比 A 高。</li>
+        <li><b>对比</b>：红色左边条 + 深色主按钮，视觉更“产品化”，但与首页白卡气质略重。</li>
+      </ul>
+      <button class="pick" onclick="pick('B')">采用方案 B</button>
+    </section>
+  </div>
+
+  <div class="notes">
+    <h3>本次改动（两方案共用）</h3>
+    <ul>
+      <li><b>删除</b>右上角「计算器」按钮；顶部只留 项目下拉 + 赛程状态。</li>
+      <li>空态文案去掉“从计算器新增”，改为「点击下方新增方案」。</li>
+      <li>卡片头部：方案名 + 过关方式（3串1 胶囊）+ 场次/倍数。</li>
+      <li>金额块：投注金额（灰标签 + 深色数字）与最高可中（红色大字）分列两端。</li>
+      <li>「上传图片 / 分享方案」从右侧竖排改为卡片底部整行等分按钮。</li>
+      <li>保留：点击卡片改方案、长按改名、删除模式勾选、识别中 / 识别失败状态（沿用同一卡片外观）。</li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    <button onclick="pick('neither')">都不满意，我说下要改什么</button>
+  </div>
+</div>
+<script>
+  function post(msg){
+    try { if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.dshui) { window.webkit.messageHandlers.dshui.postMessage(msg); return; } } catch(e){}
+    try { if (window.parent && window.parent !== window) { window.parent.postMessage(msg, '*'); return; } } catch(e){}
+    try { window.postMessage(msg, '*'); } catch(e){}
+  }
+  function pick(v){ post({type:'pick', payload:{variant:v}}); }
+</script>
+</body>
+</html>

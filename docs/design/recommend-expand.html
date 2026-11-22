@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>素材页 · 方案 A + 展开收起</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    background: #f4f4f6; color: #111;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { position: absolute; left: 20px; top: 20px; width: 780px; }
+  .frames { display: flex; gap: 30px; }
+  .col { width: 375px; }
+  .cap { font-size: 12px; color: #8e8e93; margin: 0 0 8px 2px; }
+  .phone {
+    width: 375px; height: 620px; background: #e5e5ea; border-radius: 22px; overflow: hidden;
+    box-shadow: 0 6px 24px rgba(16,44,103,.12); position: relative;
+  }
+  .navbar { height: 44px; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; background: #f2f2f5; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 10px; }
+  .sport { display: flex; align-items: center; gap: 4px; height: 34px; padding: 0 14px; border-radius: 999px; background: #fff; color: #ff383c; font-size: 15px; font-weight: 700; }
+  .sport i { color: #ff383c; font-size: 10px; font-style: normal; }
+  .sched { font-size: 12px; color: #8e8e93; }
+  .captionRow { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 8px; font-size: 11px; color: #8e8e93; }
+  .captionRow b { color: #111; font-weight: 500; }
+  .list { padding: 0 12px; }
+  .card { background: #fff; border-radius: 14px; box-shadow: 0 1px 2px rgba(16,44,103,.06); margin-bottom: 12px; overflow: hidden; }
+  .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 14px 14px 12px; }
+  .nameRow { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .name { font-size: 16px; font-weight: 600; color: #111; white-space: nowrap; }
+  .toggle { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: 0; border-radius: 999px; background: #f2f2f5; color: #627595; font-size: 12px; line-height: 1; transform: rotate(0deg); }
+  .toggle.open { transform: rotate(180deg); }
+  .headRight { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding-top: 2px; }
+  .pill { font-size: 10px; font-weight: 700; color: #fff; background: #102c67; border-radius: 5px; padding: 3px 7px; }
+  .meta { font-size: 11px; color: #8e8e93; white-space: nowrap; }
+  .legs { border-top: 1px solid #f5f5f7; }
+  .leg { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #f5f5f7; }
+  .leg:last-child { border-bottom: 0; }
+  .legLeft { min-width: 0; }
+  .teams { font-size: 13px; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .teams em { font-style: normal; color: #b9b9be; font-size: 10px; margin: 0 2px; }
+  .sub { margin-top: 3px; font-size: 10px; color: #8e8e93; }
+  .legRight { text-align: right; flex-shrink: 0; }
+  .opt { font-size: 12px; font-weight: 600; color: #102c67; }
+  .odds { font-size: 14px; font-weight: 600; color: #111; font-variant-numeric: tabular-nums; margin-top: 1px; }
+  .money { display: flex; align-items: center; background: #fafafb; border-top: 1px solid #f5f5f7; }
+  .moneyCell { flex: 1; padding: 10px 14px; }
+  .moneyCell.right { text-align: right; border-left: 1px solid #f0f0f2; }
+  .label { display: block; font-size: 10px; color: #8e8e93; }
+  .value { display: block; margin-top: 2px; font-size: 17px; font-weight: 600; color: #111; font-variant-numeric: tabular-nums; }
+  .bonus { display: block; margin-top: 2px; font-size: 20px; font-weight: 700; color: #ff383c; font-variant-numeric: tabular-nums; }
+  .actions { display: flex; border-top: 1px solid #f0f0f2; }
+  .actions button { flex: 1; height: 42px; border: 0; background: #fff; font-size: 13px; font-weight: 600; }
+  .actions button + button { border-left: 1px solid #f0f0f2; }
+  .upload { color: #ff383c; }
+  .share { color: #1c1c1e; }
+  .emptyName { display: flex; align-items: center; gap: 6px; }
+  .emptyTag { font-size: 10px; color: #8e8e93; background: #f2f2f5; border-radius: 5px; padding: 3px 7px; }
+  .emptyBody { padding: 18px 14px 20px; text-align: center; border-top: 1px solid #f5f5f7; }
+  .emptyBody p { font-size: 13px; color: #111; }
+  .emptyBody span { display: block; margin-top: 4px; font-size: 11px; color: #8e8e93; }
+  .hint { margin-top: 10px; font-size: 11px; color: #8e8e93; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="frames">
+    <div class="col">
+      <div class="cap">① 收起态（默认）— 场次全部隐藏</div>
+      <div class="phone">
+        <div class="navbar">素材</div>
+        <div class="topbar">
+          <div class="sport">竞足 <i>▾</i></div>
+          <div class="sched">24 场赛程 · 12:30</div>
+        </div>
+        <div class="captionRow"><span><b>2 个方案</b></span><span>点击名称后箭头看明细</span></div>
+        <div class="list">
+          <div class="card">
+            <div class="head">
+              <div class="nameRow"><span class="name">方案 1</span><button class="toggle">▾</button></div>
+              <div class="headRight"><span class="pill">3串1</span><span class="meta">3 场 · 10 倍</span></div>
+            </div>
+            <div class="money">
+              <div class="moneyCell"><span class="label">投注金额</span><span class="value">¥20</span></div>
+              <div class="moneyCell right"><span class="label">最高可中</span><span class="bonus">¥125.87</span></div>
+            </div>
+            <div class="actions"><button class="upload">上传图片</button><button class="share">分享方案</button></div>
+          </div>
+          <div class="card">
+            <div class="head">
+              <div class="nameRow"><span class="name">方案 2</span><button class="toggle">▾</button></div>
+              <div class="headRight"><span class="pill">4串1</span><span class="meta">4 场 · 1 倍</span></div>
+            </div>
+            <div class="money">
+              <div class="moneyCell"><span class="label">投注金额</span><span class="value">¥2</span></div>
+              <div class="moneyCell right"><span class="label">最高可中</span><span class="bonus">¥238.40</span></div>
+            </div>
+            <div class="actions"><button class="upload">上传图片</button><button class="share">分享方案</button></div>
+          </div>
+          <div class="card">
+            <div class="head">
+              <div class="emptyName"><span class="name">方案 3</span><span class="emptyTag">未选比赛</span></div>
+            </div>
+            <div class="emptyBody"><p>还没有选择比赛</p><span>点击卡片去挑选赛程</span></div>
+            <div class="actions"><button class="upload">上传图片</button><button class="share">分享方案</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="cap">② 展开态 — 点箭头看全部场次</div>
+      <div class="phone">
+        <div class="navbar">素材</div>
+        <div class="topbar">
+          <div class="sport">竞足 <i>▾</i></div>
+          <div class="sched">24 场赛程 · 12:30</div>
+        </div>
+        <div class="captionRow"><span><b>2 个方案</b></span><span>点击名称后箭头看明细</span></div>
+        <div class="list">
+          <div class="card">
+            <div class="head">
+              <div class="nameRow"><span class="name">方案 2</span><button class="toggle open">▾</button></div>
+              <div class="headRight"><span class="pill">4串1</span><span class="meta">4 场 · 1 倍</span></div>
+            </div>
+            <div class="legs">
+              <div class="leg"><div class="legLeft"><div class="teams">皇家马德里 <em>vs</em> 巴塞罗那</div><div class="sub">西甲 · 004 · 总进球</div></div><div class="legRight"><div class="opt">3球</div><div class="odds">1.95</div></div></div>
+              <div class="leg"><div class="legLeft"><div class="teams">巴黎 <em>vs</em> 马赛</div><div class="sub">法甲 · 005 · 胜平负</div></div><div class="legRight"><div class="opt">主胜</div><div class="odds">2.35</div></div></div>
+              <div class="leg"><div class="legLeft"><div class="teams">利兹联 <em>vs</em> 诺维奇</div><div class="sub">英冠 · 006 · 让球胜平负 +1</div></div><div class="legRight"><div class="opt">让负</div><div class="odds">1.72</div></div></div>
+              <div class="leg"><div class="legLeft"><div class="teams">本菲卡 <em>vs</em> 波尔图</div><div class="sub">葡超 · 007 · 胜平负</div></div><div class="legRight"><div class="opt">平</div><div class="odds">3.05</div></div></div>
+            </div>
+            <div class="money">
+              <div class="moneyCell"><span class="label">投注金额</span><span class="value">¥2</span></div>
+              <div class="moneyCell right"><span class="label">最高可中</span><span class="bonus">¥238.40</span></div>
+            </div>
+            <div class="actions"><button class="upload">上传图片</button><button class="share">分享方案</button></div>
+          </div>
+          <div class="card">
+            <div class="head">
+              <div class="nameRow"><span class="name">方案 1</span><button class="toggle">▾</button></div>
+              <div class="headRight"><span class="pill">3串1</span><span class="meta">3 场 · 10 倍</span></div>
+            </div>
+            <div class="money">
+              <div class="moneyCell"><span class="label">投注金额</span><span class="value">¥20</span></div>
+              <div class="moneyCell right"><span class="label">最高可中</span><span class="bonus">¥125.87</span></div>
+            </div>
+            <div class="actions"><button class="upload">上传图片</button><button class="share">分享方案</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="hint">方案 A：白底卡片 + 逐行场次；箭头在方案名右侧，收起时只留名称/过关/金额/操作，展开后按行列出全部场次（主队 vs 客队 · 联赛·场次号·玩法 · 选项 + 赔率）。</div>
+</div>
+</body>
+</html>
