@@ -104,6 +104,10 @@
   background: rgba(229, 57, 53, 0.1);
 }
 
+.chipOff {
+  opacity: 0.45;
+}
+
 .chipText {
   font-size: $font-size-sm;
   color: $color-text-secondary;

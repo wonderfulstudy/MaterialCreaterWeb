@@ -1,5 +1,6 @@
 /**
  * 「红金票据」方案：红金渐变底 + 米色票券卡 + 票根撕口。
+ * 一张卡里可以纵向排多个彩种（每个彩种一段），号码少的彩种相邻时自动并成两列。
  * 高度与全部坐标都由 redTicketLayout 一次算清，draw 只照着这份数据画；
  * 两处各算一套的话，成图就会与 measure 的高度错位（被裁切或底部留白）。
  */
@@ -32,7 +33,7 @@ const COLORS = {
 } as const
 
 /** 设计稿固定标题：文案没有走 input 的入口，属于版式的一部分 */
-const SECTION_TITLE = '本期开奖号码'
+const CARD_TITLE = '本期开奖号码'
 /** 左栏引导语，同上由版式固定 */
 const QR_KICKER = '微信扫码'
 
@@ -43,17 +44,24 @@ const CARD_PADDING_TOP = 60
 const CARD_PADDING_BOTTOM = 48
 const CARD_MIN_HEIGHT = 580
 
-const ISSUE_SIZE = 26
-const ISSUE_GAP = 18
-const GAME_SIZE = 52
-const GAME_GAP = 26
+const TITLE_SIZE = 44
+const TITLE_DIVIDER_GAP = 22
+const TITLE_BLOCK_GAP = 40
 const DIVIDER_WIDTH = 56
 const DIVIDER_HEIGHT = 3
-const DIVIDER_GAP = 26
-const TITLE_SIZE = 24
-const TITLE_GAP = 32
-const BALLS_GAP = 34
-const DATE_SIZE = 24
+
+const NAME_SIZE = 34
+const META_SIZE = 22
+const NAME_BALLS_GAP = 26
+const BALLS_META_GAP = 20
+/** 彩种之间的间距：发丝线画在正中间 */
+const BLOCK_GAP = 44
+/** 两个短号码彩种并排时的列间距 */
+const COLUMN_GAP = 32
+/** 号码数不超过这个值才允许并排（3D、排列三这类） */
+const SHORT_GAME_BALLS = 3
+const NAME_COLUMN_SHARE = 0.5
+const META_COLUMN_SHARE = 0.45
 
 const BALL_MAX = 76
 const BALL_MIN = 46
@@ -63,7 +71,7 @@ const BALL_GAP_MIN = 8
 const BALL_PER_ROW = 6
 const BALL_ROWS_MAX = 2
 const BALL_ROW_GAP = 18
-const BLUE_GAP = 26
+const BLUE_GAP = 22
 const BLUE_PER_ROW = 2
 
 const TEAR_GAP_TOP = 44
@@ -90,6 +98,7 @@ export interface TicketTextLine {
   y: number
   size: number
   maxWidth: number
+  align?: 'left' | 'center' | 'right'
 }
 
 export interface TicketBallRow {
@@ -114,19 +123,32 @@ export interface TicketRing {
   radius: number
 }
 
+/** 一个彩种在卡内占的那一段：名称期号同一行，号码在下方，日期收尾 */
+export interface TicketGameBlock {
+  x: number
+  width: number
+  /** 与前一段并排时为 2 */
+  columns: number
+  gameName: TicketTextLine
+  issue: TicketTextLine
+  redBalls: TicketBallArea
+  /** 无蓝号时为 null，draw 据此整段跳过，不留空行 */
+  blueBalls: TicketBallArea | null
+  drawDate: TicketTextLine
+  top: number
+  bottom: number
+}
+
 export interface redTicketLayoutData {
   height: number
   width: number
   card: { x: number; y: number; width: number; height: number; radius: number }
   rings: readonly TicketRing[]
-  issue: TicketTextLine
-  gameName: TicketTextLine
-  divider: { x: number; y: number; width: number; height: number; radius: number }
-  sectionTitle: TicketTextLine
-  redBalls: TicketBallArea
-  /** 无蓝号时为 null，draw 据此整段跳过，不留空行 */
-  blueBalls: TicketBallArea | null
-  drawDate: TicketTextLine
+  title: TicketTextLine
+  titleDivider: { x: number; y: number; width: number; height: number; radius: number }
+  games: readonly TicketGameBlock[]
+  /** 段与段之间的发丝线 */
+  separators: readonly { y: number; x1: number; x2: number }[]
   tearY: number
   notches: readonly TicketRing[]
   qr: { x: number; y: number; size: number }
@@ -166,38 +188,27 @@ function centeredRow(count: number, contentX: number, contentWidth: number, diam
   return { startX: contentX + (contentWidth - rowWidth) / 2, cy, count }
 }
 
-export function redTicketLayout(input: ResultPosterInput): redTicketLayoutData {
-  const width = POSTER_WIDTH
-  const cardWidth = width - CARD_MARGIN * 2
-  const contentX = CARD_MARGIN + CARD_PADDING_X
-  const contentWidth = cardWidth - CARD_PADDING_X * 2
-  const centerX = width / 2
-  const cardY = OUTER_TOP
-
-  let cursor = cardY + CARD_PADDING_TOP
-  const issue: TicketTextLine = { x: centerX, y: cursor + ISSUE_SIZE / 2, size: ISSUE_SIZE, maxWidth: contentWidth }
-  cursor += ISSUE_SIZE + ISSUE_GAP
-  const gameName: TicketTextLine = { x: centerX, y: cursor + GAME_SIZE / 2, size: GAME_SIZE, maxWidth: contentWidth }
-  cursor += GAME_SIZE + GAME_GAP
-  const divider = {
-    x: centerX - DIVIDER_WIDTH / 2,
-    y: cursor,
-    width: DIVIDER_WIDTH,
-    height: DIVIDER_HEIGHT,
-    radius: DIVIDER_HEIGHT / 2,
+/** 一个彩种段的纵向排版：给定左上角与可用宽度，算出全部行的坐标 */
+function layoutBlock(item: ResultPosterInput, x: number, width: number, top: number, columns: number): TicketGameBlock {
+  const nameY = top + NAME_SIZE / 2
+  const gameName: TicketTextLine = { x, y: nameY, size: NAME_SIZE, maxWidth: width * NAME_COLUMN_SHARE, align: 'left' }
+  const issue: TicketTextLine = {
+    x: x + width,
+    y: nameY,
+    size: META_SIZE,
+    maxWidth: width * META_COLUMN_SHARE,
+    align: 'right',
   }
-  cursor += DIVIDER_HEIGHT + DIVIDER_GAP
-  const sectionTitle: TicketTextLine = { x: centerX, y: cursor + TITLE_SIZE / 2, size: TITLE_SIZE, maxWidth: contentWidth }
-  cursor += TITLE_SIZE + TITLE_GAP
 
-  const redCount = input.redNumbers.length
-  const redFit = redCount > 0 ? fitRows(redCount, contentWidth) : null
+  let cursor = top + NAME_SIZE + NAME_BALLS_GAP
+  const redCount = item.redNumbers.length
+  const redFit = redCount > 0 ? fitRows(redCount, width) : null
   const redRows: TicketBallRow[] = []
   if (redFit) {
     for (let row = 0; row < redFit.rows; row += 1) {
       const count = Math.min(redFit.perRow, redCount - row * redFit.perRow)
       const cy = cursor + redFit.diameter / 2 + row * (redFit.diameter + BALL_ROW_GAP)
-      redRows.push(centeredRow(count, contentX, contentWidth, redFit.diameter, redFit.gap, cy))
+      redRows.push(centeredRow(count, x, width, redFit.diameter, redFit.gap, cy))
     }
   }
   const redBottom = redFit ? cursor + redFit.rows * redFit.diameter + (redFit.rows - 1) * BALL_ROW_GAP : cursor
@@ -211,16 +222,16 @@ export function redTicketLayout(input: ResultPosterInput): redTicketLayoutData {
 
   let blueBalls: TicketBallArea | null = null
   let ballsBottom = redBottom
-  const blueCount = input.blueNumbers.length
+  const blueCount = item.blueNumbers.length
   if (blueCount > 0) {
-    // 蓝球与红球是两种号码体系，间距固定 26；红球为空时不额外留白
+    // 蓝球与红球是两种号码体系，间距固定；红球为空时不额外留白
     const blueTop = redCount > 0 ? redBottom + BLUE_GAP : redBottom
     const blueRowCount = Math.ceil(blueCount / BLUE_PER_ROW)
     const blueRows: TicketBallRow[] = []
     for (let row = 0; row < blueRowCount; row += 1) {
       const count = Math.min(BLUE_PER_ROW, blueCount - row * BLUE_PER_ROW)
       const cy = blueTop + BALL_MAX / 2 + row * (BALL_MAX + BALL_ROW_GAP)
-      blueRows.push(centeredRow(count, contentX, contentWidth, BALL_MAX, BALL_GAP_MAX, cy))
+      blueRows.push(centeredRow(count, x, width, BALL_MAX, BALL_GAP_MAX, cy))
     }
     blueBalls = {
       diameter: BALL_MAX,
@@ -232,9 +243,86 @@ export function redTicketLayout(input: ResultPosterInput): redTicketLayoutData {
     ballsBottom = blueBalls.bottom
   }
 
-  cursor = ballsBottom + BALLS_GAP
-  const drawDate: TicketTextLine = { x: centerX, y: cursor + DATE_SIZE / 2, size: DATE_SIZE, maxWidth: contentWidth }
-  const tearY = cursor + DATE_SIZE + CARD_PADDING_BOTTOM
+  cursor = ballsBottom + BALLS_META_GAP
+  const drawDate: TicketTextLine = { x, y: cursor + META_SIZE / 2, size: META_SIZE, maxWidth: width, align: 'left' }
+
+  return {
+    x,
+    width,
+    columns,
+    gameName,
+    issue,
+    redBalls,
+    blueBalls,
+    drawDate,
+    top,
+    bottom: cursor + META_SIZE,
+  }
+}
+
+function isShortGame(item: ResultPosterInput): boolean {
+  return item.redNumbers.length + item.blueNumbers.length <= SHORT_GAME_BALLS
+}
+
+/**
+ * 多彩种排版：一段一个彩种；相邻两个都是 3 个号以内的彩种时并成两列，
+ * 其余情况独占整行。段与段之间画发丝线，最后接固定的二维码票根。
+ */
+export function redTicketLayout(items: readonly ResultPosterInput[]): redTicketLayoutData {
+  const width = POSTER_WIDTH
+  const cardWidth = width - CARD_MARGIN * 2
+  const contentX = CARD_MARGIN + CARD_PADDING_X
+  const contentWidth = cardWidth - CARD_PADDING_X * 2
+  const centerX = width / 2
+  const cardY = OUTER_TOP
+
+  const title: TicketTextLine = {
+    x: centerX,
+    y: cardY + CARD_PADDING_TOP + TITLE_SIZE / 2,
+    size: TITLE_SIZE,
+    maxWidth: contentWidth,
+    align: 'center',
+  }
+  const titleDivider = {
+    x: centerX - DIVIDER_WIDTH / 2,
+    y: cardY + CARD_PADDING_TOP + TITLE_SIZE + TITLE_DIVIDER_GAP,
+    width: DIVIDER_WIDTH,
+    height: DIVIDER_HEIGHT,
+    radius: DIVIDER_HEIGHT / 2,
+  }
+
+  const games: TicketGameBlock[] = []
+  const separators: { y: number; x1: number; x2: number }[] = []
+  let cursor = titleDivider.y + DIVIDER_HEIGHT + TITLE_BLOCK_GAP
+  let index = 0
+
+  while (index < items.length) {
+    const first = items[index]
+    const second = items[index + 1]
+    const pair = Boolean(second) && isShortGame(first) && isShortGame(second)
+
+    if (pair) {
+      const columnWidth = (contentWidth - COLUMN_GAP) / 2
+      const left = layoutBlock(first, contentX, columnWidth, cursor, 2)
+      const right = layoutBlock(second, contentX + columnWidth + COLUMN_GAP, columnWidth, cursor, 2)
+      games.push(left, right)
+      cursor = Math.max(left.bottom, right.bottom)
+      index += 2
+    } else {
+      const block = layoutBlock(first, contentX, contentWidth, cursor, 1)
+      games.push(block)
+      cursor = block.bottom
+      index += 1
+    }
+
+    if (index < items.length) {
+      separators.push({ y: cursor + BLOCK_GAP / 2, x1: contentX, x2: contentX + contentWidth })
+      cursor += BLOCK_GAP
+    }
+  }
+
+  const blocksBottom = cursor
+  const tearY = blocksBottom + CARD_PADDING_BOTTOM
 
   const qr = { x: contentX + contentWidth - QR_SIZE, y: tearY + TEAR_GAP_TOP, size: QR_SIZE }
   const leftColumnWidth = qr.x - QR_COLUMN_GAP - contentX
@@ -245,6 +333,7 @@ export function redTicketLayout(input: ResultPosterInput): redTicketLayoutData {
     y: leftCursor + KICKER_SIZE / 2,
     size: KICKER_SIZE,
     maxWidth: leftColumnWidth,
+    align: 'left',
   }
   leftCursor += KICKER_SIZE + KICKER_GAP
   const qrCaption: TicketTextLine = {
@@ -252,6 +341,7 @@ export function redTicketLayout(input: ResultPosterInput): redTicketLayoutData {
     y: leftCursor + CAPTION_SIZE / 2,
     size: CAPTION_SIZE,
     maxWidth: leftColumnWidth,
+    align: 'left',
   }
   leftCursor += CAPTION_SIZE + CAPTION_GAP
   const brandName: TicketTextLine = {
@@ -259,18 +349,17 @@ export function redTicketLayout(input: ResultPosterInput): redTicketLayoutData {
     y: leftCursor + BRAND_SIZE / 2,
     size: BRAND_SIZE,
     maxWidth: leftColumnWidth,
+    align: 'left',
   }
 
-  const cardHeight = Math.max(
-    CARD_MIN_HEIGHT,
-    qr.y + QR_SIZE + TEAR_GAP_BOTTOM - cardY
-  )
+  const cardHeight = Math.max(CARD_MIN_HEIGHT, qr.y + QR_SIZE + TEAR_GAP_BOTTOM - cardY)
   const cardBottom = cardY + cardHeight
   const slogan: TicketTextLine = {
     x: centerX,
     y: cardBottom + SLOGAN_GAP + SLOGAN_SIZE / 2,
     size: SLOGAN_SIZE,
     maxWidth: contentWidth,
+    align: 'center',
   }
 
   return {
@@ -282,13 +371,10 @@ export function redTicketLayout(input: ResultPosterInput): redTicketLayoutData {
       { cx: width + 24, cy: 132, radius: 150 },
       { cx: width - 28, cy: -48, radius: 96 },
     ],
-    issue,
-    gameName,
-    divider,
-    sectionTitle,
-    redBalls,
-    blueBalls,
-    drawDate,
+    title,
+    titleDivider,
+    games,
+    separators,
     tearY,
     notches: [
       { cx: CARD_MARGIN, cy: tearY, radius: NOTCH_RADIUS },
@@ -313,63 +399,83 @@ function drawRing(ctx: CanvasRenderingContext2D, ring: TicketRing): void {
   ctx.restore()
 }
 
+function drawBalls(ctx: CanvasRenderingContext2D, numbers: readonly string[], area: TicketBallArea, background: string): void {
+  let offset = 0
+  area.rows.forEach((row) => {
+    drawBallRow(ctx, numbers.slice(offset, offset + row.count), row.startX, row.cy, area.diameter, area.gap, background, COLORS.white)
+    offset += row.count
+  })
+}
+
+function drawBlock(ctx: CanvasRenderingContext2D, item: ResultPosterInput, block: TicketGameBlock): void {
+  drawText(ctx, item.gameName, block.gameName.x, block.gameName.y, {
+    size: block.gameName.size,
+    weight: 700,
+    color: COLORS.cardPrimary,
+    align: 'left',
+    maxWidth: block.gameName.maxWidth,
+  })
+  drawText(ctx, item.issue, block.issue.x, block.issue.y, {
+    size: block.issue.size,
+    weight: 500,
+    color: COLORS.cardSecondary,
+    align: 'right',
+    maxWidth: block.issue.maxWidth,
+  })
+
+  drawBalls(ctx, item.redNumbers, block.redBalls, COLORS.redBall)
+  if (block.blueBalls) {
+    drawBalls(ctx, item.blueNumbers, block.blueBalls, COLORS.blueBall)
+  }
+
+  drawText(ctx, item.drawDate, block.drawDate.x, block.drawDate.y, {
+    size: block.drawDate.size,
+    color: COLORS.cardSecondary,
+    align: 'left',
+    maxWidth: block.drawDate.maxWidth,
+  })
+}
+
 export const redTicketScheme: PosterScheme = {
   id: 'red-ticket',
   name: '红金票据',
   tagline: '红金底 + 米色票券，撕线票根的开奖仪式感',
-  measure(input) {
-    return redTicketLayout(input).height
+  measure(items) {
+    return redTicketLayout(items).height
   },
-  draw(ctx, input, images) {
-    const layout = redTicketLayout(input)
+  draw(ctx, items, images) {
+    const layout = redTicketLayout(items)
     const { card } = layout
+    const first = items[0]
 
     fillLinearGradient(ctx, 0, 0, layout.width, layout.height, COLORS.redTop, COLORS.redBottom, 'vertical')
     layout.rings.forEach((ring) => drawRing(ctx, ring))
     fillRoundRect(ctx, card.x, card.y, card.width, card.height, card.radius, COLORS.paper)
 
-    drawText(ctx, input.issue, layout.issue.x, layout.issue.y, {
-      size: layout.issue.size,
-      weight: 500,
-      color: COLORS.cardSecondary,
-      align: 'center',
-      maxWidth: layout.issue.maxWidth,
-    })
-    drawText(ctx, input.gameName, layout.gameName.x, layout.gameName.y, {
-      size: layout.gameName.size,
+    drawText(ctx, CARD_TITLE, layout.title.x, layout.title.y, {
+      size: layout.title.size,
       weight: 700,
       color: COLORS.cardPrimary,
       align: 'center',
-      maxWidth: layout.gameName.maxWidth,
+      maxWidth: layout.title.maxWidth,
     })
-    fillRoundRect(ctx, layout.divider.x, layout.divider.y, layout.divider.width, layout.divider.height, layout.divider.radius, COLORS.gold)
-    drawText(ctx, SECTION_TITLE, layout.sectionTitle.x, layout.sectionTitle.y, {
-      size: layout.sectionTitle.size,
-      weight: 500,
-      color: COLORS.cardSecondary,
-      align: 'center',
-      maxWidth: layout.sectionTitle.maxWidth,
-    })
+    fillRoundRect(
+      ctx,
+      layout.titleDivider.x,
+      layout.titleDivider.y,
+      layout.titleDivider.width,
+      layout.titleDivider.height,
+      layout.titleDivider.radius,
+      COLORS.gold
+    )
 
-    let redOffset = 0
-    layout.redBalls.rows.forEach((row) => {
-      drawBallRow(ctx, input.redNumbers.slice(redOffset, redOffset + row.count), row.startX, row.cy, layout.redBalls.diameter, layout.redBalls.gap, COLORS.redBall, COLORS.white)
-      redOffset += row.count
-    })
-    const blueArea = layout.blueBalls
-    if (blueArea) {
-      let blueOffset = 0
-      blueArea.rows.forEach((row) => {
-        drawBallRow(ctx, input.blueNumbers.slice(blueOffset, blueOffset + row.count), row.startX, row.cy, blueArea.diameter, blueArea.gap, COLORS.blueBall, COLORS.white)
-        blueOffset += row.count
-      })
-    }
+    layout.separators.forEach((line) => drawDashedLine(ctx, line.x1, line.x2, line.y, COLORS.tear, 2, [6, 8]))
 
-    drawText(ctx, input.drawDate, layout.drawDate.x, layout.drawDate.y, {
-      size: layout.drawDate.size,
-      color: COLORS.cardSecondary,
-      align: 'center',
-      maxWidth: layout.drawDate.maxWidth,
+    layout.games.forEach((block, i) => {
+      const item = items[i]
+      if (item) {
+        drawBlock(ctx, item, block)
+      }
     })
 
     // 撕线两端让出缺口半径，虚线不越过卡片圆角
@@ -382,25 +488,29 @@ export const redTicketScheme: PosterScheme = {
       color: COLORS.cardPrimary,
       maxWidth: layout.qrKicker.maxWidth,
     })
-    drawText(ctx, input.qrCaption, layout.qrCaption.x, layout.qrCaption.y, {
-      size: layout.qrCaption.size,
-      color: COLORS.cardSecondary,
-      maxWidth: layout.qrCaption.maxWidth,
-    })
-    drawText(ctx, input.brandName, layout.brandName.x, layout.brandName.y, {
-      size: layout.brandName.size,
-      weight: 600,
-      color: COLORS.brand,
-      maxWidth: layout.brandName.maxWidth,
-    })
+    if (first) {
+      drawText(ctx, first.qrCaption, layout.qrCaption.x, layout.qrCaption.y, {
+        size: layout.qrCaption.size,
+        color: COLORS.cardSecondary,
+        maxWidth: layout.qrCaption.maxWidth,
+      })
+      drawText(ctx, first.brandName, layout.brandName.x, layout.brandName.y, {
+        size: layout.brandName.size,
+        weight: 600,
+        color: COLORS.brand,
+        maxWidth: layout.brandName.maxWidth,
+      })
+    }
     drawQrCard(ctx, images.qr, layout.qr.x, layout.qr.y, layout.qr.size)
 
-    drawText(ctx, input.slogan, layout.slogan.x, layout.slogan.y, {
-      size: layout.slogan.size,
-      weight: 600,
-      color: COLORS.slogan,
-      align: 'center',
-      maxWidth: layout.slogan.maxWidth,
-    })
+    if (first) {
+      drawText(ctx, first.slogan, layout.slogan.x, layout.slogan.y, {
+        size: layout.slogan.size,
+        weight: 600,
+        color: COLORS.slogan,
+        align: 'center',
+        maxWidth: layout.slogan.maxWidth,
+      })
+    }
   },
 }

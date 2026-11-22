@@ -34,6 +34,7 @@ export interface PosterImages {
 
 /**
  * 一个海报方案：纯 Canvas 2D 绘制，不引入 Taro 与 DOM。
+ * items 是一张海报里的彩种列表（通常多个），至少一项。
  * measure 返回逻辑高度，draw 必须严格绘制在同一高度内。
  */
 export interface PosterScheme {
@@ -42,6 +43,6 @@ export interface PosterScheme {
   name: string
   /** 弹层里的一行风格说明 */
   tagline: string
-  measure(input: ResultPosterInput): number
-  draw(ctx: CanvasRenderingContext2D, input: ResultPosterInput, images: PosterImages): void
+  measure(items: readonly ResultPosterInput[]): number
+  draw(ctx: CanvasRenderingContext2D, items: readonly ResultPosterInput[], images: PosterImages): void
 }

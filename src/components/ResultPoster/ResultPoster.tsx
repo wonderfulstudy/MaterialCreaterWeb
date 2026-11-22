@@ -13,12 +13,28 @@ const posterScheme = getPosterScheme(DEFAULT_SCHEME_ID)
 export interface ResultPosterProps {
   /** 是否展示弹层 */
   visible: boolean
-  /** 可分享的开奖结果，只传已开奖彩种；首项为默认选中 */
+  /** 可分享的开奖结果，只传已开奖彩种；默认全部画进同一张海报 */
   results: ResultPosterInput[]
   onClose: () => void
 }
 
 type PosterStatus = 'idle' | 'drawing' | 'ready' | 'error'
+
+/** 彩种在弹层里的稳定标识：同名同期的两条数据视为同一项 */
+function posterKey(item: ResultPosterInput): string {
+  return `${item.gameName}|${item.issue}`
+}
+
+/** H5 下载时的文件名：单个彩种用彩种名，多个彩种标出数量 */
+function posterFileName(items: readonly ResultPosterInput[]): string {
+  if (items.length === 0) {
+    return '开奖海报.png'
+  }
+  if (items.length === 1) {
+    return `${items[0].gameName}-开奖海报.png`
+  }
+  return `${items[0].gameName}等${items.length}个彩种-开奖海报.png`
+}
 
 /** 离屏画布的最小抽象：weapp 用 OffscreenCanvas，H5 用 detached canvas */
 interface OffscreenLike {
@@ -107,13 +123,19 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
   const [imagePath, setImagePath] = useState('')
   const [posterHeight, setPosterHeight] = useState(0)
   const [saving, setSaving] = useState(false)
-  const [gameIndex, setGameIndex] = useState(0)
+  // 记录被关掉的彩种而不是被选中的，默认即全选，也不会因 results 换引用反复重置
+  const [deselected, setDeselected] = useState<string[]>([])
 
   const requestId = useRef(0)
 
-  const current = results[gameIndex] ?? results[0] ?? null
+  const items = useMemo(() => {
+    const picked = results.filter((item) => !deselected.includes(posterKey(item)))
+    // 全部关掉时兜底画第一个，避免空海报
+    return picked.length > 0 ? picked : results.slice(0, 1)
+  }, [results, deselected])
+
   // 用内容签名而非对象引用作为绘制依赖，调用方每次渲染新建对象也不会重复绘制
-  const signature = useMemo(() => (current ? JSON.stringify(current) : ''), [current])
+  const signature = JSON.stringify(items)
 
   useEffect(() => {
     if (!visible) {
@@ -124,7 +146,7 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
   }, [visible])
 
   useEffect(() => {
-    if (!visible || !current) {
+    if (!visible || items.length === 0) {
       return
     }
 
@@ -135,7 +157,7 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
 
     const generate = async () => {
       try {
-        const logicalHeight = posterScheme.measure(current)
+        const logicalHeight = posterScheme.measure(items)
         const ratio = getPixelRatio()
         const width = Math.round(POSTER_WIDTH * ratio)
         const height = Math.round(logicalHeight * ratio)
@@ -146,14 +168,14 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
           throw new Error('当前环境不支持海报绘制')
         }
 
-        const qr = await loadQrImage(canvas, current.qrImage)
+        const qr = await loadQrImage(canvas, items[0].qrImage)
         if (cancelled || requestId.current !== currentRequest) {
           return
         }
 
         ctx.scale(ratio, ratio)
         const images: PosterImages = { qr }
-        posterScheme.draw(ctx, current, images)
+        posterScheme.draw(ctx, items, images)
 
         const filePath = await exportImage(canvas, width, height)
         if (cancelled || requestId.current !== currentRequest) {
@@ -198,6 +220,18 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
 
   const isWeapp = process.env.TARO_ENV !== 'h5'
 
+  const toggleGame = (key: string) => {
+    if (deselected.includes(key)) {
+      setDeselected(deselected.filter((item) => item !== key))
+      return
+    }
+    if (items.length <= 1) {
+      Taro.showToast({ title: '至少保留一个彩种', icon: 'none' })
+      return
+    }
+    setDeselected([...deselected, key])
+  }
+
   const handleSave = async () => {
     if (!imagePath || saving) {
       return
@@ -207,7 +241,7 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
       if (process.env.TARO_ENV === 'h5') {
         const link = document.createElement('a')
         link.href = imagePath
-        link.download = `${current?.gameName ?? '开奖'}-开奖海报.png`
+        link.download = posterFileName(items)
         document.body.appendChild(link)
         link.click()
         link.remove()
@@ -265,15 +299,19 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
 
         {results.length > 1 ? (
           <ScrollView scrollX className={styles.gameBar}>
-            {results.map((item, index) => (
-              <View
-                key={item.gameName + item.issue}
-                className={classnames(styles.chip, index === gameIndex && styles.chipActive)}
-                onClick={() => setGameIndex(index)}
-              >
-                <Text className={styles.chipText}>{item.gameName}</Text>
-              </View>
-            ))}
+            {results.map((item) => {
+              const key = posterKey(item)
+              const active = !deselected.includes(key)
+              return (
+                <View
+                  key={key}
+                  className={classnames(styles.chip, active ? styles.chipActive : styles.chipOff)}
+                  onClick={() => toggleGame(key)}
+                >
+                  <Text className={styles.chipText}>{item.gameName}</Text>
+                </View>
+              )
+            })}
           </ScrollView>
         ) : null}
 
@@ -308,7 +346,7 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
             className={classnames(styles.actionBtn, styles.actionGhost, status !== 'ready' && styles.actionDisabled)}
             onClick={handleSave}
           >
-            <Text className={styles.actionText}>{saving ? '保存中…' : isWeapp ? '保存到相册' : '下载图片'}</Text>
+            <Text className={styles.actionText}>{saving ? '保存中…' : isWeapp ? '保存到相册' : '保存图片'}</Text>
           </View>
           {isWeapp ? (
             <View
@@ -320,7 +358,8 @@ export default function ResultPoster({ visible, results, onClose }: ResultPoster
           ) : null}
         </View>
         <Text className={styles.tip}>
-          {isWeapp ? '长按海报可保存或转发，二维码换成门店微信后即可引流' : '下载后可发送给好友或朋友圈'}
+          {results.length > 1 ? '点击彩种可增减内容，' : ''}
+          {isWeapp ? '长按海报可保存或转发，二维码换成门店微信后即可引流' : '保存后可发送给好友或朋友圈'}
         </Text>
       </View>
     </View>
