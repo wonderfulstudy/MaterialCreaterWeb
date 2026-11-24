@@ -4,8 +4,10 @@ import {
   DEFAULT_SELECTION,
   DIGITAL_GAMES,
   pickDrawEntries,
+  resolveShareSource,
   selectAllGames,
   sharePosterFileName,
+  shareSportPosterFileName,
   toggleGameSelection,
   type ShareDrawEntry,
 } from './share-data'
@@ -81,6 +83,67 @@ describe('海报内容', () => {
     expect(sharePosterFileName([entry('dlt', '大乐透')])).toBe('大乐透-开奖海报.png')
     expect(sharePosterFileName([entry('dlt', '大乐透'), entry('ssq', '双色球'), entry('kl8', '快乐8')])).toBe(
       '数字彩合集-3个彩种-开奖海报.png'
+    )
+  })
+})
+describe('分享来源分流', () => {
+  it('缺省来源走数字彩勾选流程', () => {
+    const resolved = resolveShareSource(undefined)
+    expect(resolved.kind).toBe('draw')
+    expect(resolved.title).toBe('数字彩合集')
+    expect(resolved.directPreview).toBe(false)
+    expect(resolved.date).toBe('')
+    expect(resolved.issue).toBe('')
+  })
+
+  it('竞彩足球直接进预览态并带上日期', () => {
+    const resolved = resolveShareSource('jc-football', { date: '2026-11-23' })
+    expect(resolved.kind).toBe('jc-football')
+    expect(resolved.title).toBe('竞彩足球')
+    expect(resolved.directPreview).toBe(true)
+    expect(resolved.date).toBe('2026-11-23')
+  })
+
+  it('竞彩篮球直接进预览态并带上日期', () => {
+    const resolved = resolveShareSource('jc-basketball', { date: '2026-11-23' })
+    expect(resolved.kind).toBe('jc-basketball')
+    expect(resolved.title).toBe('竞彩篮球')
+    expect(resolved.directPreview).toBe(true)
+    expect(resolved.date).toBe('2026-11-23')
+  })
+
+  it('传统足彩直接进预览态并带上期次', () => {
+    const resolved = resolveShareSource('jc-traditional', { issue: '26167' })
+    expect(resolved.kind).toBe('jc-traditional')
+    expect(resolved.title).toBe('传统足彩')
+    expect(resolved.directPreview).toBe(true)
+    expect(resolved.issue).toBe('26167')
+  })
+
+  it('日期与期次只落在各自来源上', () => {
+    expect(resolveShareSource('jc-football', { date: '2026-11-23', issue: '26167' }).issue).toBe('')
+    expect(resolveShareSource('jc-traditional', { date: '2026-11-23' }).date).toBe('')
+    expect(resolveShareSource('draw', { date: '2026-11-23' }).date).toBe('')
+  })
+
+  it('未知来源保持占位，不直接进预览态', () => {
+    const resolved = resolveShareSource('lottery-xyz')
+    expect(resolved.kind).toBe('unsupported')
+    expect(resolved.directPreview).toBe(false)
+    expect(resolved.title).toBe('分享海报')
+  })
+})
+
+describe('竞彩海报文件名', () => {
+  it('按日期命名竞彩海报', () => {
+    expect(shareSportPosterFileName(resolveShareSource('jc-football', { date: '2026-11-23' }))).toBe(
+      '竞彩足球-2026-11-23-赛果海报.png'
+    )
+  })
+
+  it('按期次命名传足海报', () => {
+    expect(shareSportPosterFileName(resolveShareSource('jc-traditional', { issue: '26167' }))).toBe(
+      '传统足彩-26167期-赛果海报.png'
     )
   })
 })

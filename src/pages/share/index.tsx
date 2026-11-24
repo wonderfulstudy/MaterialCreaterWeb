@@ -1,14 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import classnames from 'classnames'
 import LotteryCardView from '@/components/LotteryCardView'
+import MatchCardView from '@/components/MatchCardView'
+import TraditionalCardView from '@/components/MatchCardView/traditional'
 import PosterFrame, { type PosterFrameHandle } from '@/components/PosterFrame'
 import PosterFooter from '@/components/PosterFrame/poster-footer'
 import { toCardItems } from '@/components/ResultPoster/card-items'
 import { DEFAULT_BRAND_NAME, DEFAULT_QR_CAPTION, DEFAULT_QR_IMAGE, DEFAULT_SLOGAN } from '@/components/ResultPoster/config'
 import { toPosterInputs, type DrawSource, type PosterDefaults } from '@/components/ResultPoster/poster-inputs'
 import { loadLatestGame } from '@/api/latest-lottery'
+import {
+  loadBasketballResults,
+  loadFootballResults,
+  loadTraditionalDraws,
+  shiftDateKey,
+  toDateKey,
+  type SportMatchResult,
+  type TraditionalDraw,
+} from '@/api/lottery/results'
 import { DEMO_DRAWS, IS_DEMO_MODE } from '@/config/demo'
 import { LATEST_LOTTERIES, type LotteryGameCode } from '@/models/lottery.model'
 import { formatDrawDate, formatIssue } from '@/utils/lottery-format'
@@ -16,8 +28,10 @@ import {
   DEFAULT_SELECTION,
   DIGITAL_GAMES,
   pickDrawEntries,
+  resolveShareSource,
   selectAllGames,
   sharePosterFileName,
+  shareSportPosterFileName,
   toggleGameSelection,
   type ShareDrawEntry,
 } from './share-data'
@@ -32,8 +46,11 @@ const DEFAULTS: PosterDefaults = {
   slogan: DEFAULT_SLOGAN,
 }
 
+/** 竞彩赛果缺省看昨天，与两个详情页的默认日期一致 */
+const DEFAULT_SPORT_DATE = shiftDateKey(toDateKey(new Date()), -1)
+
 type Phase = 'select' | 'preview'
-type LoadStatus = 'loading' | 'ready' | 'empty'
+type LoadStatus = 'loading' | 'ready' | 'empty' | 'error'
 
 /** 一个彩种的最新开奖 → 海报入参；落款统一走 config 默认值 */
 function createEntry(code: LotteryGameCode, source: DrawSource): ShareDrawEntry {
@@ -86,19 +103,27 @@ async function loadDrawEntries(): Promise<ShareDrawEntry[]> {
 
 /**
  * 分享海报页（按来源单张）。
- * 选择态勾彩种 → 预览态展示整张海报 → 保存图片。
+ * - source=draw：勾选彩种 → 预览态整张数字彩合集海报；
+ * - source=jc-football / jc-basketball：直接进预览态，正文是当日赛果卡列表；
+ * - source=jc-traditional：直接进预览态，正文是该期 14 场 3/1/0。
  * 海报视觉就是页面卡片 + 海报页脚，截图节点宽 375px、导出 scale=2 即 750px 成品。
  */
 export default function SharePage() {
   const router = useRouter()
-  const source = router.params.source ?? 'draw'
-  // TODO(B2b): date 参数用于分享历史某一期的海报，本轮只分享最新一期
-  const date = router.params.date ?? ''
-  const isDrawSource = source === 'draw'
+  const resolved = useMemo(
+    () =>
+      resolveShareSource(router.params.source, {
+        date: router.params.date,
+        issue: router.params.issue,
+      }),
+    [router.params.source, router.params.date, router.params.issue]
+  )
 
   const [selected, setSelected] = useState<LotteryGameCode[]>(DEFAULT_SELECTION)
-  const [phase, setPhase] = useState<Phase>('select')
+  const [phase, setPhase] = useState<Phase>(() => (resolved.directPreview ? 'preview' : 'select'))
   const [entries, setEntries] = useState<ShareDrawEntry[]>([])
+  const [matches, setMatches] = useState<SportMatchResult[]>([])
+  const [draw, setDraw] = useState<TraditionalDraw | null>(null)
   const [status, setStatus] = useState<LoadStatus>('loading')
   const [imagePath, setImagePath] = useState('')
   const [capturing, setCapturing] = useState(false)
@@ -109,25 +134,70 @@ export default function SharePage() {
     void Taro.setNavigationBarTitle({ title: '分享海报' })
   }, [])
 
+  /** 竞彩赛果日期：分享页没带 date 时回落到昨天 */
+  const sportDate = resolved.date || DEFAULT_SPORT_DATE
+
   const load = useCallback(async () => {
     const current = ++requestId.current
     setStatus('loading')
+    setEntries([])
+    setMatches([])
+    setDraw(null)
+
     try {
-      const list = await loadDrawEntries()
-      if (requestId.current !== current) {
+      if (resolved.kind === 'draw') {
+        const list = await loadDrawEntries()
+        if (requestId.current !== current) {
+          return
+        }
+        setEntries(list)
+        setStatus(list.length > 0 ? 'ready' : 'empty')
         return
       }
-      setEntries(list)
-      setStatus(list.length > 0 ? 'ready' : 'empty')
+
+      if (resolved.kind === 'jc-football' || resolved.kind === 'jc-basketball') {
+        const loaded =
+          resolved.kind === 'jc-football'
+            ? await loadFootballResults(sportDate)
+            : await loadBasketballResults(sportDate)
+        if (requestId.current !== current) {
+          return
+        }
+        if (!loaded) {
+          setStatus('error')
+          return
+        }
+        setMatches(loaded.data)
+        setStatus(loaded.data.length > 0 ? 'ready' : 'empty')
+        return
+      }
+
+      if (resolved.kind === 'jc-traditional') {
+        const loaded = await loadTraditionalDraws()
+        if (requestId.current !== current) {
+          return
+        }
+        if (!loaded) {
+          setStatus('error')
+          return
+        }
+        // 带了期次就锁定该期，否则取最新一期
+        const target = loaded.data.find((item) => item.issue === resolved.issue) ?? loaded.data[0] ?? null
+        setDraw(target)
+        setStatus(target ? 'ready' : 'empty')
+        return
+      }
+
+      // 未知来源：占位文案在下面的分支里渲染
+      setStatus('empty')
     } catch (error: unknown) {
       if (requestId.current !== current) {
         return
       }
       console.error('[SharePage] 开奖数据加载失败', error)
-      setEntries([])
-      setStatus('empty')
+      setStatus('error')
     }
-  }, [])
+  }, [resolved.kind, resolved.issue, sportDate])
 
   useEffect(() => {
     void load()
@@ -136,9 +206,26 @@ export default function SharePage() {
   const selectedEntries = useMemo(() => pickDrawEntries(selected, entries), [selected, entries])
   const cards = useMemo(() => toCardItems(selectedEntries.map(({ input }) => input)), [selectedEntries])
 
+  /** 海报正文：页面与海报共用同一个组件的唯一实例，缺数据时为 null */
+  const posterBody = useMemo<ReactNode>(() => {
+    if (status !== 'ready') {
+      return null
+    }
+    if (resolved.kind === 'draw') {
+      return cards.length > 0 ? <LotteryCardView cards={cards} /> : null
+    }
+    if (resolved.kind === 'jc-football' || resolved.kind === 'jc-basketball') {
+      return matches.length > 0 ? <MatchCardView matches={matches} /> : null
+    }
+    if (resolved.kind === 'jc-traditional') {
+      return draw ? <TraditionalCardView draw={draw} /> : null
+    }
+    return null
+  }, [status, resolved.kind, cards, matches, draw])
+
   /** 预览态下先让版式定下来再截图，避免拿到半张图 */
   useEffect(() => {
-    if (!IS_H5 || phase !== 'preview' || status !== 'ready' || cards.length === 0) {
+    if (!IS_H5 || phase !== 'preview' || !posterBody) {
       return
     }
     const current = ++requestId.current
@@ -171,7 +258,7 @@ export default function SharePage() {
     return () => {
       clearTimeout(timer)
     }
-  }, [phase, status, cards])
+  }, [phase, posterBody])
 
   function handleBack(): void {
     void Taro.navigateBack()
@@ -208,23 +295,23 @@ export default function SharePage() {
     if (IS_H5 && typeof document !== 'undefined') {
       const link = document.createElement('a')
       link.href = imagePath
-      link.download = sharePosterFileName(selectedEntries)
+      link.download =
+        resolved.kind === 'draw' ? sharePosterFileName(selectedEntries) : shareSportPosterFileName(resolved)
       document.body.appendChild(link)
       link.click()
       link.remove()
       void Taro.showToast({ title: '已开始下载', icon: 'success' })
       return
     }
-    // TODO(B2b): 小程序端改走 ResultPoster 的离屏画布分支，本轮只保证 H5 所见即所得
-    void Taro.showToast({ title: '请回到开奖页保存海报', icon: 'none' })
+    // 小程序端的画布导出随 Skyline 迁移一起做，本轮只保证 H5 所见即所得
+    void Taro.showToast({ title: '小程序端暂不支持保存，请用浏览器打开', icon: 'none' })
   }
 
   function handleShare(): void {
     void Taro.showToast({ title: '请保存图片后分享', icon: 'none' })
   }
 
-  if (!isDrawSource) {
-    // TODO(B2b): football / basketball / traditional 三种来源的合集海报不在本轮范围内
+  if (resolved.kind === 'unsupported') {
     return (
       <View className={styles.page}>
         <View className={styles.bar}>
@@ -236,7 +323,7 @@ export default function SharePage() {
         </View>
         <View className={styles.placeholder}>
           <Text className={styles.placeholderTitle}>该来源暂不支持分享海报</Text>
-          <Text className={styles.placeholderHint}>目前只支持数字彩合集海报，其它彩种合集稍后上线</Text>
+          <Text className={styles.placeholderHint}>目前支持数字彩合集与竞彩足球 / 篮球 / 传统足彩赛果海报</Text>
         </View>
       </View>
     )
@@ -247,10 +334,16 @@ export default function SharePage() {
     return found ? found.input.issue : ''
   }
 
+  /** 预览态占位文案：三种 jc-* 来源进入页面时可能还在取数 */
+  const placeholderTitle =
+    status === 'loading' ? '海报生成中…' : status === 'error' ? '赛果加载失败' : '暂无可分享的赛果'
+  const placeholderHint =
+    status === 'loading' ? '正在获取赛果数据，请稍候' : '请返回开奖页刷新后重试'
+
   return (
     <View className={styles.page}>
       <View className={styles.bar}>
-        {phase === 'preview' ? (
+        {phase === 'preview' && !resolved.directPreview ? (
           <View className={styles.barBtn} onClick={() => setPhase('select')}>
             <Text className={styles.barBtnIcon}>×</Text>
           </View>
@@ -259,7 +352,7 @@ export default function SharePage() {
             <Text className={styles.barBtnIcon}>‹</Text>
           </View>
         )}
-        <Text className={styles.barTitle}>分享海报 · 数字彩合集</Text>
+        <Text className={styles.barTitle}>分享海报 · {resolved.title}</Text>
         <View className={styles.barBtnGhost} />
       </View>
 
@@ -272,7 +365,7 @@ export default function SharePage() {
                 已选 {selected.length} / {DIGITAL_GAMES.length}
               </Text>
             </View>
-            {date ? <Text className={styles.selDate}>开奖日期 {date}</Text> : null}
+            {router.params.date ? <Text className={styles.selDate}>开奖日期 {router.params.date}</Text> : null}
             <View className={styles.selList}>
               <View className={styles.selAll} onClick={handleSelectAll}>
                 <Text className={styles.selAllText}>全选</Text>
@@ -302,14 +395,14 @@ export default function SharePage() {
       ) : (
         <>
           <ScrollView scrollY className={styles.body}>
-            {status === 'ready' && cards.length > 0 ? (
+            {posterBody ? (
               <PosterFrame ref={frameRef} footer={<PosterFooter />}>
-                <LotteryCardView cards={cards} />
+                {posterBody}
               </PosterFrame>
             ) : (
               <View className={styles.placeholder}>
-                <Text className={styles.placeholderTitle}>暂无可分享的开奖数据</Text>
-                <Text className={styles.placeholderHint}>请返回开奖页刷新后重试</Text>
+                <Text className={styles.placeholderTitle}>{placeholderTitle}</Text>
+                <Text className={styles.placeholderHint}>{placeholderHint}</Text>
               </View>
             )}
           </ScrollView>

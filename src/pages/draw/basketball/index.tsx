@@ -1,8 +1,8 @@
 import { Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import classnames from 'classnames'
 import { useCallback, useEffect, useState } from 'react'
 import DateBar, { type PeriodOption } from '@/components/DateBar'
+import MatchCardView from '@/components/MatchCardView'
 import {
   loadBasketballResults,
   recentDateKeys,
@@ -96,44 +96,19 @@ export default function BasketballDrawPage() {
         {status === 'empty' && <Text className={styles.status}>当日暂无赛果</Text>}
         {status === 'error' && <Text className={styles.status}>赛果加载失败，请稍后重试</Text>}
 
-        {status === 'ready' &&
-          matches.map((match) => (
-            <View className={styles.matchCard} key={match.id}>
-              <View className={styles.matchHead}>
-                <Text className={styles.matchLeague}>{match.league}</Text>
-                <Text className={styles.matchNo}>{match.matchNo}</Text>
-                {!match.finished && <Text className={styles.matchLive}>未结束</Text>}
-              </View>
-
-              <View className={styles.matchTeams}>
-                <Text className={styles.matchTeam}>{match.homeTeam}</Text>
-                <Text className={styles.matchScore}>{match.score || '—'}</Text>
-                <Text className={styles.matchTeam}>{match.awayTeam}</Text>
-              </View>
-
-              <View className={styles.plays}>
-                {match.plays.map((play) => (
-                  <View className={styles.play} key={play.label}>
-                    <Text className={styles.playLabel}>{play.label}</Text>
-                    <Text
-                      className={classnames(
-                        styles.playValue,
-                        play.tone === 'win' && styles.playWin,
-                        play.tone === 'lose' && styles.playLose,
-                        play.tone === 'draw' && styles.playDraw
-                      )}
-                    >
-                      {play.value}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ))}
+        {/* 页面与分享海报共用同一份赛果卡 JSX，见 components/MatchCardView */}
+        {status === 'ready' && <MatchCardView matches={matches} />}
 
         <Text className={styles.note}>
           玩法口径：胜负取全场赛果，让分与大小分按官方收盘盘口；篮球没有平局。
         </Text>
+      </View>
+
+      <View
+        className={styles.fab}
+        onClick={() => void Taro.navigateTo({ url: `/pages/share/index?source=jc-basketball&date=${dateKey}` })}
+      >
+        <Text className={styles.fabIcon}>↑</Text>
       </View>
     </View>
   )

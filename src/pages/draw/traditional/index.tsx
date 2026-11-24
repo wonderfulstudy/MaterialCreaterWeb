@@ -1,8 +1,8 @@
 import { Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import classnames from 'classnames'
 import { useCallback, useEffect, useState } from 'react'
 import DateBar, { type PeriodOption } from '@/components/DateBar'
+import TraditionalCardView from '@/components/MatchCardView/traditional'
 import {
   loadTraditionalDraws,
   shiftDateKey,
@@ -116,36 +116,23 @@ export default function TraditionalDrawPage() {
 
         {status === 'ready' && active && (
           <>
-            <View className={styles.tinfo}>
-              <Text className={styles.tinfoTitle}>胜负彩 {formatIssue(active.issue)}</Text>
-              <Text className={classnames(styles.pill, styles.pillWin)}>已开奖</Text>
-              <Text className={styles.tinfoDate}>{formatDrawDate(active.drawDate)}</Text>
-            </View>
-
-            <View className={styles.listCard}>
-              {active.results.map((result, index) => (
-                <View className={styles.trow} key={`${active.issue}-${index}`}>
-                  <Text className={styles.tNo}>{index + 1}</Text>
-                  <Text className={styles.tTeam}>第 {index + 1} 场</Text>
-                  <Text
-                    className={classnames(
-                      styles.tResult,
-                      result === '3' && styles.r3,
-                      result === '1' && styles.r1,
-                      result === '0' && styles.r0
-                    )}
-                  >
-                    {result}
-                  </Text>
-                </View>
-              ))}
-            </View>
+            {/* 页面与分享海报共用同一份期次卡 JSX，见 components/MatchCardView/traditional */}
+            <TraditionalCardView draw={active} />
 
             <Text className={styles.note}>任选九场 = 从 14 场中任选 9 场，猜中 9 场即中奖</Text>
             <Text className={styles.note}>3 主胜 · 1 平 · 0 客胜</Text>
             <Text className={styles.note}>数据来源：中国体彩官网。数据源只提供 14 场赛果，不含对阵名单。</Text>
           </>
         )}
+      </View>
+
+      <View
+        className={styles.fab}
+        onClick={() =>
+          active && void Taro.navigateTo({ url: `/pages/share/index?source=jc-traditional&issue=${active.issue}` })
+        }
+      >
+        <Text className={styles.fabIcon}>↑</Text>
       </View>
     </View>
   )
