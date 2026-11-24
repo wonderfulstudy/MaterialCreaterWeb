@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import Taro from '@tarojs/taro'
-import AppConfig from '@/config/app'
+import { getMatchCalculator } from '@/api/football/matchCalculator'
 import {
   ALL_POOLS,
   POOL_DEFS,
@@ -59,11 +58,6 @@ interface RawCalculatorResponse {
     lastUpdateTime?: string
     matchInfoList?: RawMatchGroup[]
   }
-}
-
-const SPORT_URLS: Record<SportKey, string> = {
-  football: `${AppConfig.app.football_base_url}?channel=c&poolCode=hhad,had,hafu,ttg,crs`,
-  basketball: `${AppConfig.app.basketball_base_url}?channel=c&poolCode=mnl,hdc,hilo,wnm`,
 }
 
 export function emptySchedule(sport: SportKey): SportSchedule {
@@ -199,17 +193,8 @@ export function parseCalculatorResponse(
 
 /** 拉取竞足 / 竞篮赛程与赔率 */
 export async function fetchSportSchedule(sport: SportKey): Promise<SportSchedule> {
-  const response = await Taro.request<RawCalculatorResponse>({
-    url: SPORT_URLS[sport],
-    method: 'GET',
-    timeout: 15000,
-  })
-
-  if (response.statusCode !== 200) {
-    throw new Error(`赛程请求失败：HTTP ${response.statusCode}`)
-  }
-
-  const data = response.data
+  // 走自建代理：H5 不再受上游 CORS 限制，玩法组合由代理按运动给缺省值
+  const data = await getMatchCalculator<RawCalculatorResponse>('c', sport)
   if (!data || data.success === false) {
     throw new Error(data?.errorMessage || '赛程数据异常')
   }

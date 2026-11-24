@@ -13,10 +13,6 @@ export interface AppConfigType {
     name: string
     api_base_url: string
     auth_mock: boolean
-    lottery_base_url: string
-    cwl_base_url: string
-    football_base_url: string
-    basketball_base_url: string
   }
   
   navigation: {
