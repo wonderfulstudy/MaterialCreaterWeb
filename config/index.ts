@@ -54,6 +54,8 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
     defineConstants: {
       // 模型下载地址由构建环境注入，避免把带签名的临时链接提交到仓库
       __OCR_MODEL_URL__: JSON.stringify(readBuildEnv('OCR_MODEL_URL')),
+      // 开奖数据代理根地址（API.r1）：.env 的 API_BASE，未配置时连本地代理进程
+      __API_BASE__: JSON.stringify(readBuildEnv('API_BASE') || 'http://localhost:8081'),
     },
     copy: {
       patterns: ocrModelDir

@@ -134,10 +134,26 @@
   background: $color-bg-page;
 }
 
-.posterImage {
+/* 预览 = 导出：卡片按可见高度截断，H5 截的就是这个节点 */
+.preview {
+  display: flex;
+  flex-direction: column;
+}
+
+.previewViewport {
   width: 100%;
+  max-height: 62vh;
+  overflow: hidden;
   border-radius: $radius-md;
-  box-shadow: $shadow-card;
+  background: $color-bg-card;
+}
+
+.previewHint {
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $color-text-tertiary;
+  text-align: center;
 }
 
 .placeholder {

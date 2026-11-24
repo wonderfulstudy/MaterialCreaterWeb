@@ -19,143 +19,178 @@ $green: #34c759;
   padding-left: 28rpx;
 }
 
-/* ============ 顶部战报卡 ============ */
-.summaryCard {
-  padding: 8rpx 28rpx 18rpx;
-  border-radius: 28rpx;
-  background: #ffffff;
-}
-
-.summaryRow {
-  padding: 16rpx 0;
-}
-
-.summaryHead {
+/* ============ 页头与分享入口 ============ */
+.pageHead {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 8rpx 20rpx;
 }
 
-.summaryTitle {
+.pageTitle {
   color: $ink;
-  font-size: 38rpx;
+  font-size: 40rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.shareEntry {
+  display: flex;
+  align-items: center;
+  height: 64rpx;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  background: #ffffff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.shareIcon {
+  margin-right: 6rpx;
+  color: $red;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.shareText {
+  color: $ink;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+/* ============ 断网提示 ============ */
+.metaBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.metaText {
+  flex: 1;
+  color: $muted;
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.metaRetry {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  color: $red;
+  font-size: 24rpx;
+}
+
+/* ============ 分组标题 ============ */
+.secHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8rpx 8rpx 14rpx;
+}
+
+.secTitle {
+  color: $ink;
+  font-size: 34rpx;
   font-weight: $font-weight-bold;
   line-height: 1.3;
 }
 
-.summaryDate {
-  margin-left: 12rpx;
-  color: $ink;
-  font-size: 27rpx;
-  line-height: 1.3;
+.secHint {
+  color: $muted;
+  font-size: 24rpx;
 }
 
-.chevron {
-  width: 10rpx;
-  height: 10rpx;
-  flex-shrink: 0;
-  margin-top: 2rpx;
-  margin-left: 8rpx;
-  border-top: 2rpx solid #b0b0b5;
-  border-right: 2rpx solid #b0b0b5;
-  transform: rotate(45deg);
+/* ============ 竞彩三行入口 ============ */
+.entryCard {
+  padding: 4rpx 24rpx 16rpx;
+  border-radius: 28rpx;
+  background: #ffffff;
 }
 
-.stats {
+.entryRow {
   display: flex;
-  margin-top: 12rpx;
-}
-
-.statCol {
-  width: 64rpx;
-  flex-shrink: 0;
+  align-items: center;
+  padding: 22rpx 0;
 
   & + & {
-    margin-left: 8rpx;
+    border-top: 2rpx solid $divider;
+  }
+
+  &:active {
+    opacity: 0.7;
   }
 }
 
-.statLabel {
-  display: block;
-  margin-bottom: 6rpx;
-  color: $ink;
-  font-size: 24rpx;
-  line-height: 1.2;
-  text-align: center;
-}
-
-.statBox {
+.entryIcon {
   display: flex;
-  height: 44rpx;
+  width: 64rpx;
+  height: 64rpx;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 4rpx;
-  background: #d9d9d9;
-}
-
-.statValue {
-  font-size: 26rpx;
-  font-weight: $font-weight-medium;
-  line-height: 1;
-}
-
-.statMuted {
-  color: #9a9a9e;
-}
-
-.statRed {
-  color: $red;
-}
-
-.statPlain {
-  color: $ink;
-}
-
-.statGreen {
-  color: $green;
-}
-
-.divider {
-  height: 2rpx;
-  margin: 0 4rpx;
+  border-radius: 18rpx;
   background: $divider;
 }
 
-.traditionalDate {
-  display: block;
-  margin: 8rpx 0 12rpx;
+.entryIconText {
   color: $ink;
-  font-size: 27rpx;
-  line-height: 1.3;
-}
-
-.traditionalBalls {
-  display: flex;
-}
-
-.traditionalBall {
-  display: flex;
-  width: 18rpx;
-  height: 44rpx;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8rpx;
-  background: $green;
-
-  & + & {
-    margin-left: 4rpx;
-  }
-}
-
-.traditionalBallText {
-  color: #ffffff;
-  font-size: 16rpx;
+  font-size: 28rpx;
   font-weight: $font-weight-semibold;
   line-height: 1;
 }
 
+.entryBody {
+  flex: 1;
+  margin-left: 20rpx;
+}
+
+.entryTitle {
+  display: block;
+  color: $ink;
+  font-size: 32rpx;
+  font-weight: $font-weight-semibold;
+  line-height: 1.3;
+}
+
+.entrySub {
+  display: block;
+  margin-top: 4rpx;
+  color: $muted;
+  font-size: 24rpx;
+  line-height: 1.3;
+}
+
+.entryChevron {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  color: #b0b0b5;
+  font-size: 32rpx;
+  line-height: 1;
+}
+
+.entryNote {
+  display: block;
+  margin-top: 12rpx;
+  padding-top: 14rpx;
+  border-top: 2rpx solid $divider;
+  color: $muted;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
 /* ============ 最新开奖卡 ============ */
+/* 卡片本体样式由共享组件 LotteryCardView 使用，这里只管首页的位置 */
+.lotteryCardSection {
+  margin-top: 0;
+}
+
 .lotteryCard {
-  margin-top: 24rpx;
   padding: 4rpx 28rpx;
   border-radius: 28rpx;
   background: #ffffff;
@@ -232,44 +267,13 @@ $green: #34c759;
   font-size: 22rpx;
   line-height: 1.4;
 }
-/* ============ 页头与分享入口 ============ */
-.pageHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16rpx 8rpx 20rpx;
-}
 
-.pageTitle {
-  color: $ink;
-  font-size: 40rpx;
-  font-weight: 700;
-  letter-spacing: 1rpx;
-}
-
-.shareEntry {
-  display: flex;
-  align-items: center;
-  height: 64rpx;
-  padding: 0 24rpx;
-  border-radius: 999rpx;
-  background: #ffffff;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
-
-  &:active {
-    opacity: 0.7;
-  }
-}
-
-.shareIcon {
-  margin-right: 6rpx;
-  color: $red;
-  font-size: 28rpx;
-  font-weight: 700;
-}
-
-.shareText {
-  color: $ink;
-  font-size: 26rpx;
-  font-weight: 600;
+/* ============ 数据来源 ============ */
+.sourceNote {
+  display: block;
+  margin-top: 20rpx;
+  color: $muted;
+  font-size: 22rpx;
+  line-height: 1.5;
+  text-align: center;
 }

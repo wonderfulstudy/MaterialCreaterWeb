@@ -1,10 +1,5 @@
-import {
-  MAX_MATCH,
-  summarizeLegs,
-  type PlanLeg,
-  type SelectionSummary,
-  type SportKey,
-} from '@/components/PlanCalculator'
+import type { PlanLeg, SelectionSummary, SportKey } from '@/components/PlanCalculator'
+import { summarizeCardLegs } from '@/components/PlanCardView'
 import type { PlanHistoryEntry, PlanLegResult, SharePlan } from '@/components/SharePoster'
 
 /** 一张推荐单卡片 */
@@ -37,9 +32,7 @@ export function createPlanId(): string {
  * 与计算器默认选中的过关方式保持一致。
  */
 export function summarizePlan(legs: PlanLeg[], multiple = 1): SelectionSummary {
-  const matchCount = new Set(legs.map((leg) => leg.matchId)).size
-  const passSizes = [Math.min(MAX_MATCH, Math.max(1, matchCount))]
-  return summarizeLegs(legs, passSizes, multiple)
+  return summarizeCardLegs(legs, multiple)
 }
 
 export function createPlan(sport: SportKey, name: string, legs: PlanLeg[] = []): RecommendPlan {

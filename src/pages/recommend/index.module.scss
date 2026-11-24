@@ -192,10 +192,11 @@ $tabbar-height: 132rpx;
 .cardList {
   display: flex;
   flex-direction: column;
+  gap: 24rpx;
 }
 
+// 卡片内外边距由列表 gap 提供：海报里嵌入同一张卡片时不会多出底部空白
 .card {
-  margin-bottom: 24rpx;
   overflow: hidden;
   background: #fff;
   border-radius: 28rpx;

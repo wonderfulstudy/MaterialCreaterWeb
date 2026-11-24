@@ -1,0 +1,429 @@
+// 开奖详情页（足球/篮球/传统足彩）与 DateBar 共用一份样式，
+// 色板沿用首页：灰底白卡 + 红/绿语义色，不另造一套视觉。
+@use '@/styles/variables.scss' as *;
+
+$page-bg: #e5e5ea;
+$card-bg: #ffffff;
+$ink: #111111;
+$muted: #8e8e93;
+$divider: #f0f0f2;
+$red: #ff383c;
+$green: #34c759;
+
+.page {
+  min-height: 100vh;
+  background: $page-bg;
+}
+
+/* ============ 顶部悬浮日期条 ============ */
+.topbarWrap {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.topbar {
+  display: flex;
+  height: 96rpx;
+  align-items: center;
+  padding: 0 24rpx;
+  background: $card-bg;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.topbarBack {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+
+  &:active {
+    opacity: 0.6;
+  }
+}
+
+.topbarBackIcon {
+  color: $ink;
+  font-size: 44rpx;
+  line-height: 1;
+}
+
+.topbarTitle {
+  color: $ink;
+  font-size: 32rpx;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+}
+
+.topbarDate {
+  margin-left: auto;
+  color: $muted;
+  font-size: 26rpx;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.topbarMore {
+  display: flex;
+  height: 52rpx;
+  flex-shrink: 0;
+  align-items: center;
+  margin-left: 16rpx;
+  padding: 0 16rpx;
+  border-radius: 999rpx;
+  background: $divider;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.topbarMoreText {
+  color: $red;
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.topbarMoreIcon {
+  margin-left: 4rpx;
+  color: $red;
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+/* ============ 更多期次弹层 ============ */
+.sheet {
+  background: $card-bg;
+  box-shadow: 0 12rpx 28rpx rgba(0, 0, 0, 0.08);
+}
+
+.sheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 32rpx 12rpx;
+}
+
+.sheetTitle {
+  color: $ink;
+  font-size: 28rpx;
+  font-weight: $font-weight-semibold;
+}
+
+.sheetClose {
+  color: $muted;
+  font-size: 24rpx;
+}
+
+.sheetSteps {
+  display: flex;
+  padding: 0 32rpx 16rpx;
+}
+
+.sheetStep {
+  display: flex;
+  height: 68rpx;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  background: $divider;
+
+  & + & {
+    margin-left: 16rpx;
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.sheetStepText {
+  color: $ink;
+  font-size: 26rpx;
+}
+
+.sheetList {
+  height: 480rpx;
+  padding: 0 32rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.sheetItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 12rpx;
+  background: #f7f7f9;
+}
+
+.sheetItemActive {
+  background: #fff1f1;
+  outline: 2rpx solid rgba(255, 56, 60, 0.35);
+}
+
+.sheetItemLabel {
+  color: $ink;
+  font-size: 26rpx;
+}
+
+.sheetItemHint {
+  color: $muted;
+  font-size: 22rpx;
+}
+
+/* ============ 列表主体 ============ */
+.body {
+  padding: 24rpx 24rpx calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.metaBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.metaText {
+  color: $muted;
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.metaRetry {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  color: $red;
+  font-size: 24rpx;
+}
+
+.status {
+  display: block;
+  padding: 80rpx 0;
+  color: $muted;
+  font-size: 26rpx;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ============ 竞彩单场赛果卡 ============ */
+.matchCard {
+  margin-bottom: 16rpx;
+  padding: 20rpx 24rpx 16rpx;
+  border-radius: 24rpx;
+  background: $card-bg;
+}
+
+.matchHead {
+  display: flex;
+  align-items: center;
+}
+
+.matchLeague {
+  color: $muted;
+  font-size: 22rpx;
+}
+
+.matchNo {
+  margin-left: 12rpx;
+  color: $ink;
+  font-size: 22rpx;
+}
+
+.matchLive {
+  margin-left: auto;
+  color: $muted;
+  font-size: 22rpx;
+}
+
+.matchTeams {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+}
+
+.matchTeam {
+  flex: 1;
+  color: $ink;
+  font-size: 30rpx;
+  font-weight: $font-weight-medium;
+  line-height: 1.3;
+
+  &:first-child {
+    text-align: right;
+  }
+
+  &:last-child {
+    text-align: left;
+  }
+}
+
+.matchScore {
+  min-width: 132rpx;
+  flex-shrink: 0;
+  color: $ink;
+  font-size: 36rpx;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.matchHalf {
+  display: block;
+  margin-top: 6rpx;
+  color: $muted;
+  font-size: 22rpx;
+  text-align: center;
+}
+
+.plays {
+  display: flex;
+  margin-top: 16rpx;
+  padding-top: 14rpx;
+  border-top: 2rpx solid $divider;
+}
+
+.play {
+  flex: 1;
+  text-align: center;
+}
+
+.playLabel {
+  display: block;
+  color: $muted;
+  font-size: 20rpx;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.playValue {
+  display: block;
+  margin-top: 4rpx;
+  color: $ink;
+  font-size: 26rpx;
+  font-weight: $font-weight-semibold;
+  line-height: 1.3;
+}
+
+.playWin {
+  color: $red;
+}
+
+.playLose {
+  color: $green;
+}
+
+.playDraw {
+  color: $ink;
+}
+
+/* ============ 传统足彩 14 场 ============ */
+.tinfo {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 24rpx;
+  background: $card-bg;
+}
+
+.tinfoTitle {
+  color: $ink;
+  font-size: 30rpx;
+  font-weight: $font-weight-bold;
+}
+
+.pill {
+  margin-left: 12rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  line-height: 1.4;
+}
+
+.pillWin {
+  background: rgba(52, 199, 89, 0.14);
+  color: $green;
+}
+
+.tinfoDate {
+  margin-left: auto;
+  color: $muted;
+  font-size: 24rpx;
+}
+
+.listCard {
+  overflow: hidden;
+  border-radius: 24rpx;
+  background: $card-bg;
+}
+
+.trow {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 24rpx;
+
+  & + & {
+    border-top: 2rpx solid $divider;
+  }
+}
+
+.tNo {
+  width: 56rpx;
+  flex-shrink: 0;
+  color: $muted;
+  font-size: 24rpx;
+}
+
+.tTeam {
+  flex: 1;
+  color: $ink;
+  font-size: 26rpx;
+}
+
+.tResult {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-round;
+  color: $ink;
+  font-size: 26rpx;
+  font-weight: $font-weight-semibold;
+  line-height: 1;
+}
+
+.r3 {
+  background: rgba(255, 56, 60, 0.12);
+  color: $red;
+}
+
+.r1 {
+  background: $divider;
+  color: $ink;
+}
+
+.r0 {
+  background: rgba(52, 199, 89, 0.14);
+  color: $green;
+}
+
+.note {
+  display: block;
+  margin-top: 16rpx;
+  padding: 18rpx 24rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.7);
+  color: $muted;
+  font-size: 22rpx;
+  line-height: 1.6;
+}

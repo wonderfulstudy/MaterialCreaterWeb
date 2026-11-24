@@ -1,39 +1,27 @@
-import Taro from "@tarojs/taro";
-import AppConfig from "@/config/app";
+import { requestProxy } from '../proxy'
 import { LotteryHistory } from "./lottery.dto";
 
-async function getLotteryHistory<T>(
-    gameNo: string,
-    provinceId: number = 0,
-    isVerify: number = 1,
-    pageSize: number = 30,
-    pageNo: number = 1,
-): Promise<T> {
-    const resp = await Taro.request<T>({
-        url: AppConfig.app.lottery_base_url,
-        method: 'GET',
-        data: { gameNo, provinceId, isVerify, pageSize, pageNo}
-    })
+/** 代理路由：game 取 dlt / pl3 / pl5 / qxc，固定 provinceId=0&pageSize=30&isVerify=1 */
+const LOTTERY_HISTORY_PATH = '/api/lottery/history'
 
-    if (resp.statusCode !== 200) {
-        throw new Error(`请求失败：HTTP ${resp.statusCode}`)
-    }
+async function getLotteryHistory<T>(game: string): Promise<T> {
+    const { data } = await requestProxy<T>(LOTTERY_HISTORY_PATH, { game, pageNo: 1 })
 
-    return resp.data
+    return data
 }
 
 export function getDltHistory(): Promise<LotteryHistory> {
-  return getLotteryHistory<LotteryHistory>(AppConfig.games.DLT.gameFlag)
+  return getLotteryHistory<LotteryHistory>('dlt')
 }
 
 export function getQxcHistory(): Promise<LotteryHistory> {
-  return getLotteryHistory<LotteryHistory>(AppConfig.games.QXC.gameFlag)
+  return getLotteryHistory<LotteryHistory>('qxc')
 }
 
 export function getPl3History(): Promise<LotteryHistory> {
-  return getLotteryHistory<LotteryHistory>(AppConfig.games.PL3.gameFlag)
+  return getLotteryHistory<LotteryHistory>('pl3')
 }
 
 export function getPl5History(): Promise<LotteryHistory> {
-  return getLotteryHistory<LotteryHistory>(AppConfig.games.PL5.gameFlag)
+  return getLotteryHistory<LotteryHistory>('pl5')
 }

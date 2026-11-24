@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Image, ScrollView, Text, View } from '@tarojs/components'
+import { Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import classnames from 'classnames'
+import PlanCardView from '@/components/PlanCardView'
+import { captureNodeToDataUrl } from '@/utils/posters/capture'
 import { drawSharePoster, measurePosterHeight, POSTER_WIDTH } from './draw'
 import { planSignature, type SharePlan } from './model'
 import styles from './index.module.scss'
@@ -17,6 +19,9 @@ export interface SharePosterProps {
 }
 
 type PosterStatus = 'idle' | 'drawing' | 'ready' | 'error'
+
+/** H5 端「所见即所得」的截图源节点：预览里那张方案卡片的外框 */
+const PREVIEW_NODE_ID = 'share-poster-preview'
 
 /** 离屏画布的最小抽象：weapp 用 OffscreenCanvas，H5 用 detached canvas */
 interface OffscreenLike {
@@ -64,8 +69,11 @@ async function exportImage(canvas: OffscreenLike, width: number, height: number)
 }
 
 /**
- * 方案分享海报：把当前方案、历史方案与中奖情况绘制成一张红金票据风格长图，
- * 弹层内预览，支持保存到相册 / 微信分享（H5 为下载图片）。
+ * 方案分享海报：预览就是推荐页那张方案卡片（同一个 PlanCardView），
+ * 因此 H5 保存下来的图与预览完全一致（所见即所得）。
+ *
+ * - H5：截取预览节点（captureNodeToDataUrl）得到图片；
+ * - 小程序：预览同样是方案卡片，导出仍走离屏画布（Snapshot 需要 Skyline，后续迁移）。
  *
  * 用法：
  * ```tsx
@@ -75,7 +83,6 @@ async function exportImage(canvas: OffscreenLike, width: number, height: number)
 export default function SharePoster({ visible, plan, onClose, onGenerated }: SharePosterProps) {
   const [status, setStatus] = useState<PosterStatus>('idle')
   const [imagePath, setImagePath] = useState('')
-  const [posterHeight, setPosterHeight] = useState(0)
   const [saving, setSaving] = useState(false)
   const requestId = useRef(0)
   const planRef = useRef<SharePlan | null>(plan)
@@ -83,7 +90,7 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
   const onGeneratedRef = useRef(onGenerated)
   onGeneratedRef.current = onGenerated
 
-  // 以内容签名为依赖：调用方每次渲染传入新对象引用时，只要内容不变就不重复绘制
+  // 以内容签名为依赖：调用方每次渲染传入新对象引用时，只要内容不变就不重复生成
   const signature = useMemo(() => (plan ? planSignature(plan) : ''), [plan])
 
   useEffect(() => {
@@ -102,25 +109,34 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
         return
       }
       try {
-        const logicalHeight = measurePosterHeight(target)
-        const ratio = getPixelRatio()
-        const width = Math.round(POSTER_WIDTH * ratio)
-        const height = Math.round(logicalHeight * ratio)
+        let filePath: string
+        if (process.env.TARO_ENV === 'h5') {
+          const node = document.getElementById(PREVIEW_NODE_ID)
+          if (!node) {
+            throw new Error('海报预览尚未渲染')
+          }
+          filePath = await captureNodeToDataUrl(node)
+        } else {
+          const logicalHeight = measurePosterHeight(target)
+          const ratio = getPixelRatio()
+          const width = Math.round(POSTER_WIDTH * ratio)
+          const height = Math.round(logicalHeight * ratio)
 
-        const canvas = createOffscreen(width, height)
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          throw new Error('当前环境不支持海报绘制')
+          const canvas = createOffscreen(width, height)
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            throw new Error('当前环境不支持海报绘制')
+          }
+          ctx.scale(ratio, ratio)
+          drawSharePoster(ctx, target)
+
+          filePath = await exportImage(canvas, width, height)
         }
-        ctx.scale(ratio, ratio)
-        drawSharePoster(ctx, target)
 
-        const filePath = await exportImage(canvas, width, height)
         if (cancelled || requestId.current !== currentRequest) {
           return
         }
         setImagePath(filePath)
-        setPosterHeight(logicalHeight)
         setStatus('ready')
         onGeneratedRef.current?.(filePath)
       } catch (error) {
@@ -132,7 +148,7 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
       }
     }
 
-    // 等弹层动画落定后再绘制，避免首帧卡顿
+    // 等弹层动画与卡片排版落定后再截图，避免首帧卡顿 / 截到半透明状态
     const timer = setTimeout(() => void generate(), 60)
     return () => {
       cancelled = true
@@ -224,31 +240,14 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
           </View>
         </View>
 
-        <ScrollView scrollY className={styles.scrollBody}>
-          <View className={styles.posterWrap}>
-            {status === 'drawing' && (
-              <View className={styles.placeholder}>
-                <View className={styles.spinner} />
-                <Text className={styles.placeholderText}>海报生成中…</Text>
-              </View>
-            )}
-            {status === 'error' && (
-              <View className={styles.placeholder}>
-                <Text className={styles.placeholderText}>海报生成失败</Text>
-                <Text className={styles.placeholderHint}>请关闭后重试，或检查方案内容是否完整</Text>
-              </View>
-            )}
-            {status === 'ready' && imagePath && (
-              <Image
-                className={styles.posterImage}
-                src={imagePath}
-                mode="widthFix"
-                style={{ aspectRatio: `${POSTER_WIDTH} / ${posterHeight}` }}
-                showMenuByLongpress={isWeapp}
-              />
-            )}
+        <View className={styles.previewWrap}>
+          {/* 预览＝页面同款卡片；容器截断超长内容，H5 直接截这一块导出 */}
+          <View id={PREVIEW_NODE_ID} className={styles.previewClip}>
+            <PlanCardView name={plan.name} legs={plan.legs} summary={plan.summary} expanded />
           </View>
-        </ScrollView>
+          {status === 'drawing' ? <Text className={styles.statusText}>正在生成图片…</Text> : null}
+          {status === 'error' ? <Text className={styles.statusError}>图片生成失败，请关闭后重试</Text> : null}
+        </View>
 
         <View className={styles.actions}>
           <View
@@ -267,7 +266,7 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
           ) : null}
         </View>
         <Text className={styles.tip}>
-          {isWeapp ? '也可以长按海报图片保存或转发' : '下载后可发送给好友或分享到朋友圈'}
+          {isWeapp ? '预览为方案卡片，保存的图片仍为票据海报' : '下载的图片就是上方这张方案卡片'}
         </Text>
       </View>
     </View>

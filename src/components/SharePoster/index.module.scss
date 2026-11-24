@@ -11,12 +11,6 @@
   }
 }
 
-@keyframes poster-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .mask {
   position: fixed;
   top: 0;
@@ -88,53 +82,36 @@
   color: $color-text-secondary;
 }
 
-.scrollBody {
+// 预览区：内嵌页面同款方案卡片；容器负责截断超长内容（预览＝保存图）
+.previewWrap {
   flex: 1 1 auto;
   min-height: 0;
-  max-height: 62vh;
-  overscroll-behavior-y: contain;
+  padding: $spacing-md;
+  overflow: hidden;
   background: #2a0d10;
 }
 
-.posterWrap {
-  padding: $spacing-md;
-}
-
-.posterImage {
-  display: block;
-  width: 100%;
+.previewClip {
+  max-height: 58vh;
+  overflow: hidden;
+  background: #fff;
   border-radius: $radius-md;
   box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.4);
 }
 
-.placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-sm;
-  min-height: 560rpx;
-  padding: $spacing-xl $spacing-md;
-}
-
-.spinner {
-  width: 64rpx;
-  height: 64rpx;
-  border: 6rpx solid rgba(245, 217, 139, 0.25);
-  border-top-color: $color-gold-light;
-  border-radius: 50%;
-  animation: poster-spin 0.9s linear infinite;
-}
-
-.placeholderText {
-  font-size: $font-size-md;
-  font-weight: $font-weight-medium;
-  color: $color-gold-light;
-}
-
-.placeholderHint {
+.statusText {
+  display: block;
+  margin-top: $spacing-xs;
   font-size: $font-size-xs;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+}
+
+.statusError {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-gold-light;
   text-align: center;
 }
 
@@ -195,9 +172,5 @@
 @media (prefers-reduced-motion: reduce) {
   .panel {
     animation: none;
-  }
-
-  .spinner {
-    animation-duration: 1.8s;
   }
 }

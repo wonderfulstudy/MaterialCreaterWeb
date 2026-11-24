@@ -1,33 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Image, ScrollView, Text, View } from '@tarojs/components'
+import { ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import classnames from 'classnames'
+import LotteryCardView from '@/components/LotteryCardView'
+import { captureNodeToDataUrl } from '@/utils/posters/capture'
+import { POSTER_WIDTH } from './canvas-kit'
 import { DEFAULT_SCHEME_ID, getPosterScheme } from './schemes'
 import { useShareResults } from './use-share-results'
-import { POSTER_WIDTH } from './canvas-kit'
+import { posterKey, toCardItems } from './card-items'
 import type { PosterImages, ResultPosterInput } from './types'
 import styles from './index.module.scss'
 
 /** 当前定稿方案；弹层不再提供切换，换风格只改这里 */
 const posterScheme = getPosterScheme(DEFAULT_SCHEME_ID)
 
+/** H5 导出 = 截取预览节点；小程序仍走本文下面的画布绘制 */
+const IS_H5 = process.env.TARO_ENV === 'h5'
+
 export interface ResultPosterProps {
   /** 是否展示弹层 */
   visible: boolean
   /**
    * 可选的现成数据：传入时以它为准（预览/测试），不传则由组件自己拉取当期开奖结果。
-   * 只放已开奖彩种，默认全部画进同一张海报。
+   * 只放已开奖彩种，默认全部展示在同一张海报里。
    */
   results?: readonly ResultPosterInput[]
   onClose: () => void
 }
 
 type PaintStatus = 'idle' | 'drawing' | 'ready' | 'error'
-
-/** 彩种在弹层里的稳定标识：同名同期的两条数据视为同一项 */
-function posterKey(item: ResultPosterInput): string {
-  return `${item.gameName}|${item.issue}`
-}
 
 /** H5 下载时的文件名：单个彩种用彩种名，多个彩种标出数量 */
 function posterFileName(items: readonly ResultPosterInput[]): string {
@@ -114,8 +115,11 @@ function loadQrImage(canvas: OffscreenLike, src: string): Promise<CanvasImageSou
 }
 
 /**
- * 开奖结果分享海报：把当期开奖号码绘制成图片，附微信二维码引流。
- * 方案（视觉风格）由 schemes/ 提供，这里只管取数据、画布、导出与保存分享。
+ * 开奖结果分享海报。
+ *
+ * 预览渲染的就是首页那张开奖号码卡片（LotteryCardView），因此「看到什么就保存什么」：
+ * - H5：保存/下载的图由 captureNodeToDataUrl 直接截取预览节点，与预览逐像素一致；
+ * - 小程序：预览同样是卡片，导出暂留 schemes/ 的画布绘制（保存到相册 + 分享给好友）。
  *
  * 用法：数据自己取，调用方只管显隐
  * ```tsx
@@ -126,11 +130,12 @@ export default function ResultPoster({ visible, results: providedResults, onClos
   const share = useShareResults(visible, providedResults)
   const [status, setStatus] = useState<PaintStatus>('idle')
   const [imagePath, setImagePath] = useState('')
-  const [posterHeight, setPosterHeight] = useState(0)
   const [saving, setSaving] = useState(false)
   // 记录被关掉的彩种而不是被选中的，默认即全选，也不会因 results 换引用反复重置
   const [deselected, setDeselected] = useState<string[]>([])
 
+  // H5 的导出源节点：预览容器（已按 max-height 截断），截它即得预览同款图片
+  const previewRef = useRef<HTMLDivElement | null>(null)
   const requestId = useRef(0)
 
   const items = useMemo(() => {
@@ -142,6 +147,7 @@ export default function ResultPoster({ visible, results: providedResults, onClos
 
   // 用内容签名而非对象引用作为绘制依赖，调用方每次渲染新建对象也不会重复绘制
   const signature = JSON.stringify(items)
+  const cardItems = useMemo(() => toCardItems(items), [items])
 
   useEffect(() => {
     if (!visible) {
@@ -151,8 +157,9 @@ export default function ResultPoster({ visible, results: providedResults, onClos
     setImagePath('')
   }, [visible])
 
+  // 小程序端：离屏画布绘制，导出路径保持不变
   useEffect(() => {
-    if (!visible || items.length === 0) {
+    if (IS_H5 || !visible || items.length === 0) {
       return
     }
 
@@ -188,7 +195,6 @@ export default function ResultPoster({ visible, results: providedResults, onClos
           return
         }
         setImagePath(filePath)
-        setPosterHeight(logicalHeight)
         setStatus('ready')
       } catch (error) {
         if (cancelled || requestId.current !== currentRequest) {
@@ -206,6 +212,51 @@ export default function ResultPoster({ visible, results: providedResults, onClos
       clearTimeout(timer)
     }
   }, [visible, signature])
+
+  // H5 端：截取预览节点，保存出去的图与预览完全一致
+  useEffect(() => {
+    if (!IS_H5 || !visible || items.length === 0 || share.status !== 'ready') {
+      return
+    }
+
+    const currentRequest = ++requestId.current
+    let cancelled = false
+    setStatus('drawing')
+    setImagePath('')
+
+    const capture = async () => {
+      const node = previewRef.current
+      if (!node) {
+        throw new Error('预览节点尚未渲染')
+      }
+      return captureNodeToDataUrl(node)
+    }
+
+    // 等卡片渲染完成（字体/布局落定）再截图
+    const timer = setTimeout(() => {
+      capture().then(
+        (filePath) => {
+          if (cancelled || requestId.current !== currentRequest) {
+            return
+          }
+          setImagePath(filePath)
+          setStatus('ready')
+        },
+        (error) => {
+          if (cancelled || requestId.current !== currentRequest) {
+            return
+          }
+          console.error('[ResultPoster] capture failed', error)
+          setStatus('error')
+        }
+      )
+    }, 60)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [visible, signature, share.status])
 
   useEffect(() => {
     if (!visible || process.env.TARO_ENV !== 'h5') {
@@ -322,47 +373,38 @@ export default function ResultPoster({ visible, results: providedResults, onClos
         ) : null}
 
         <ScrollView scrollY className={styles.scrollBody}>
-          <View className={styles.posterWrap}>
-            {share.status === 'loading' && (
-              <View className={styles.placeholder}>
-                <View className={styles.spinner} />
-                <Text className={styles.placeholderText}>正在获取本期开奖…</Text>
+          {share.status !== 'ready' && (
+            <View className={styles.posterWrap}>
+              {share.status === 'loading' && (
+                <View className={styles.placeholder}>
+                  <View className={styles.spinner} />
+                  <Text className={styles.placeholderText}>正在获取本期开奖…</Text>
+                </View>
+              )}
+              {share.status === 'empty' && (
+                <View className={styles.placeholder}>
+                  <Text className={styles.placeholderText}>本期还没有可分享的开奖结果</Text>
+                  <Text className={styles.placeholderHint}>开奖后重新打开即可分享</Text>
+                </View>
+              )}
+              {share.status === 'error' && (
+                <View className={styles.placeholder}>
+                  <Text className={styles.placeholderText}>开奖数据获取失败</Text>
+                  <Text className={styles.placeholderHint}>请关闭后重试</Text>
+                </View>
+              )}
+            </View>
+          )}
+          {share.status === 'ready' && items.length > 0 && (
+            <View className={styles.preview}>
+              {/* 预览即导出：容器按可见高度截断，H5 保存的图就是这个节点 */}
+              <View className={styles.previewViewport} ref={IS_H5 ? previewRef : undefined}>
+                <LotteryCardView cards={cardItems} />
               </View>
-            )}
-            {share.status === 'empty' && (
-              <View className={styles.placeholder}>
-                <Text className={styles.placeholderText}>本期还没有可分享的开奖结果</Text>
-                <Text className={styles.placeholderHint}>开奖后重新打开即可分享</Text>
-              </View>
-            )}
-            {share.status === 'error' && (
-              <View className={styles.placeholder}>
-                <Text className={styles.placeholderText}>开奖数据获取失败</Text>
-                <Text className={styles.placeholderHint}>请关闭后重试</Text>
-              </View>
-            )}
-            {status === 'drawing' && (
-              <View className={styles.placeholder}>
-                <View className={styles.spinner} />
-                <Text className={styles.placeholderText}>海报生成中…</Text>
-              </View>
-            )}
-            {status === 'error' && (
-              <View className={styles.placeholder}>
-                <Text className={styles.placeholderText}>海报生成失败</Text>
-                <Text className={styles.placeholderHint}>请关闭后重试</Text>
-              </View>
-            )}
-            {status === 'ready' && imagePath && (
-              <Image
-                className={styles.posterImage}
-                src={imagePath}
-                mode="widthFix"
-                style={{ aspectRatio: `${POSTER_WIDTH} / ${posterHeight}` }}
-                showMenuByLongpress={isWeapp}
-              />
-            )}
-          </View>
+              {status === 'drawing' && <Text className={styles.previewHint}>图片生成中…</Text>}
+              {status === 'error' && <Text className={styles.previewHint}>图片生成失败，可直接截图保存</Text>}
+            </View>
+          )}
         </ScrollView>
 
         <View className={styles.actions}>
@@ -383,7 +425,7 @@ export default function ResultPoster({ visible, results: providedResults, onClos
         </View>
         <Text className={styles.tip}>
           {share.results.length > 1 ? '点击彩种可增减内容，' : ''}
-          {isWeapp ? '长按海报可保存或转发，二维码换成门店微信后即可引流' : '保存后可发送给好友或朋友圈'}
+          {isWeapp ? '保存到相册后可转发给好友，二维码换成门店微信后即可引流' : '保存后可发送给好友或朋友圈'}
         </Text>
       </View>
     </View>

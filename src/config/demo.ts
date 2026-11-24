@@ -49,13 +49,6 @@ export const DEMO_DRAWS: DemoDraw[] = [
     blueNumbers: [],
   },
   {
-    code: 'fc3d',
-    issue: '2026308',
-    drawDate: '2026-11-18',
-    redNumbers: ['4', '5', '7'],
-    blueNumbers: [],
-  },
-  {
     code: 'qxc',
     issue: '26132',
     drawDate: '2026-11-17',

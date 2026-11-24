@@ -1,23 +1,41 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Text, View } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
-import classnames from 'classnames'
-import BallNumber from '@/components/BallNumber'
+import LotteryCardView from '@/components/LotteryCardView'
+import type { LotteryCardItem } from '@/components/LotteryCardView/types'
 import ResultPoster from '@/components/ResultPoster'
 import TabBar from '@/components/TabBar'
 import { loadLatestGame } from '@/api/latest-lottery'
+import { loadTraditionalDraws, type TraditionalDraw } from '@/api/lottery/results'
+import { formatUpdatedAt } from '@/services/cache/remote-cache'
 import { IS_DEMO_MODE, OPEN_SHARE_ON_LOAD } from '@/config/demo'
 import { LATEST_LOTTERIES } from '@/models/lottery.model'
 import { formatDrawDate, formatIssue } from '@/utils/lottery-format'
-import { SPORT_REPORTS, TRADITIONAL_REPORT, createDemoCards } from './home-data'
-import { createLoadingCards, toCardView, type LotteryCardView } from './lottery-view-model'
+import { SPORT_ENTRIES, createDemoCards, type SportEntry } from './home-data'
+import { createCachedCards, createLoadingCards, toCardView } from './lottery-view-model'
 import styles from './index.module.scss'
 
 const IS_H5 = process.env.TARO_ENV === 'h5'
 
+interface LoadMeta {
+  /** 本次汇总数据的落库时间，缓存回退时为上次成功时间 */
+  updatedAt: number
+  /** 有任一数据来自本地缓存，说明当前网络不可用 */
+  fromCache: boolean
+}
+
+/**
+ * 首页开奖页：只保留两组入口。
+ * 1) 竞彩开奖结果：足球 / 篮球 / 传统足彩三条入口行，点进各自的详情页；
+ * 2) 数字彩开奖结果：7 个彩种纵向平铺，点不进详情，也没有彩种切换控件。
+ */
 export default function HomePage() {
   const requestId = useRef(0)
-  const [cards, setCards] = useState<LotteryCardView[]>(createLoadingCards)
+  const [cards, setCards] = useState<LotteryCardItem[]>(
+    () => createCachedCards() ?? createLoadingCards()
+  )
+  const [traditional, setTraditional] = useState<TraditionalDraw | null>(null)
+  const [meta, setMeta] = useState<LoadMeta | null>(null)
   const [topInset, setTopInset] = useState(IS_H5 ? 20 : 64)
   const [shareOpen, setShareOpen] = useState(OPEN_SHARE_ON_LOAD)
 
@@ -34,30 +52,54 @@ export default function HomePage() {
   }, [])
 
   /**
-   * 重置为加载态并逐彩种独立请求，谁先回来谁先定格。
+   * 逐彩种独立请求，谁先回来谁先定格；已有内容时不退回加载态。
    * 返回全部请求落定的 Promise，供下拉刷新收起指示器。
    */
   function loadAllGames(): Promise<void> {
     const currentRequestId = ++requestId.current
-    setCards(createLoadingCards())
 
     if (IS_DEMO_MODE) {
       setCards(createDemoCards())
       return Promise.resolve()
     }
 
-    return Promise.all(
-      LATEST_LOTTERIES.map(({ code }) =>
-        loadLatestGame(code).then((game) => {
-          if (requestId.current !== currentRequestId) {
-            return
-          }
+    setCards((prev) =>
+      prev.every((card) => card.status === 'loading') ? createLoadingCards() : prev
+    )
 
-          const card = toCardView(game)
-          setCards((prev) => prev.map((item) => (item.code === code ? card : item)))
-        })
-      )
-    ).then(() => undefined)
+    let updatedAt = 0
+    let fromCache = false
+
+    const collect = (nextUpdatedAt: number, nextFromCache: boolean) => {
+      updatedAt = Math.max(updatedAt, nextUpdatedAt)
+      fromCache = fromCache || nextFromCache
+    }
+
+    const gameTasks = LATEST_LOTTERIES.map(({ code }) =>
+      loadLatestGame(code).then((game) => {
+        if (requestId.current !== currentRequestId) {
+          return
+        }
+        collect(game.updatedAt, game.fromCache)
+        const card = toCardView(game)
+        setCards((prev) => prev.map((item) => (item.id === code ? card : item)))
+      })
+    )
+
+    const traditionalTask = loadTraditionalDraws().then((loaded) => {
+      if (!loaded || requestId.current !== currentRequestId) {
+        return
+      }
+      collect(loaded.updatedAt, loaded.fromCache)
+      setTraditional(loaded.data[0] ?? null)
+    })
+
+    return Promise.all([...gameTasks, traditionalTask]).then(() => {
+      if (requestId.current !== currentRequestId || updatedAt === 0) {
+        return
+      }
+      setMeta({ updatedAt, fromCache })
+    })
   }
 
   useDidShow(() => {
@@ -75,13 +117,14 @@ export default function HomePage() {
     )
   })
 
-  const openMaterial = (sport: 'football' | 'basketball') => {
-    void Taro.reLaunch({ url: `/pages/recommend/index?sport=${sport}` })
+  const openEntry = (entry: SportEntry) => {
+    void Taro.navigateTo({ url: entry.url })
   }
 
-  const openTraditional = () => {
-    void Taro.showToast({ title: '传统足彩数据接入中', icon: 'none' })
-  }
+  /** 传足入口的副文案带上真实期号与开奖日期 */
+  const traditionalHint = traditional
+    ? `${formatIssue(traditional.issue)} · ${formatDrawDate(traditional.drawDate)}`
+    : ''
 
   return (
     <View className={styles.page}>
@@ -94,108 +137,50 @@ export default function HomePage() {
           </View>
         </View>
 
-        <View className={styles.summaryCard}>
-          {SPORT_REPORTS.map((report, index) => (
-            <Fragment key={report.key}>
-              {index > 0 && <View className={styles.divider} />}
-              <View className={styles.summaryRow} onClick={() => openMaterial(report.key)}>
-                <View className={styles.summaryHead}>
-                  <Text className={styles.summaryTitle}>{report.title}</Text>
-                  <Text className={styles.summaryDate}>{report.date}</Text>
-                  <View className={styles.chevron} />
-                </View>
-                <View className={styles.stats}>
-                  {report.stats.map((stat) => (
-                    <View className={styles.statCol} key={stat.label}>
-                      <Text className={styles.statLabel}>{stat.label}</Text>
-                      <View className={styles.statBox}>
-                        <Text
-                          className={classnames(
-                            styles.statValue,
-                            stat.tone === 'muted' && styles.statMuted,
-                            stat.tone === 'red' && styles.statRed,
-                            stat.tone === 'plain' && styles.statPlain,
-                            stat.tone === 'green' && styles.statGreen
-                          )}
-                        >
-                          {stat.value}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            </Fragment>
-          ))}
-
-          <View className={styles.divider} />
-
-          <View className={styles.summaryRow} onClick={openTraditional}>
-            <View className={styles.summaryHead}>
-              <Text className={styles.summaryTitle}>{TRADITIONAL_REPORT.title}</Text>
-              <Text className={styles.summaryDate}>
-                {formatIssue(TRADITIONAL_REPORT.issue)}
-              </Text>
-              <View className={styles.chevron} />
-            </View>
-            <Text className={styles.traditionalDate}>{TRADITIONAL_REPORT.date}</Text>
-            <View className={styles.traditionalBalls}>
-              {TRADITIONAL_REPORT.results.map((result, index) => (
-                <View className={styles.traditionalBall} key={`traditional-${index}`}>
-                  <Text className={styles.traditionalBallText}>{result}</Text>
-                </View>
-              ))}
-            </View>
+        {meta && meta.fromCache && (
+          <View className={styles.metaBar}>
+            <Text className={styles.metaText}>
+              网络不可用，展示更新于 {formatUpdatedAt(meta.updatedAt)} 的数据
+            </Text>
+            <Text className={styles.metaRetry} onClick={() => void loadAllGames()}>
+              重试
+            </Text>
           </View>
+        )}
+
+        <View className={styles.secHead}>
+          <Text className={styles.secTitle}>竞彩开奖结果</Text>
+          <Text className={styles.secHint}>按日期查看</Text>
         </View>
 
-        <View className={styles.lotteryCard}>
-          {cards.map((game) => (
-            <View className={styles.lotteryRow} key={game.code}>
-              <View className={styles.lotteryHead}>
-                <Text className={styles.lotteryName}>{game.name}</Text>
-                {game.status === 'drawn' && (
-                  <>
-                    <Text className={styles.lotteryIssue}>{formatIssue(game.issue)}</Text>
-                    <Text className={styles.lotteryDate}>{formatDrawDate(game.drawDate)}</Text>
-                  </>
-                )}
+        <View className={styles.entryCard}>
+          {SPORT_ENTRIES.map((entry) => (
+            <View className={styles.entryRow} key={entry.key} onClick={() => openEntry(entry)}>
+              <View className={styles.entryIcon}>
+                <Text className={styles.entryIconText}>{entry.glyph}</Text>
               </View>
-
-              {game.status === 'loading' && (
-                <View className={styles.numbers}>
-                  {Array.from({ length: 8 }).map((_, index) => (
-                    <View className={styles.skeletonBall} key={`${game.code}-skeleton-${index}`} />
-                  ))}
-                </View>
-              )}
-
-              {game.status === 'unavailable' && (
-                <Text className={styles.lotteryEmpty}>暂无最新开奖数据</Text>
-              )}
-
-              {game.status === 'drawn' && (
-                <View className={styles.numbers}>
-                  {game.redNumbers.map((number, index) => (
-                    <BallNumber
-                      key={`${game.code}-red-${index}`}
-                      number={number}
-                      type='red'
-                    />
-                  ))}
-                  {game.blueNumbers.length > 0 && <View className={styles.blueGap} />}
-                  {game.blueNumbers.map((number, index) => (
-                    <BallNumber
-                      key={`${game.code}-blue-${index}`}
-                      number={number}
-                      type='blue'
-                    />
-                  ))}
-                </View>
-              )}
+              <View className={styles.entryBody}>
+                <Text className={styles.entryTitle}>{entry.title}</Text>
+                <Text className={styles.entrySub}>
+                  {entry.key === 'traditional' && traditionalHint ? traditionalHint : entry.hint}
+                </Text>
+              </View>
+              <Text className={styles.entryChevron}>›</Text>
             </View>
           ))}
+          <Text className={styles.entryNote}>
+            任九：从 14 场中任选 9 场，猜中 9 场即中奖
+          </Text>
         </View>
+
+        <View className={styles.secHead}>
+          <Text className={styles.secTitle}>数字彩开奖结果</Text>
+          <Text className={styles.secHint}>{LATEST_LOTTERIES.length} 个彩种</Text>
+        </View>
+
+        <LotteryCardView cards={cards} className={styles.lotteryCardSection} />
+
+        <Text className={styles.sourceNote}>数据来源：中国体彩官网 · 中国福彩官网</Text>
       </View>
 
       <TabBar active='home' />

@@ -1,16 +1,18 @@
 import type { CwlHistory } from '../api/cwl/cwl.dto'
 import type { LotteryHistory } from '../api/lottery/lottery.dto'
 
-/** 首页展示的彩种及顺序；numberType 决定号码展示形态 */
+/**
+ * 开奖页展示的数字彩彩种及顺序，顺序即页面纵向顺序。
+ * numberType 决定号码展示形态；3D（fc3d）已按需求下线，不再登记。
+ */
 export const LATEST_LOTTERIES = [
-  { code: 'ssq', name: '双色球', numberType: 'red-blue' },
   { code: 'dlt', name: '大乐透', numberType: 'red-blue' },
-  { code: 'kl8', name: '快乐8', numberType: 'single' },
-  { code: 'fc3d', name: '3D', numberType: 'single' },
+  { code: 'ssq', name: '双色球', numberType: 'red-blue' },
   { code: 'qxc', name: '七星彩', numberType: 'red-blue' },
   { code: 'pl3', name: '排列3', numberType: 'single' },
   { code: 'pl5', name: '排列5', numberType: 'single' },
   { code: 'qlc', name: '七乐彩', numberType: 'red-blue' },
+  { code: 'kl8', name: '快乐8', numberType: 'single' },
 ] as const
 
 export type LotteryGameCode = (typeof LATEST_LOTTERIES)[number]['code']
@@ -20,7 +22,7 @@ export type LotteryGameCode = (typeof LATEST_LOTTERIES)[number]['code']
  * 各数据源的 DTO 由对应 mapper 转换为此结构，页面只消费该模型。
  */
 export interface LotteryResult {
-  /** 应用内彩种标识，如 'ssq'、'dlt'、'fc3d' */
+  /** 应用内彩种标识，如 'ssq'、'dlt' */
   gameCode: LotteryGameCode
   /** 彩种名称，来自接口返回 */
   name: string
@@ -34,10 +36,18 @@ export interface LotteryResult {
   blueNumbers: string[]
 }
 
-/** 首页聚合后的单彩种结果：已开奖或暂无数据 */
+/** 每张卡片都带数据时间，断网时用它标注「更新于 …」 */
+interface LatestGameMeta {
+  /** 本次数据的落库时间（毫秒）；来自缓存时为上次成功的时间 */
+  updatedAt: number
+  /** true 表示本次请求失败，数据来自本地缓存 */
+  fromCache: boolean
+}
+
+/** 开奖页聚合后的单彩种结果：已开奖或暂无数据 */
 export type LatestLotteryGame =
-  | { gameCode: LotteryGameCode; status: 'drawn'; result: LotteryResult }
-  | { gameCode: LotteryGameCode; status: 'unavailable' }
+  | ({ gameCode: LotteryGameCode; status: 'drawn'; result: LotteryResult } & LatestGameMeta)
+  | ({ gameCode: LotteryGameCode; status: 'unavailable' } & LatestGameMeta)
 
 /** 将逗号分隔的号码串拆为字符串数组，空串返回空数组 */
 function splitNumbers(value: string): string[] {
