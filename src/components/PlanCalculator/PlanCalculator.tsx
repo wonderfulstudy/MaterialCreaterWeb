@@ -8,11 +8,11 @@ import {
   KEYPAD_KEYS,
   MAX_MATCH,
   MULTIPLE_PRESETS,
+  MULTI_PASS_OPTIONS,
   PASS_OPTIONS,
   POOL_DEFS,
   PRIMARY_POOLS,
   SPORTS,
-  passLabel,
   type OddsOption,
   type PlanLeg,
   type PoolCode,
@@ -44,6 +44,10 @@ export interface PlanCalculatorProps {
   showPassBar?: boolean
   /** 最多可选场次，默认 MAX_MATCH */
   maxMatch?: number
+  /** 打开时回填的过关方式档位（单档 s1…s8，多档 p3x4 / p4x11 / p5x26），缺省按场次数取 N串1 */
+  initialPassId?: string
+  /** 打开时回填的倍数，缺省重置为 1 */
+  initialMultiple?: number
   confirmText?: string
   /** 传入后展示竞足 / 竞篮切换 */
   onSportChange?: (sport: SportKey) => void
@@ -55,6 +59,30 @@ export interface PlanCalculatorProps {
 interface DateGroup {
   date: string
   matches: SportMatch[]
+}
+
+/** 过关方式档位：单关 / N串1 与 M串N 放在同一组 chip 里单选 */
+const PASS_CHIPS = [
+  ...PASS_OPTIONS.map((option) => ({ id: `s${option.size}`, label: option.label, sizes: [option.size] })),
+  ...MULTI_PASS_OPTIONS.map((option) => ({ id: option.id, label: option.label, sizes: [...option.sizes] })),
+]
+
+/** 档位 id -> 串法；未知 id 返回空数组，由调用方回落到默认串法 */
+function passSizesById(id: string): number[] {
+  const chip = PASS_CHIPS.find((item) => item.id === id)
+  return chip ? [...chip.sizes] : []
+}
+
+/** 串法比较键：档位与当前选择都按这个键判断选中态 */
+function passKeyOf(sizes: number[]): string {
+  return [...sizes].sort((a, b) => a - b).join(',')
+}
+
+/** 奖金口径：最低与最高一致（单选必然全中）时只给一个数，否则给区间 */
+function bonusText(minBonus: number, maxBonus: number): string {
+  const min = formatAmount(minBonus)
+  const max = formatAmount(maxBonus)
+  return min === max ? max : `${min}–${max}`
 }
 
 /** 左侧盘口列文案 */
@@ -112,6 +140,8 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
     allowMultiSelect = true,
     showPassBar = true,
     maxMatch = MAX_MATCH,
+    initialPassId,
+    initialMultiple,
     confirmText = '保存',
     onSportChange,
     onRetry,
@@ -129,7 +159,6 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
   const [showLeagueFilter, setShowLeagueFilter] = useState(false)
   const [gameOpen, setGameOpen] = useState(false)
   const [passSizes, setPassSizes] = useState<number[]>([1])
-  const [passOpen, setPassOpen] = useState(false)
   const [multiple, setMultiple] = useState(1)
   const [multOpen, setMultOpen] = useState(false)
   const [multInput, setMultInput] = useState('1')
@@ -153,12 +182,14 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
     setLeagueFilter('')
     setShowLeagueFilter(false)
     setGameOpen(false)
-    setPassSizes([Math.min(maxMatch, Math.max(1, new Set(initialLegs.map((leg) => leg.matchId)).size))])
-    setPassOpen(false)
-    setMultiple(1)
-    setMultInput('1')
+    const legCount = new Set(initialLegs.map((leg) => leg.matchId)).size
+    const restoredSizes = initialPassId ? passSizesById(initialPassId) : []
+    setPassSizes(restoredSizes.length ? restoredSizes : [Math.min(maxMatch, Math.max(1, legCount))])
+    const restoredMultiple = initialMultiple && initialMultiple >= 1 ? Math.floor(initialMultiple) : 1
+    setMultiple(restoredMultiple)
+    setMultInput(String(restoredMultiple))
     setMultOpen(false)
-  }, [visible, initialLegs, maxMatch])
+  }, [visible, initialLegs, maxMatch, initialPassId, initialMultiple])
 
   // 切换竞足 / 竞篮后，旧的选项不再有效
   const sportRef = useRef(sport)
@@ -202,16 +233,9 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
   }, [leagueFilter, schedule.matches])
 
   const selectedMatchCount = useMemo(() => new Set(legs.map((leg) => leg.matchId)).size, [legs])
-  // 已选比赛场数变化时，默认选中对应的几串1。
-  const defaultPassSize = Math.min(maxMatch, Math.max(1, selectedMatchCount))
-  const availablePassOptions = PASS_OPTIONS.filter((option) => option.size <= defaultPassSize)
-
-  useEffect(() => {
-    if (!showPassBar) {
-      return
-    }
-    setPassSizes([defaultPassSize])
-  }, [defaultPassSize, selectedMatchCount, showPassBar])
+  // 档位能覆盖的最大串法：场次不够的档位（如 2 场时的 3串4）置灰
+  const passLimit = Math.min(maxMatch, Math.max(1, selectedMatchCount))
+  const passKey = passKeyOf(passSizes)
 
   const summary = useMemo(() => summarizeLegs(legs, passSizes, multiple), [legs, passSizes, multiple])
 
@@ -233,26 +257,20 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
       }
     }
 
-    setLegs((prev) => {
-      const target = prev.find(
-        (leg) =>
-          leg.matchId === match.matchId && leg.poolCode === row.poolCode && leg.optionKey === option.key,
-      )
-      if (target) {
-        return prev.filter((leg) => leg !== target)
-      }
-      const leg = toLeg(match, row, option, sport)
-      if (allowMultiSelect) {
-        return [...prev, leg]
-      }
-      return [...prev.filter((item) => item.matchId !== match.matchId), leg]
-    })
-  }
-
-  const togglePass = (size: number) => {
-    setPassSizes((prev) =>
-      prev.includes(size) ? prev.filter((item) => item !== size) : [...prev, size].sort((a, b) => a - b),
+    const rest = legs.filter(
+      (leg) => !(leg.matchId === match.matchId && leg.poolCode === row.poolCode && leg.optionKey === option.key),
     )
+    let next = rest
+    if (!picked) {
+      const leg = toLeg(match, row, option, sport)
+      next = allowMultiSelect ? [...legs, leg] : [...rest.filter((item) => item.matchId !== match.matchId), leg]
+    }
+    setLegs(next)
+    // 场次数变化时默认回到对应的 N串1；倍数由用户决定，不跟着重置
+    const nextCount = new Set(next.map((leg) => leg.matchId)).size
+    if (nextCount !== selectedMatchCount) {
+      setPassSizes([Math.min(maxMatch, Math.max(1, nextCount))])
+    }
   }
 
   const changeMultiple = (delta: number) => {
@@ -316,13 +334,15 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
   )
 
   const renderMatchCard = (match: SportMatch) => {
+    // 开单关的场次整卡描红，对应底部「红色边框可投单关」的说明
+    const single = match.bettingSingle === 1
     const primaryRows = PRIMARY_POOLS[sport]
       .map((code) => match.rows.find((row) => row.poolCode === code))
       .filter((row): row is PoolRow => Boolean(row))
     const extraCount = EXTRA_POOLS[sport].filter((code) => match.rows.some((row) => row.poolCode === code)).length
 
     return (
-      <View key={match.matchId} className={styles.matchCard}>
+      <View key={match.matchId} className={classnames(styles.matchCard, single && styles.cardSingle)}>
         <View className={styles.matchHead}>
           <View className={styles.matchNo}>
             <Text className={styles.matchWeek}>{match.matchWeek}</Text>
@@ -532,37 +552,37 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
       <View className={classnames(!isSheet && styles.footerMain)}>
         {showPassBar ? (
           <>
-            <View className={styles.barRow}>
-              <View className={styles.passDd}>
-                <View
-                  className={styles.ddTrigger}
-                  onClick={() => {
-                    setMultOpen(false)
-                    setPassOpen((prev) => !prev)
-                  }}
-                >
-                  <Text className={styles.ddLabel}>过关方式</Text>
-                  <Text className={styles.ddValue}>
-                    {passSizes.length ? passSizes.map((size) => passLabel(size)).join('、') : '未选择'}
-                  </Text>
-                  <Text className={classnames(styles.ddArrow, passOpen && styles.ddArrowOpen)}>▾</Text>
-                </View>
-                {passOpen ? (
-                  <View className={classnames(styles.ddMenu, styles.ddMenuUp)}>
-                    {availablePassOptions.map((option) => (
+            <View className={styles.passBar}>
+              <Text className={styles.passBarLabel}>过关方式</Text>
+              <ScrollView scrollX className={styles.passChipScroll} enhanced showScrollbar={false}>
+                <View className={styles.passChipList}>
+                  {PASS_CHIPS.map((chip) => {
+                    const disabled = Math.max(...chip.sizes) > passLimit
+                    return (
                       <View
-                        key={option.size}
-                        className={classnames(styles.ddItem, passSizes.includes(option.size) && styles.ddItemActive)}
-                        onClick={() => togglePass(option.size)}
+                        key={chip.id}
+                        className={classnames(
+                          styles.passChip,
+                          passKeyOf(chip.sizes) === passKey && styles.passChipActive,
+                          disabled && styles.passChipDisabled,
+                        )}
+                        onClick={() => {
+                          // 场次不足以覆盖该档最大串法时点不动，避免算出 0 注方案
+                          if (disabled) {
+                            return
+                          }
+                          setPassSizes([...chip.sizes])
+                        }}
                       >
-                        <Text className={styles.ddItemText}>{option.label}</Text>
-                        {passSizes.includes(option.size) ? <Text className={styles.ddCheck}>✓</Text> : null}
+                        <Text className={styles.passChipText}>{chip.label}</Text>
                       </View>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
+                    )
+                  })}
+                </View>
+              </ScrollView>
+            </View>
 
+            <View className={styles.barRow}>
               <View className={styles.multBox}>
                 <View className={styles.multipleBtn} onClick={() => changeMultiple(-1)}>
                   <Text className={styles.multipleBtnText}>-</Text>
@@ -575,7 +595,6 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
                         setMultInput(String(multiple))
                         replaceMultInput.current = true
                       }
-                      setPassOpen(false)
                       setMultOpen(!multOpen)
                     }}
                   >
@@ -625,11 +644,15 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
             <View className={styles.bonusRow}>
               <Text className={styles.legendText}>红色边框可投单关</Text>
               {isSheet ? (
-                <Text className={styles.maxBonus}>最高奖金：{formatAmount(summary.maxBonus)}元</Text>
+                // sheet 与整页同口径：票面金额和奖金区间都必须在选场时就看得见
+                <View className={styles.sheetBonusAmounts}>
+                  <Text className={styles.ticketAmount}>票面金额：{formatAmount(summary.amount)}元</Text>
+                  <Text className={styles.maxBonus}>理论奖金：{bonusText(summary.minBonus, summary.maxBonus)}元</Text>
+                </View>
               ) : (
                 <View className={styles.pageBonusAmounts}>
                   <Text className={styles.ticketAmount}>票面金额：{formatAmount(summary.amount)}元</Text>
-                  <Text className={styles.maxBonus}>最高奖金：{formatAmount(summary.maxBonus)}元</Text>
+                  <Text className={styles.maxBonus}>理论奖金：{bonusText(summary.minBonus, summary.maxBonus)}元</Text>
                 </View>
               )}
             </View>
@@ -660,7 +683,6 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
             summary={summary}
             passSizes={passSizes}
             onOpen={() => {
-              setPassOpen(false)
               setMultOpen(false)
               setGameOpen(false)
             }}

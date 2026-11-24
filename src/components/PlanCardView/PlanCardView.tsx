@@ -22,6 +22,13 @@ export function summarizeCardLegs(legs: PlanLeg[], multiple = 1): SelectionSumma
   return summarizeLegs(legs, [Math.min(MAX_MATCH, Math.max(1, matchCount))], multiple)
 }
 
+/** 奖金口径：最低与最高一致（单选必然全中）时只给一个数，否则给区间 */
+function bonusText(minBonus: number, maxBonus: number): string {
+  const min = formatAmount(minBonus)
+  const max = formatAmount(maxBonus)
+  return min === max ? max : `${min}–${max}`
+}
+
 /** 场次副标题：联赛 · 场次号 · 玩法(+盘口) */
 function legMetaText(leg: PlanLeg): string {
   const line = formatGoalLine(leg.goalLine)
@@ -140,9 +147,9 @@ export default function PlanCardView({
           </View>
           <View className={styles.moneySep} />
           <View className={classnames(styles.moneyCell, styles.moneyCellRight)}>
-            <Text className={styles.moneyLabel}>最高可中</Text>
+            <Text className={styles.moneyLabel}>理论奖金</Text>
             <Text className={classnames(styles.moneyValue, styles.bonusValue)}>
-              {`¥${formatAmount(resolved.maxBonus)}`}
+              {`¥${bonusText(resolved.minBonus, resolved.maxBonus)}`}
             </Text>
           </View>
         </View>

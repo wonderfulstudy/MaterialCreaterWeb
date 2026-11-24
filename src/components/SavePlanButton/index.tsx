@@ -47,6 +47,13 @@ interface PlanSnapshot {
   matches: DetailMatch[]
 }
 
+/** 奖金口径：最低与最高一致（单选必然全中）时只给一个数，否则给区间 */
+function bonusText(minBonus: number, maxBonus: number): string {
+  const min = formatAmount(minBonus)
+  const max = formatAmount(maxBonus)
+  return min === max ? max : `${min}–${max}`
+}
+
 /** 保存入口与方案详情预览，可在需要展示方案的页面中复用。 */
 export default function SavePlanButton({
   className,
@@ -162,8 +169,10 @@ export default function SavePlanButton({
                       <Text className={styles.caption}>元 [{snapshot.summary.multiple}倍]</Text>
                     </View>
                     <View className={styles.amountItem}>
-                      <Text className={styles.caption}>最高奖金：</Text>
-                      <Text className={classnames(styles.amount, styles.bonus)}>{formatAmount(snapshot.summary.maxBonus)}</Text>
+                      <Text className={styles.caption}>理论奖金：</Text>
+                      <Text className={classnames(styles.amount, styles.bonus)}>
+                        {bonusText(snapshot.summary.minBonus, snapshot.summary.maxBonus)}
+                      </Text>
                       <Text className={styles.caption}>元</Text>
                     </View>
                   </View>
