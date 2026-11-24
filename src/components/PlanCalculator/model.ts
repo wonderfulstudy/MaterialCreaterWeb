@@ -188,6 +188,27 @@ export const PASS_OPTIONS = Array.from({ length: MAX_MATCH }, (_, index) => inde
   label: passLabel(size),
 }))
 
+/** 多串过关：一次投注同时覆盖多种串法（如 3串4 = 3 个 2串1 + 1 个 3串1） */
+export interface MultiPassOption {
+  id: string
+  label: string
+  sizes: number[]
+}
+
+/** 竞彩常见的递增档位：每档都是「上一档 + 全部命中」的累加结果 */
+export const MULTI_PASS_OPTIONS: MultiPassOption[] = [
+  { id: 'p3x4', label: '3串4', sizes: [2, 3] },
+  { id: 'p4x11', label: '4串11', sizes: [2, 3, 4] },
+  { id: 'p5x26', label: '5串26', sizes: [2, 3, 4, 5] },
+]
+
+/** 多串 id -> 参与求和的串法；未知 id 返回空数组，由调用方决定回落方式 */
+export function passSizesOf(id: string): number[] {
+  const option = MULTI_PASS_OPTIONS.find((item) => item.id === id)
+  // 返回副本，避免调用方改动共享常量
+  return option ? [...option.sizes] : []
+}
+
 /** 可投注玩法的单个选项 */
 export interface OddsOption {
   key: string

@@ -1,6 +1,7 @@
 import type { PlanLeg, SelectionSummary, SportKey } from '@/components/PlanCalculator'
 import { summarizeCardLegs } from '@/components/PlanCardView'
 import type { PlanHistoryEntry, PlanLegResult, SharePlan } from '@/components/SharePoster'
+import type { StoredPlanDay } from '@/services/plan-store'
 
 /** 一张推荐单卡片 */
 export interface RecommendPlan {
@@ -95,6 +96,29 @@ export function pushHistory(plan: RecommendPlan, nextLegs: PlanLeg[]): PlanHisto
     results: plan.results,
   }
   return [entry, ...history].slice(0, MAX_PLAN_HISTORY)
+}
+
+/**
+ * 推荐单 + 归属日期 → 按日持久化的记录。
+ * 卡片自己的 summary 可能缺省（识别出的方案还没试算），这里补算一次再落盘，
+ * 避免日历卡读到空汇总。
+ */
+export function toStoredDay(
+  plan: RecommendPlan,
+  date: string,
+  passIds: string[],
+  multiple: number,
+): StoredPlanDay {
+  return {
+    date,
+    sport: plan.sport,
+    multiple,
+    passIds,
+    legs: plan.legs,
+    summary: plan.summary ?? summarizePlan(plan.legs, multiple),
+    rest: false,
+    updatedAt: Date.now(),
+  }
 }
 
 /** 推荐单卡片 → 海报数据模型 */
