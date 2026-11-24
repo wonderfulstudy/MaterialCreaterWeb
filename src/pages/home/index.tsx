@@ -39,8 +39,10 @@ export default function HomePage() {
   const [topInset, setTopInset] = useState(IS_H5 ? 20 : 64)
   const [shareOpen, setShareOpen] = useState(OPEN_SHARE_ON_LOAD)
 
-  /** 海报组件自己取当期开奖数据，这里只负责打开弹层 */
-  const openShare = () => setShareOpen(true)
+  /** 右下角 fab 进分享页：选择彩种 → 生成数字彩合集海报 */
+  const openSharePage = () => {
+    void Taro.navigateTo({ url: '/pages/share/index?source=draw' })
+  }
 
   useEffect(() => {
     if (IS_H5) {
@@ -131,10 +133,6 @@ export default function HomePage() {
       <View className={styles.content} style={{ paddingTop: `${topInset}px` }}>
         <View className={styles.pageHead}>
           <Text className={styles.pageTitle}>开奖速览</Text>
-          <View className={styles.shareEntry} onClick={openShare}>
-            <Text className={styles.shareIcon}>↗</Text>
-            <Text className={styles.shareText}>分享开奖</Text>
-          </View>
         </View>
 
         {meta && meta.fromCache && (
@@ -183,8 +181,13 @@ export default function HomePage() {
         <Text className={styles.sourceNote}>数据来源：中国体彩官网 · 中国福彩官网</Text>
       </View>
 
+      <View className={styles.fab} onClick={openSharePage}>
+        <Text className={styles.fabIcon}>↑</Text>
+      </View>
+
       <TabBar active='home' />
 
+      {/* 小程序端仍走离屏画布的既有海报弹层；H5 分享改由 /pages/share/index 承担 */}
       <ResultPoster visible={shareOpen} onClose={() => setShareOpen(false)} />
     </View>
   )

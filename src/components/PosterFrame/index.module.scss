@@ -1,0 +1,98 @@
+@use '@/styles/variables.scss' as *;
+
+/* 画布本身就是海报成品：红金渐变底 + 白卡 + 页脚，导出与预览同一份样式 */
+.frame {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.sizer {
+  position: relative;
+  flex: none;
+}
+
+/* 画布宽 375px 由行内样式锁定（见 index.tsx）：不裁剪、不设 max-width，整张海报连同页脚一起进图 */
+.posterBody {
+  padding: 22rpx 22rpx 0;
+}
+
+.canvas {
+  width: 100%;
+  background: linear-gradient(168deg, #b3121b, #8b0c14 44%, #6c0810);
+  transform-origin: top left;
+}
+
+/* H5 截图副本：与预览同结构同宽，放在可视区外，只用于生成图片 */
+.captureStage {
+  position: fixed;
+  top: 0;
+}
+
+.captureCanvas {
+  width: 100%;
+}
+
+/* ============ 海报页脚：店名 + 二维码 + 两行合规声明 ============ */
+.footer {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 32rpx 12rpx;
+}
+
+.footerBrand {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.footerName {
+  color: #f5d98b;
+  font-size: 24rpx;
+  font-weight: 800;
+  letter-spacing: 0.5rpx;
+}
+
+.footerCaption {
+  margin-top: 4rpx;
+  color: rgba(245, 217, 139, 0.72);
+  font-size: 18rpx;
+}
+
+.footerScan {
+  flex: none;
+  width: 120rpx;
+  color: #f5d98b;
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.footerQrBox {
+  flex: none;
+  width: 132rpx;
+  height: 132rpx;
+  padding: 6rpx;
+  border-radius: 10rpx;
+  background: #ffffff;
+}
+
+.footerQr {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.laws {
+  display: flex;
+  flex-direction: column;
+  padding: 8rpx 32rpx 22rpx;
+}
+
+.lawLine {
+  color: rgba(255, 253, 247, 0.72);
+  font-size: 18rpx;
+  line-height: 1.5;
+}

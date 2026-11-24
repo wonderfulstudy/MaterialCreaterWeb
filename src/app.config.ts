@@ -6,6 +6,7 @@ export default defineAppConfig({
     'pages/draw/football/index',
     'pages/draw/basketball/index',
     'pages/draw/traditional/index',
+    'pages/share/index',
     'pages/recommend/index',
     'pages/selector/index',
     'pages/profile/index'

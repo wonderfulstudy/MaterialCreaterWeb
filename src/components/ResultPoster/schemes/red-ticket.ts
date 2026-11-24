@@ -31,6 +31,7 @@ const COLORS = {
   tear: '#D9C9B4',
   brand: '#3A1A16',
   slogan: 'rgba(255,255,255,0.55)',
+  law: 'rgba(255,253,247,0.72)',
 } as const
 
 /** 设计稿固定标题：文案没有走 input 的入口，属于版式的一部分 */
@@ -90,6 +91,20 @@ const OUTER_TOP = 72
 const SLOGAN_SIZE = 22
 const SLOGAN_GAP = 40
 const OUTER_BOTTOM = 56
+
+/**
+ * 页脚两行合规声明：与设计稿 42-poster-draw.html 逐字一致。
+ * 页面预览页脚与这里共用同一份文案，避免两端说法不一致。
+ */
+export const COMPLIANCE_LINES = [
+  '理性购彩 · 量力而行，未满 18 周岁禁止购彩',
+  '开奖结果仅供参考，请以彩票机构官方公告为准',
+] as const
+const LAW_SIZE = 20
+/** 声明行间距 */
+const LAW_LINE_GAP = 10
+/** 口号与声明之间的间距 */
+const LAW_GAP = 24
 
 export interface TicketTextLine {
   x: number
@@ -155,6 +170,8 @@ export interface redTicketLayoutData {
   qrCaption: TicketTextLine
   brandName: TicketTextLine
   slogan: TicketTextLine
+  /** 口号下方的两行合规声明 */
+  lawLines: readonly TicketTextLine[]
 }
 
 interface RowFit {
@@ -340,9 +357,18 @@ export function redTicketLayout(items: readonly ResultPosterInput[]): redTicketL
     maxWidth: contentWidth,
     align: 'center',
   }
+  const lawTop = cardBottom + SLOGAN_GAP + SLOGAN_SIZE + LAW_GAP
+  const lawLines: TicketTextLine[] = COMPLIANCE_LINES.map((_, index) => ({
+    x: centerX,
+    y: lawTop + LAW_SIZE / 2 + index * (LAW_SIZE + LAW_LINE_GAP),
+    size: LAW_SIZE,
+    maxWidth: contentWidth,
+    align: 'center',
+  }))
+  const lawHeight = COMPLIANCE_LINES.length * LAW_SIZE + (COMPLIANCE_LINES.length - 1) * LAW_LINE_GAP
 
   return {
-    height: cardBottom + SLOGAN_GAP + SLOGAN_SIZE + OUTER_BOTTOM,
+    height: lawTop + lawHeight + OUTER_BOTTOM,
     width,
     card: { x: CARD_MARGIN, y: cardY, width: cardWidth, height: cardHeight, radius: CARD_RADIUS },
     // 两个圆环的圆心都落在画布右上外侧，只露出弧形装饰
@@ -364,6 +390,7 @@ export function redTicketLayout(items: readonly ResultPosterInput[]): redTicketL
     qrCaption,
     brandName,
     slogan,
+    lawLines,
   }
 }
 
@@ -497,5 +524,19 @@ export const redTicketScheme: PosterScheme = {
         maxWidth: layout.slogan.maxWidth,
       })
     }
+
+    // 两行合规声明固定在口号下方，小程序端与 H5 页脚文案一致
+    layout.lawLines.forEach((line, index) => {
+      const text = COMPLIANCE_LINES[index]
+      if (!text) {
+        return
+      }
+      drawText(ctx, text, line.x, line.y, {
+        size: line.size,
+        color: COLORS.law,
+        align: 'center',
+        maxWidth: line.maxWidth,
+      })
+    })
   },
 }

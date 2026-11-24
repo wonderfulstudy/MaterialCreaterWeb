@@ -1,0 +1,246 @@
+@use '@/styles/variables.scss' as *;
+
+/* 深色分享页：与设计稿 ui-kit.css 的 .share 底色一致 */
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: radial-gradient(120% 80% at 50% 0%, #241e19, #141110 58%, #0d0b0a);
+  color: #f3ede0;
+}
+
+.bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-xl;
+}
+
+.barBtn,
+.barBtnGhost {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: $radius-round;
+  background: rgba(255, 253, 247, 0.08);
+}
+
+.barBtnGhost {
+  background: transparent;
+}
+
+.barBtnIcon {
+  color: #f6f1e6;
+  font-size: 34rpx;
+  line-height: 1;
+}
+
+.barTitle {
+  flex: 1;
+  color: #f6f1e6;
+  font-size: 30rpx;
+  font-weight: 600;
+  text-align: center;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ===== 选择态 ===== */
+.selHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: $spacing-lg $spacing-xl $spacing-sm;
+}
+
+.selTitle {
+  color: #f6f1e6;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.selCount {
+  color: #8e8678;
+  font-size: 24rpx;
+}
+
+.selDate {
+  display: block;
+  padding: 0 $spacing-xl $spacing-sm;
+  color: #8e8678;
+  font-size: 24rpx;
+}
+
+.selList {
+  margin: 0 $spacing-xl;
+  padding: 0 $spacing-lg;
+  border-radius: $radius-lg;
+  background: rgba(255, 253, 247, 0.05);
+}
+
+.selAll {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 88rpx;
+  border-bottom: 2rpx solid rgba(255, 253, 247, 0.08);
+}
+
+.selAllText {
+  color: #f5d98b;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.selAllHint {
+  color: #8e8678;
+  font-size: 24rpx;
+}
+
+.selRow {
+  display: flex;
+  align-items: center;
+  min-height: 88rpx;
+  border-bottom: 2rpx solid rgba(255, 253, 247, 0.08);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.check {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+  border: 2rpx solid rgba(255, 253, 247, 0.3);
+  border-radius: 8rpx;
+}
+
+.checkOn {
+  border-color: #b3121b;
+  background: #b3121b;
+}
+
+.checkMark {
+  color: #fff;
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.selName {
+  flex: 1;
+  margin-left: $spacing-md;
+  color: #f3ede0;
+  font-size: 28rpx;
+}
+
+.selIssue {
+  color: #8e8678;
+  font-size: 24rpx;
+}
+
+.selTip {
+  display: block;
+  padding: $spacing-md $spacing-xl $spacing-xl;
+  color: #8e8678;
+  font-size: 22rpx;
+  text-align: center;
+}
+
+/* ===== 页底操作栏 ===== */
+.actionBar {
+  display: flex;
+  flex: none;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-xl calc(#{$spacing-lg} + env(safe-area-inset-bottom));
+}
+
+.primary {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 92rpx;
+  border-radius: $radius-md;
+  background: #b3121b;
+}
+
+.primaryText {
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.action {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 92rpx;
+  border-radius: $radius-md;
+}
+
+.actionPrimary {
+  flex: 1.35;
+  background: #b3121b;
+}
+
+.actionGhost {
+  border: 2rpx solid rgba(255, 255, 255, 0.18);
+}
+
+.actionIdle {
+  opacity: 0.6;
+}
+
+.actionPrimaryText {
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.actionGhostText {
+  color: #f3ede0;
+  font-size: 30rpx;
+}
+
+.hint {
+  flex: none;
+  padding: 0 $spacing-xl $spacing-sm;
+  color: #8e8678;
+  font-size: 22rpx;
+  text-align: center;
+}
+
+/* ===== 占位态 ===== */
+.placeholder {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+}
+
+.placeholderTitle {
+  color: #f3ede0;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.placeholderHint {
+  margin-top: $spacing-sm;
+  color: #8e8678;
+  font-size: 24rpx;
+  text-align: center;
+}

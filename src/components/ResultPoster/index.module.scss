@@ -134,7 +134,7 @@
   background: $color-bg-page;
 }
 
-/* 预览 = 导出：卡片按可见高度截断，H5 截的就是这个节点 */
+/* 预览与导出同一节点：H5 截的就是它，因此不允许任何 overflow 裁剪 */
 .preview {
   display: flex;
   flex-direction: column;
@@ -142,8 +142,6 @@
 
 .previewViewport {
   width: 100%;
-  max-height: 62vh;
-  overflow: hidden;
   border-radius: $radius-md;
   background: $color-bg-card;
 }
