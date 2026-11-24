@@ -13,6 +13,10 @@ export interface StoredPlanDay {
   legs: PlanLeg[]
   summary: SelectionSummary
   rest: boolean
+  /** 休息理由（如「国庆休息 4 天」）；只在 rest 为真时有意义 */
+  note?: string
+  /** 当日判中结果（B5 判定写入，B4 海报消费）；缺省视为待开奖 */
+  judged?: 'hit' | 'miss' | 'pending'
   updatedAt: number
 }
 
@@ -46,6 +50,9 @@ function parseDay(value: unknown): StoredPlanDay | null {
     legs: legs as PlanLeg[],
     summary: summary as unknown as SelectionSummary,
     rest: value.rest === true,
+    note: typeof value.note === 'string' && value.note ? value.note : undefined,
+    judged:
+      value.judged === 'hit' || value.judged === 'miss' || value.judged === 'pending' ? value.judged : undefined,
     updatedAt: typeof value.updatedAt === 'number' && Number.isFinite(value.updatedAt) ? value.updatedAt : 0,
   }
 }

@@ -1,0 +1,135 @@
+@use '@/styles/variables.scss' as *;
+
+$brand: #b3121b;
+$gold: #c9973b;
+$paper: #f6f3ec;
+$ink: #201b15;
+$ink2: #6b6459;
+$ink3: #8c8578;
+$line: #e6dfd2;
+
+.page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: $spacing-md $page-padding calc(220rpx + env(safe-area-inset-bottom));
+  background: $paper;
+}
+
+// ============ 日期头 ============
+.head {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.headDate {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.headSport {
+  margin-left: $spacing-sm;
+  padding: 2rpx 12rpx;
+  font-size: $font-size-xs;
+  color: $brand;
+  background: rgba(179, 18, 27, 0.08);
+  border-radius: $radius-xs;
+}
+
+.headRest {
+  margin-left: $spacing-xs;
+  padding: 2rpx 12rpx;
+  font-size: $font-size-xs;
+  color: $gold;
+  background: rgba(201, 151, 59, 0.12);
+  border-radius: $radius-xs;
+}
+
+.restNote {
+  display: block;
+  margin-bottom: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  color: $ink2;
+  background: rgba(201, 151, 59, 0.1);
+  border-radius: $radius-md;
+}
+
+// ============ 空态 ============
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl $spacing-md;
+  background: #ffffff;
+  border: 1rpx dashed $line;
+  border-radius: $radius-md;
+}
+
+.emptyTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $ink2;
+}
+
+.emptyHint {
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $ink3;
+}
+
+// ============ 底部操作栏（恰好两个按钮） ============
+.dock {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: $spacing-sm $page-padding calc($spacing-sm + env(safe-area-inset-bottom));
+  background: rgba(246, 243, 236, 0.97);
+  border-top: 1rpx solid $line;
+}
+
+.dockGhost {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: $button-height-lg;
+  margin-right: $spacing-sm;
+  border: 1rpx solid $brand;
+  border-radius: $radius-button;
+}
+
+.dockGhostText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $brand;
+}
+
+.dockPrimary {
+  display: flex;
+  flex: 2;
+  align-items: center;
+  justify-content: center;
+  height: $button-height-lg;
+  background: $brand;
+  border-radius: $radius-button;
+  box-shadow: 0 6rpx 20rpx rgba(179, 18, 27, 0.24);
+}
+
+.dockPrimaryOff {
+  opacity: 0.4;
+  box-shadow: none;
+}
+
+.dockPrimaryText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: #ffffff;
+}

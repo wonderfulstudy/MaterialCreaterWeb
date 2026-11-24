@@ -20,9 +20,17 @@ export async function captureNodeToDataUrl(
   options: CaptureOptions = {},
 ): Promise<string> {
   const ratio = typeof window !== 'undefined' ? window.devicePixelRatio || 2 : 2
+  // 显式给宽高与克隆窗口尺寸：html2canvas 默认按 window.innerWidth 建 iframe，
+  // 克隆里的布局会比原节点窄十几像素，导出就不是整数倍的 750 宽
+  const width = node.offsetWidth || Math.round(node.getBoundingClientRect().width)
+  const height = node.offsetHeight || Math.round(node.getBoundingClientRect().height)
   const canvas = await html2canvas(node, {
     scale: options.scale ?? Math.min(Math.max(ratio, 1), 2),
     backgroundColor: options.backgroundColor ?? '#ffffff',
+    width,
+    height,
+    windowWidth: width,
+    windowHeight: height,
     useCORS: true,
     logging: false,
   })

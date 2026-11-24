@@ -9,7 +9,9 @@ export default defineAppConfig({
     'pages/share/index',
     'pages/recommend/index',
     'pages/selector/index',
-    'pages/profile/index'
+    'pages/profile/index',
+    'pages/plan-record/index',
+    'pages/plan-detail/index'
   ],
   window: {
     backgroundTextStyle: 'light',

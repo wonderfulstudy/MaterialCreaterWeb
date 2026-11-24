@@ -1,0 +1,109 @@
+import { useMemo, useState } from 'react'
+import { Text, View } from '@tarojs/components'
+import Taro, { useDidShow, useRouter } from '@tarojs/taro'
+import classnames from 'classnames'
+import PlanCardView from '@/components/PlanCardView'
+import SharePoster from '@/components/SharePoster'
+import { formatDateLabel, sportLabel } from '@/components/PlanCalculator'
+import { findDay } from '@/services/plan-store'
+import { toSharePlan, type RecommendPlan } from '@/pages/recommend/plan'
+import styles from './index.module.scss'
+
+/** 今天 2026-11-24 */
+function todayKey(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+/** 记录日期：缺省今天，非法参数回落今天 */
+function resolveDate(raw?: string): string {
+  return raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : todayKey()
+}
+
+/** 记录详情：只读方案卡 + [修改记录] / [分享海报] 两个动作 */
+export default function PlanDetailPage() {
+  const router = useRouter()
+  const date = useMemo(() => resolveDate(router.params?.date), [router.params?.date])
+  const [day, setDay] = useState(() => findDay(date))
+  const [posterVisible, setPosterVisible] = useState(false)
+
+  useDidShow(() => {
+    setDay(findDay(date))
+  })
+
+  const hasPlan = Boolean(day && day.legs.length)
+
+  const sharePlan = useMemo(() => {
+    if (!day || !day.legs.length) {
+      return null
+    }
+    const plan: RecommendPlan = {
+      id: `record-${day.date}`,
+      sport: day.sport,
+      name: `${day.date} 记录`,
+      imagePath: '',
+      recognizedText: '',
+      note: '',
+      legs: day.legs,
+      summary: day.summary,
+    }
+    return toSharePlan(plan)
+  }, [day])
+
+  const goModify = () => {
+    void Taro.navigateTo({ url: `/pages/selector/index?date=${date}` })
+  }
+
+  const openPoster = () => {
+    if (sharePlan) {
+      setPosterVisible(true)
+    }
+  }
+
+  return (
+    <View className={styles.page}>
+      <View className={styles.head}>
+        <Text className={styles.headDate}>{formatDateLabel(date)}</Text>
+        {day ? <Text className={styles.headSport}>{sportLabel(day.sport)}</Text> : null}
+        {day?.rest ? <Text className={styles.headRest}>已休息</Text> : null}
+
+      </View>
+
+      {day?.rest ? (
+        <Text className={styles.restNote}>{day.note || '休息（未填理由）'}</Text>
+      ) : null}
+
+      {hasPlan && day ? (
+        <PlanCardView
+          name={`${day.date} 记录`}
+          legs={day.legs}
+          summary={day.summary}
+          expanded
+        />
+      ) : (
+        <View className={styles.empty}>
+          <Text className={styles.emptyTitle}>该日还没有记录</Text>
+          <Text className={styles.emptyHint}>点 [修改记录] 去选场次</Text>
+        </View>
+      )}
+
+      <View className={styles.dock}>
+        <View className={styles.dockGhost} onClick={goModify}>
+          <Text className={styles.dockGhostText}>修改记录</Text>
+        </View>
+        <View
+          className={classnames(styles.dockPrimary, !hasPlan && styles.dockPrimaryOff)}
+          onClick={openPoster}
+        >
+          <Text className={styles.dockPrimaryText}>分享海报</Text>
+        </View>
+      </View>
+
+      <SharePoster
+        visible={posterVisible}
+        plan={sharePlan}
+        onClose={() => setPosterVisible(false)}
+      />
+    </View>
+  )
+}

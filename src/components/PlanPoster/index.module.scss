@@ -1,0 +1,591 @@
+/* 方案海报 A/B 双卡：数值照 shared/releases/v1.0.0/design/ui-drafts/40-poster-plan-ab.html 抄，不引 ui-kit.css */
+
+/* ---------- 预览舞台：等比缩放 + 1:1 截图副本 ---------- */
+.stage {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
+
+/* 高过预览区就滚动，绝不裁掉海报内容 */
+.scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.frame {
+  width: 100%;
+  overflow: hidden;
+}
+
+.sizer {
+  position: relative;
+  width: 100%;
+}
+
+/* 宽度由组件内联给 375px：SCSS 的 px 会被 pxtransform 转成 rem，截出来只有半屏宽 */
+.canvas {
+  transform-origin: top left;
+  flex: none;
+}
+
+.captureStage {
+  position: fixed;
+  top: 0;
+  left: -20000px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ---------- 页顶分段 ---------- */
+.seg {
+  display: flex;
+  align-items: center;
+  padding-bottom: 20rpx;
+}
+
+.segItem {
+  flex: 1;
+  height: 64rpx;
+  margin-right: 12rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 253, 247, 0.08);
+  border: 1px solid rgba(245, 217, 139, 0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:last-child {
+    margin-right: 0;
+  }
+}
+
+.segItemOn {
+  background: #b3121b;
+  border-color: #f5d98b;
+}
+
+.segText {
+  font-size: 24rpx;
+  letter-spacing: 0.04em;
+  color: rgba(255, 253, 247, 0.72);
+}
+
+.segTextOn {
+  color: #fff7e6;
+  font-weight: 700;
+}
+
+/* ---------- 海报画布（375 宽） ---------- */
+.po {
+  width: 375px;
+  padding-bottom: 2px;
+  box-sizing: border-box;
+  border-radius: 4px;
+  overflow: hidden;
+  color: #fffdf7;
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(168deg, #b3121b 0%, #8b0c14 44%, #6c0810 100%);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 12px 16px 5px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: #f5d98b;
+}
+
+.topDate {
+  letter-spacing: 0.02em;
+  color: rgba(255, 253, 247, 0.62);
+}
+
+.name {
+  display: block;
+  padding: 0 16px;
+  font-size: 23px;
+  line-height: 1.3;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.sub {
+  display: block;
+  padding: 3px 16px 10px;
+  font-size: 10px;
+  color: rgba(255, 253, 247, 0.6);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 16px 12px;
+}
+
+.chip {
+  box-sizing: border-box;
+  margin: 0 8px 6px 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 217, 139, 0.3);
+  background: rgba(255, 253, 247, 0.12);
+  color: #fff7e6;
+  font-size: 10.5px;
+}
+
+.chipValue {
+  margin-left: 3px;
+  font-weight: 800;
+}
+
+/* ---------- 票根白卡 ---------- */
+.card {
+  margin: 0 12px;
+  border-radius: 10px;
+  background: #fffdf7;
+  color: #2b1b12;
+  box-shadow: 0 2px 10px rgba(60, 0, 0, 0.25);
+}
+
+.range {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 11px 13px 10px;
+}
+
+.rangeLabel {
+  font-size: 9.5px;
+  color: #8a7361;
+}
+
+.rangeValue {
+  font-size: 19px;
+  font-weight: 800;
+  color: #b3121b;
+}
+
+/* 虚线撕票口：缺口用真实节点，html2canvas 不渲染伪元素 */
+.perf {
+  position: relative;
+  height: 0;
+  border-top: 1.5px dashed #efe3cd;
+}
+
+.notch {
+  position: absolute;
+  top: -7px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #8c0d15;
+}
+
+.notchLeft {
+  left: -6.5px;
+}
+
+.notchRight {
+  right: -6.5px;
+}
+
+.sect {
+  padding: 10px 13px 6px;
+}
+
+.sectHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 700;
+  color: #8a7361;
+}
+
+.sectHint {
+  font-size: 9px;
+  font-weight: 400;
+  color: #b3121b;
+}
+
+/* ---------- 本期场次 ---------- */
+.leg {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 74px 34px;
+  column-gap: 7px;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px dashed #efe3cd;
+}
+
+.legNo {
+  padding: 2px 0;
+  border: 1px solid #e3cfa6;
+  border-radius: 3px;
+  background: #fff9ec;
+  color: #a87a22;
+  font-size: 9px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.legTeam {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.legTeamName {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2b1b12;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.legLeague {
+  overflow: hidden;
+  font-size: 9px;
+  color: #a08976;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.legPick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.legPickName {
+  font-size: 11px;
+  font-weight: 700;
+  color: #b3121b;
+}
+
+.legOdds {
+  font-size: 9.5px;
+  color: #8a7361;
+}
+
+.badge {
+  min-width: 30px;
+  height: 17px;
+  line-height: 17px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.badgeSingle {
+  background: #fdf0da;
+  color: #c07607;
+}
+
+.badgeCombo {
+  background: #e6f4ea;
+  color: #1e9e50;
+}
+
+/* ---------- A 卡历史表 ---------- */
+.htab {
+  margin-top: 2px;
+}
+
+.hrow {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 38px 54px 26px;
+  column-gap: 5px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-top: 1px dashed #efe3cd;
+  font-size: 10px;
+  color: #3a2a1e;
+}
+
+.hrowHead {
+  padding: 4px 0 3px;
+  border-top: 0;
+  font-size: 9.5px;
+  color: #a08976;
+}
+
+.hd {
+  font-size: 9.5px;
+  color: #8a7361;
+}
+
+.hc {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cRight {
+  text-align: right;
+}
+
+.toneWin {
+  font-weight: 700;
+  color: #1e9e50;
+}
+
+.toneLose {
+  font-weight: 700;
+  color: #9a9894;
+}
+
+.tonePend {
+  font-weight: 700;
+  color: #c07607;
+}
+
+.emptyRow {
+  display: block;
+  padding: 8px 0;
+  font-size: 9.5px;
+  color: #a08976;
+}
+
+.sum {
+  display: flex;
+  align-items: baseline;
+  margin: 0 -1px;
+  padding: 9px 13px;
+  border-top: 1.5px dashed #efe3cd;
+  font-size: 10.5px;
+  color: #6b5b4c;
+}
+
+.sumValue {
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #b3121b;
+}
+
+.sumSep {
+  margin: 0 4px;
+  color: #a08976;
+}
+
+.note {
+  padding: 0 13px 11px;
+  font-size: 9.5px;
+  line-height: 1.65;
+  color: #6b5b4c;
+}
+
+.noteLabel {
+  margin-right: 4px;
+  font-weight: 700;
+  color: #b3121b;
+}
+
+/* ---------- B 卡：背景图 + 战绩长表 ---------- */
+.cover {
+  position: relative;
+  height: 186px;
+  margin: 2px 12px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(150deg, #4a1206 0%, #1d0b04 70%);
+  box-shadow: inset 0 0 0 1px rgba(245, 217, 139, 0.28);
+}
+
+.coverImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.coverBox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px;
+}
+
+.coverT1 {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: #f5d98b;
+}
+
+.coverTag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 3px 8px;
+  border-bottom-right-radius: 6px;
+  background: rgba(245, 217, 139, 0.92);
+  color: #6c0810;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.bHead {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 30px 64px 22px;
+  column-gap: 4px;
+  margin: 0 12px;
+  padding: 11px 14px 5px 9px;
+  border-bottom: 1px solid rgba(245, 217, 139, 0.28);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #f5d98b;
+}
+
+.bTab {
+  margin: 0 12px;
+  padding: 0 14px 0 9px;
+}
+
+.bRow {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 30px 64px 22px;
+  column-gap: 4px;
+  align-items: baseline;
+  padding: 5px 0;
+  border-top: 1px solid rgba(255, 253, 247, 0.1);
+  font-size: 9.5px;
+  color: rgba(255, 253, 247, 0.9);
+}
+
+.bRow .hd {
+  color: rgba(255, 253, 247, 0.62);
+}
+
+.bContent {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bPay {
+  font-weight: 700;
+  color: #f5d98b;
+}
+
+.bCnt {
+  font-weight: 800;
+  color: #f5d98b;
+}
+
+.bCntZero {
+  font-weight: 600;
+  color: rgba(255, 253, 247, 0.42);
+}
+
+.bRest {
+  border-top-style: dashed;
+  border-top-color: rgba(245, 217, 139, 0.35);
+  background: rgba(255, 253, 247, 0.05);
+}
+
+.bRestText {
+  grid-column: 2 / span 3;
+  color: #f5d98b;
+}
+
+.bCur {
+  margin: 1px -4px;
+  padding: 6px 4px;
+  border-radius: 3px;
+  background: rgba(245, 217, 139, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(245, 217, 139, 0.4);
+}
+
+.bCur .bCnt {
+  color: #fff7e6;
+}
+
+.bNote {
+  padding: 9px 15px 2px;
+  font-size: 9.5px;
+  line-height: 1.7;
+  color: rgba(255, 253, 247, 0.78);
+}
+
+.bNoteLabel {
+  margin-right: 4px;
+  font-weight: 700;
+  color: #f5d98b;
+}
+
+.bTab .emptyRow {
+  color: rgba(255, 253, 247, 0.6);
+}
+
+/* ---------- 底部引流区 ---------- */
+.lead {
+  display: grid;
+  grid-template-columns: 86px 54px minmax(0, 1fr);
+  column-gap: 9px;
+  align-items: center;
+  margin-top: 9px;
+  padding: 11px 15px 12px;
+  border-top: 1.5px dashed rgba(245, 217, 139, 0.4);
+}
+
+.qrCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qrBox {
+  box-sizing: border-box;
+  width: 66px;
+  height: 66px;
+  padding: 3px;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.qrImage {
+  display: block;
+  width: 60px;
+  height: 60px;
+}
+
+.qrCap {
+  margin-top: 3px;
+  font-size: 8px;
+  line-height: 1.5;
+  text-align: center;
+  color: rgba(255, 253, 247, 0.85);
+}
+
+.leadMid {
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+  color: #f5d98b;
+}
+
+.leadLaw {
+  display: flex;
+  flex-direction: column;
+}
+
+.leadLawLine {
+  font-size: 9px;
+  line-height: 1.74;
+  color: rgba(255, 253, 247, 0.8);
+}

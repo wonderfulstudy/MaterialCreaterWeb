@@ -2,7 +2,22 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import classnames from 'classnames'
-import PlanCardView from '@/components/PlanCardView'
+import PosterStage, {
+  PlanPosterA,
+  PlanPosterB,
+  PosterSegments,
+  POSTER_EXPORT_SCALE,
+  buildRecordRows,
+  clockText,
+  dateKey,
+  dayStats,
+  historyRows,
+  readJudged,
+  readPosterBackground,
+  todayLabel,
+  type PosterCardKey,
+} from '@/components/PlanPoster'
+import { listDays } from '@/services/plan-store'
 import { captureNodeToDataUrl } from '@/utils/posters/capture'
 import { drawSharePoster, measurePosterHeight, POSTER_WIDTH } from './draw'
 import { planSignature, type SharePlan } from './model'
@@ -20,14 +35,33 @@ export interface SharePosterProps {
 
 type PosterStatus = 'idle' | 'drawing' | 'ready' | 'error'
 
-/** H5 端「所见即所得」的截图源节点：预览里那张方案卡片的外框 */
+/** H5 端「所见即所得」的截图源节点：1:1 海报副本的外框（A/B 卡共用同一个 id） */
 const PREVIEW_NODE_ID = 'share-poster-preview'
+
+/** 导出底色：卡片圆角外的缝隙与海报背景同色 */
+const POSTER_EXPORT_BACKGROUND = '#8B0C14'
 
 /** 离屏画布的最小抽象：weapp 用 OffscreenCanvas，H5 用 detached canvas */
 interface OffscreenLike {
   width: number
   height: number
   getContext(type: '2d'): CanvasRenderingContext2D | null
+}
+
+/**
+ * 弹层入场动画（poster-grow 0.28s，scale 0.86 → 1）会缩放截图的父节点，
+ * 动画没结束就截，成品尺寸会小于 750 宽且每次都不一样。
+ * 判据是「可视宽度 = 布局宽度」：有祖先 transform 时两者不等。
+ */
+async function waitForStableWidth(node: HTMLElement, timeoutMs = 1200): Promise<void> {
+  const started = Date.now()
+  while (Date.now() - started < timeoutMs) {
+    const visible = node.getBoundingClientRect().width
+    if (node.offsetWidth > 0 && Math.abs(visible - node.offsetWidth) < 0.5) {
+      return
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 60))
+  }
 }
 
 /** 按设备像素比放大，封顶 2 倍，避免超大画布占用过多内存 */
@@ -69,11 +103,10 @@ async function exportImage(canvas: OffscreenLike, width: number, height: number)
 }
 
 /**
- * 方案分享海报：预览就是推荐页那张方案卡片（同一个 PlanCardView），
- * 因此 H5 保存下来的图与预览完全一致（所见即所得）。
+ * 方案分享海报：A 卡（今日推荐）与 B 卡（战绩长图），页顶分段切换当前那一张。
  *
- * - H5：截取预览节点（captureNodeToDataUrl）得到图片；
- * - 小程序：预览同样是方案卡片，导出仍走离屏画布（Snapshot 需要 Skyline，后续迁移）。
+ * - H5：截取 1:1 副本节点（captureNodeToDataUrl，scale=2）得到图片，预览就是导出；
+ * - 小程序：预览同样是 A/B 卡，导出仍走离屏画布（Snapshot 需要 Skyline，后续迁移）。
  *
  * 用法：
  * ```tsx
@@ -84,6 +117,7 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
   const [status, setStatus] = useState<PosterStatus>('idle')
   const [imagePath, setImagePath] = useState('')
   const [saving, setSaving] = useState(false)
+  const [card, setCard] = useState<PosterCardKey>('today')
   const requestId = useRef(0)
   const planRef = useRef<SharePlan | null>(plan)
   planRef.current = plan
@@ -92,6 +126,22 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
 
   // 以内容签名为依赖：调用方每次渲染传入新对象引用时，只要内容不变就不重复生成
   const signature = useMemo(() => (plan ? planSignature(plan) : ''), [plan])
+
+  // 每日记录：只读消费 plan-store；card 作为重读触发器，切卡时拿最新 judged / note
+  const dayRecords = useMemo(() => (visible ? listDays() : []), [visible, card])
+  const daysSignature = useMemo(
+    () => dayRecords.map((day) => day.date + ':' + readJudged(day) + (day.rest ? ':rest' : '')).join(','),
+    [dayRecords]
+  )
+  const stats = useMemo(() => dayStats(dayRecords), [dayRecords])
+  const recordRows = useMemo(
+    () => buildRecordRows(dayRecords, plan ? { date: dateKey(), legs: plan.legs, amount: plan.summary?.amount ?? 0 } : null),
+    [dayRecords, plan]
+  )
+  const history = useMemo(() => (plan ? historyRows(plan) : []), [plan])
+  const coverImage = useMemo(() => (visible ? readPosterBackground() : ''), [visible, card])
+  const dateText = useMemo(() => (visible ? todayLabel() : ''), [visible, card])
+  const timeText = useMemo(() => (visible ? clockText() : ''), [visible, card])
 
   useEffect(() => {
     if (!visible || !signature) {
@@ -115,7 +165,11 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
           if (!node) {
             throw new Error('海报预览尚未渲染')
           }
-          filePath = await captureNodeToDataUrl(node)
+          await waitForStableWidth(node)
+          filePath = await captureNodeToDataUrl(node, {
+            scale: POSTER_EXPORT_SCALE,
+            backgroundColor: POSTER_EXPORT_BACKGROUND,
+          })
         } else {
           const logicalHeight = measurePosterHeight(target)
           const ratio = getPixelRatio()
@@ -154,7 +208,7 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
       cancelled = true
       clearTimeout(timer)
     }
-  }, [visible, signature])
+  }, [visible, signature, card, daysSignature])
 
   useEffect(() => {
     if (!visible || process.env.TARO_ENV !== 'h5') {
@@ -182,7 +236,7 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
       if (process.env.TARO_ENV === 'h5') {
         const link = document.createElement('a')
         link.href = imagePath
-        link.download = `${plan.name}-分享海报.png`
+        link.download = `${plan.name}-${card === 'today' ? '今日推荐' : '战绩长图'}.png`
         document.body.appendChild(link)
         link.click()
         link.remove()
@@ -240,11 +294,24 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
           </View>
         </View>
 
+        {/* 页顶分段：只换当前那张卡，不做横向封面流（D75 按来源单张） */}
+        <PosterSegments value={card} onChange={setCard} />
+
         <View className={styles.previewWrap}>
-          {/* 预览＝页面同款卡片；容器截断超长内容，H5 直接截这一块导出 */}
-          <View id={PREVIEW_NODE_ID} className={styles.previewClip}>
-            <PlanCardView name={plan.name} legs={plan.legs} summary={plan.summary} expanded />
-          </View>
+          {/* 预览＝导出：同一份卡片 DOM，H5 直接截这份 1:1 副本 */}
+          <PosterStage captureNodeId={PREVIEW_NODE_ID}>
+            {card === 'today' ? (
+              <PlanPosterA plan={plan} dateText={dateText} timeText={timeText} stats={stats} history={history} />
+            ) : (
+              <PlanPosterB
+                planName={plan.name}
+                dateText={dateText}
+                rows={recordRows}
+                coverImage={coverImage}
+                stats={stats}
+              />
+            )}
+          </PosterStage>
           {status === 'drawing' ? <Text className={styles.statusText}>正在生成图片…</Text> : null}
           {status === 'error' ? <Text className={styles.statusError}>图片生成失败，请关闭后重试</Text> : null}
         </View>
@@ -266,7 +333,7 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
           ) : null}
         </View>
         <Text className={styles.tip}>
-          {isWeapp ? '预览为方案卡片，保存的图片仍为票据海报' : '下载的图片就是上方这张方案卡片'}
+          {isWeapp ? '预览为方案海报，保存的图片仍为票据海报' : '下载的图片就是上方这张海报（750 宽）'}
         </Text>
       </View>
     </View>

@@ -1,0 +1,326 @@
+@use '@/styles/variables.scss' as *;
+
+// 品牌与纸面（照 design/ui-kit 口径，不复用全局旧红）
+$brand: #b3121b;
+$brand-deep: #7e0c13;
+$gold: #c9973b;
+$paper: #f6f3ec;
+$card: #ffffff;
+$ink: #201b15;
+$ink2: #6b6459;
+$ink3: #8c8578;
+$line: #e6dfd2;
+
+.page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: $spacing-md $page-padding calc(220rpx + env(safe-area-inset-bottom));
+  background: $paper;
+}
+
+// ============ 日历卡 ============
+.calCard {
+  padding: $spacing-md $spacing-md $spacing-sm;
+  background: $card;
+  border: 1rpx solid $line;
+  border-radius: $radius-lg;
+  box-shadow: 0 4rpx 24rpx rgba(32, 27, 21, 0.06);
+}
+
+.calHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.calMonth {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  letter-spacing: 1rpx;
+}
+
+.calNav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  border: 1rpx solid $line;
+  border-radius: $radius-round;
+  transition: opacity $transition-fast;
+}
+
+.calNavOff {
+  opacity: 0.32;
+}
+
+.calNavText {
+  font-size: $font-size-lg;
+  line-height: 1;
+  color: $ink2;
+}
+
+.calWeek {
+  display: flex;
+  margin-top: $spacing-sm;
+}
+
+.calWeekCell {
+  flex: 1;
+  font-size: $font-size-xs;
+  color: $ink3;
+  text-align: center;
+}
+
+.calGrid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: $spacing-xs;
+}
+
+.cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 14.2857%;
+  height: 92rpx;
+  border-radius: $radius-sm;
+}
+
+.cellMute .cellDay {
+  color: #c9c3b6;
+}
+
+.cellOn {
+  background: rgba(179, 18, 27, 0.06);
+  box-shadow: inset 0 0 0 2rpx $brand;
+}
+
+.cellDay {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 8rpx;
+  height: 8rpx;
+  margin-top: 4rpx;
+  background: $gold;
+  border-radius: $radius-round;
+}
+
+.restTag {
+  position: absolute;
+  top: 2rpx;
+  right: 8rpx;
+  padding: 0 6rpx;
+  font-size: 18rpx;
+  line-height: 1.5;
+  color: $brand;
+  background: rgba(179, 18, 27, 0.08);
+  border-radius: $radius-xs;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  margin-top: $spacing-sm;
+  padding-top: $spacing-sm;
+  border-top: 1rpx dashed $line;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  margin-right: $spacing-md;
+}
+
+.legendDot {
+  width: 8rpx;
+  height: 8rpx;
+  margin-right: 8rpx;
+  background: $gold;
+  border-radius: $radius-round;
+}
+
+.legendRest {
+  margin-right: 8rpx;
+  padding: 0 6rpx;
+  font-size: 18rpx;
+  color: $brand;
+  background: rgba(179, 18, 27, 0.08);
+  border-radius: $radius-xs;
+}
+
+.legendText {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.legendHint {
+  flex: 1;
+  font-size: $font-size-xs;
+  color: $ink3;
+  text-align: right;
+}
+
+// ============ 当日摘要（票根卡） ============
+.ticket {
+  margin-top: $spacing-md;
+  padding: $spacing-md;
+  background: $card;
+  border: 1rpx dashed $line;
+  border-radius: $radius-md;
+}
+
+.ticketHead {
+  display: flex;
+  align-items: center;
+}
+
+.ticketDate {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticketSport {
+  margin-left: $spacing-sm;
+  padding: 2rpx 12rpx;
+  font-size: $font-size-xs;
+  color: $brand;
+  background: rgba(179, 18, 27, 0.08);
+  border-radius: $radius-xs;
+}
+
+.ticketRest {
+  margin-left: $spacing-xs;
+  padding: 2rpx 12rpx;
+  font-size: $font-size-xs;
+  color: $gold;
+  background: rgba(201, 151, 59, 0.12);
+  border-radius: $radius-xs;
+}
+
+.stats {
+  display: flex;
+  margin-top: $spacing-md;
+}
+
+.statCell {
+  flex: 1;
+}
+
+.statCellWide {
+  flex: 1.4;
+}
+
+.statValue {
+  display: block;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  display: block;
+  margin-top: 4rpx;
+  font-size: $font-size-xs;
+  color: $ink3;
+}
+
+.ticketEmpty {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: $font-size-sm;
+  color: $ink2;
+}
+
+.restNoteRow {
+  display: flex;
+  align-items: center;
+  margin-top: $spacing-md;
+  padding-top: $spacing-sm;
+  border-top: 1rpx dashed $line;
+}
+
+.restNoteLabel {
+  flex-shrink: 0;
+  margin-right: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $ink3;
+}
+
+.restNoteInput {
+  flex: 1;
+  height: 64rpx;
+  font-size: $font-size-sm;
+  color: $ink;
+}
+
+.restNotePlaceholder {
+  color: $ink3;
+}
+
+.hint {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $ink3;
+}
+
+// ============ 底部操作栏 ============
+.dock {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: $spacing-sm $page-padding calc($spacing-sm + env(safe-area-inset-bottom));
+  background: rgba(246, 243, 236, 0.97);
+  border-top: 1rpx solid $line;
+}
+
+.dockGhost {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: $button-height-lg;
+  margin-right: $spacing-sm;
+  border: 1rpx solid $brand;
+  border-radius: $radius-button;
+}
+
+.dockGhostText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $brand;
+}
+
+.dockPrimary {
+  display: flex;
+  flex: 2;
+  align-items: center;
+  justify-content: center;
+  height: $button-height-lg;
+  background: $brand;
+  border-radius: $radius-button;
+  box-shadow: 0 6rpx 20rpx rgba(179, 18, 27, 0.24);
+}
+
+.dockPrimaryText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: #ffffff;
+}

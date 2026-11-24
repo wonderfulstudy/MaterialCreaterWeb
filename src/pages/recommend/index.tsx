@@ -431,6 +431,13 @@ export default function RecommendPage() {
             </Text>
           )}
         </View>
+
+        <Text
+          className={styles.scheduleRetry}
+          onClick={() => void Taro.navigateTo({ url: '/pages/plan-record/index' })}
+        >
+          记录
+        </Text>
       </View>
 
       {!supported && (

@@ -53,7 +53,8 @@ export interface PlanCalculatorProps {
   onSportChange?: (sport: SportKey) => void
   onRetry?: () => void
   onCancel?: () => void
-  onConfirm?: (legs: PlanLeg[], summary: SelectionSummary) => void
+  /** sheet 变体与 page 变体（传了它才渲染 confirmText 按钮）共用；第三参是当前过关方式的档位 */
+  onConfirm?: (legs: PlanLeg[], summary: SelectionSummary, passSizes: number[]) => void
 }
 
 interface DateGroup {
@@ -676,17 +677,27 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
           <Button className={styles.clearButton} disabled={!legs.length} onClick={clearSelection}>
             清空
           </Button>
-          <SavePlanButton
-            className={styles.saveButton}
-            legs={legs}
-            matches={schedule.matches}
-            summary={summary}
-            passSizes={passSizes}
-            onOpen={() => {
-              setMultOpen(false)
-              setGameOpen(false)
-            }}
-          />
+          {onConfirm ? (
+            <Button
+              className={classnames(styles.clearButton, styles.saveButton)}
+              disabled={!legs.length}
+              onClick={() => legs.length && onConfirm(legs, summary, passSizes)}
+            >
+              {confirmText}
+            </Button>
+          ) : (
+            <SavePlanButton
+              className={styles.saveButton}
+              legs={legs}
+              matches={schedule.matches}
+              summary={summary}
+              passSizes={passSizes}
+              onOpen={() => {
+                setMultOpen(false)
+                setGameOpen(false)
+              }}
+            />
+          )}
         </View>
       ) : null}
 
@@ -700,7 +711,7 @@ export default function PlanCalculator(props: PlanCalculatorProps) {
           {onConfirm ? (
             <View
               className={classnames(styles.confirmBtn, !legs.length && styles.confirmBtnDisabled)}
-              onClick={() => legs.length && onConfirm(legs, summary)}
+              onClick={() => legs.length && onConfirm(legs, summary, passSizes)}
             >
               <Text className={styles.confirmText}>{confirmText}</Text>
             </View>
