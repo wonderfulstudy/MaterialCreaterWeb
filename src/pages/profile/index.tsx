@@ -37,6 +37,11 @@ const AUTH_ERROR_COPY: Record<AuthErrorCode, string> = {
   network_error: '服务异常',
 }
 
+/** 白名单拒绝走 statusCode 403（D87），错误码枚举里没有对应成员 */
+function authErrorMessage(error: { code: AuthErrorCode; statusCode: number }): string {
+  return error.statusCode === 403 ? '没有使用权限' : AUTH_ERROR_COPY[error.code]
+}
+
 const QR_ERROR_COPY: Record<WechatQrErrorCode, string> = {
   invalid_image: '导入失败，请重新选择二维码截图',
   not_recognized: '没识别到二维码，换一张试试',
@@ -91,7 +96,7 @@ export default function Profile() {
       setSession(result.session)
     } else {
       setSession(null)
-      setAuthError(AUTH_ERROR_COPY[result.error.code])
+      setAuthError(authErrorMessage(result.error))
     }
     setAuthLoading(false)
     setLoginBusy(false)

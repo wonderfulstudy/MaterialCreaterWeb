@@ -651,29 +651,6 @@ $jc-red: #e60012;
   gap: $spacing-md;
   margin-bottom: $spacing-sm;
 }
-
-.passDd {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  max-width: 100%;
-
-  .ddTrigger {
-    box-sizing: border-box;
-    max-width: none;
-  }
-
-  .ddLabel,
-  .ddArrow {
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-
-  .ddValue {
-    min-width: 0;
-  }
-}
-
 .multBox {
   display: flex;
   align-items: center;
@@ -913,10 +890,6 @@ $jc-red: #e60012;
     justify-content: flex-start;
     gap: $spacing-xs;
     margin-bottom: 12rpx;
-  }
-
-  .passDd {
-    flex: 0 1 auto;
   }
 
   .ddTrigger {
