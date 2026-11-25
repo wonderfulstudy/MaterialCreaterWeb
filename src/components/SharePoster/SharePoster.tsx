@@ -12,11 +12,16 @@ import PosterStage, {
   dateKey,
   dayStats,
   historyRows,
+  measureRecordPaging,
+  planRecordPages,
   readJudged,
   readPosterBackground,
   todayLabel,
   type PosterCardKey,
+  type PosterPage,
+  type PosterRecordPage,
 } from '@/components/PlanPoster'
+import { clearPosterBackground, pickPosterBackground, savePosterBackground } from '@/components/PlanPoster/poster-bg'
 import { listDays } from '@/services/plan-store'
 import { captureNodeToDataUrl } from '@/utils/posters/capture'
 import { drawSharePoster, measurePosterHeight, POSTER_WIDTH } from './draw'
@@ -29,17 +34,31 @@ export interface SharePosterProps {
   /** 要分享的方案（含历史方案与中奖情况） */
   plan: SharePlan | null
   onClose: () => void
-  /** 海报图片生成成功后回调，参数为图片临时路径 / dataURL */
+  /** 海报图片生成成功后回调，参数为图片临时路径 / dataURL（分张时是第一张） */
   onGenerated?: (filePath: string) => void
 }
 
 type PosterStatus = 'idle' | 'drawing' | 'ready' | 'error'
 
-/** H5 端「所见即所得」的截图源节点：1:1 海报副本的外框（A/B 卡共用同一个 id） */
+const IS_H5 = process.env.TARO_ENV === 'h5'
+
+/** H5 端「所见即所得」的截图源节点：1:1 海报副本的外框（A/B 卡共用同一个 id，分张时再加序号） */
 const PREVIEW_NODE_ID = 'share-poster-preview'
 
 /** 导出底色：卡片圆角外的缝隙与海报背景同色 */
 const POSTER_EXPORT_BACKGROUND = '#8B0C14'
+
+/** 分张时每张的截图节点 id；单张沿用 PREVIEW_NODE_ID，导出与分张上线前完全一致 */
+function sheetNodeIds(count: number): string[] {
+  if (count <= 1) return [PREVIEW_NODE_ID]
+  return Array.from({ length: count }, (_, index) => PREVIEW_NODE_ID + '-' + (index + 1))
+}
+
+/** 下载文件名：单张保持「方案名-战绩长图.png」，分张才加序号 */
+function posterFileName(name: string, card: PosterCardKey, index: number, total: number): string {
+  const label = card === 'today' ? '今日推荐' : '战绩长图'
+  return total > 1 ? name + '-' + label + '-' + (index + 1) + '.png' : name + '-' + label + '.png'
+}
 
 /** 离屏画布的最小抽象：weapp 用 OffscreenCanvas，H5 用 detached canvas */
 interface OffscreenLike {
@@ -75,7 +94,7 @@ function getPixelRatio(): number {
 }
 
 function createOffscreen(width: number, height: number): OffscreenLike {
-  if (process.env.TARO_ENV === 'h5') {
+  if (IS_H5) {
     const canvas = document.createElement('canvas')
     canvas.width = width
     canvas.height = height
@@ -86,7 +105,7 @@ function createOffscreen(width: number, height: number): OffscreenLike {
 
 /** weapp 离屏画布导出为临时文件；H5 直接返回 dataURL */
 async function exportImage(canvas: OffscreenLike, width: number, height: number): Promise<string> {
-  if (process.env.TARO_ENV === 'h5') {
+  if (IS_H5) {
     return (canvas as HTMLCanvasElement).toDataURL('image/png')
   }
   const result = await Taro.canvasToTempFilePath({
@@ -106,6 +125,8 @@ async function exportImage(canvas: OffscreenLike, width: number, height: number)
  * 方案分享海报：A 卡（今日推荐）与 B 卡（战绩长图），页顶分段切换当前那一张。
  *
  * - H5：截取 1:1 副本节点（captureNodeToDataUrl，scale=2）得到图片，预览就是导出；
+ *   B 卡成品高 > 3000px 时按行边界自动切成多张，每张都带表头，逐张下载；
+ *   B 卡背景图可在弹层工具条里换（只写 storage，不进截图节点）；
  * - 小程序：预览同样是 A/B 卡，导出仍走离屏画布（Snapshot 需要 Skyline，后续迁移）。
  *
  * 用法：
@@ -115,9 +136,13 @@ async function exportImage(canvas: OffscreenLike, width: number, height: number)
  */
 export default function SharePoster({ visible, plan, onClose, onGenerated }: SharePosterProps) {
   const [status, setStatus] = useState<PosterStatus>('idle')
-  const [imagePath, setImagePath] = useState('')
+  const [imagePaths, setImagePaths] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [picking, setPicking] = useState(false)
   const [card, setCard] = useState<PosterCardKey>('today')
+  const [coverImage, setCoverImage] = useState('')
+  /** 分张结果：key 记录它是按哪一份数据量的，数据一变就作废（不拿旧行数算分张） */
+  const [pagesState, setPagesState] = useState<{ key: string; ranges: PosterRecordPage[] } | null>(null)
   const requestId = useRef(0)
   const planRef = useRef<SharePlan | null>(plan)
   planRef.current = plan
@@ -139,19 +164,43 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
     [dayRecords, plan]
   )
   const history = useMemo(() => (plan ? historyRows(plan) : []), [plan])
-  const coverImage = useMemo(() => (visible ? readPosterBackground() : ''), [visible, card])
   const dateText = useMemo(() => (visible ? todayLabel() : ''), [visible, card])
   const timeText = useMemo(() => (visible ? clockText() : ''), [visible, card])
 
+  // 背景图读 storage：打开时同步一次，换图/恢复默认后由 setCoverImage 直接更新
   useEffect(() => {
-    if (!visible || !signature) {
+    if (!visible) return
+    setCoverImage(readPosterBackground())
+  }, [visible])
+
+  const measureKey = signature + '|' + daysSignature + '|' + card
+
+  // 量一次 1:1 副本的真实高度，定下 B 卡分张；量不到就整张导出（与分张上线前一致）
+  useEffect(() => {
+    if (!visible || card !== 'history' || !IS_H5) return
+    if (pagesState && pagesState.key === measureKey) return
+    const node = document.getElementById(PREVIEW_NODE_ID)
+    const measured = node ? measureRecordPaging(node, recordRows.length) : null
+    setPagesState({
+      key: measureKey,
+      ranges: measured ? planRecordPages(measured) : [{ start: 0, end: recordRows.length }],
+    })
+  }, [visible, card, measureKey, recordRows.length, pagesState])
+
+  const splitRanges = card === 'history' && pagesState && pagesState.key === measureKey ? pagesState.ranges : null
+  const splitKey = splitRanges ? splitRanges.map((range) => range.start + ':' + range.end).join(',') : ''
+  /** 分张还没定下来就先别截：截早了会拿上一轮的节点尺寸 */
+  const pagingPending = card === 'history' && IS_H5 && splitRanges === null
+
+  useEffect(() => {
+    if (!visible || !signature || pagingPending) {
       return
     }
 
     const currentRequest = ++requestId.current
     let cancelled = false
     setStatus('drawing')
-    setImagePath('')
+    setImagePaths([])
 
     const generate = async () => {
       const target = planRef.current
@@ -159,17 +208,23 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
         return
       }
       try {
-        let filePath: string
-        if (process.env.TARO_ENV === 'h5') {
-          const node = document.getElementById(PREVIEW_NODE_ID)
-          if (!node) {
-            throw new Error('海报预览尚未渲染')
+        let paths: string[]
+        if (IS_H5) {
+          const captured: string[] = []
+          for (const id of sheetNodeIds(splitRanges ? splitRanges.length : 1)) {
+            const node = document.getElementById(id)
+            if (!node) {
+              throw new Error('海报预览尚未渲染')
+            }
+            await waitForStableWidth(node)
+            captured.push(
+              await captureNodeToDataUrl(node, {
+                scale: POSTER_EXPORT_SCALE,
+                backgroundColor: POSTER_EXPORT_BACKGROUND,
+              })
+            )
           }
-          await waitForStableWidth(node)
-          filePath = await captureNodeToDataUrl(node, {
-            scale: POSTER_EXPORT_SCALE,
-            backgroundColor: POSTER_EXPORT_BACKGROUND,
-          })
+          paths = captured
         } else {
           const logicalHeight = measurePosterHeight(target)
           const ratio = getPixelRatio()
@@ -184,15 +239,15 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
           ctx.scale(ratio, ratio)
           drawSharePoster(ctx, target)
 
-          filePath = await exportImage(canvas, width, height)
+          paths = [await exportImage(canvas, width, height)]
         }
 
         if (cancelled || requestId.current !== currentRequest) {
           return
         }
-        setImagePath(filePath)
+        setImagePaths(paths)
         setStatus('ready')
-        onGeneratedRef.current?.(filePath)
+        onGeneratedRef.current?.(paths[0])
       } catch (error) {
         if (cancelled || requestId.current !== currentRequest) {
           return
@@ -208,10 +263,10 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
       cancelled = true
       clearTimeout(timer)
     }
-  }, [visible, signature, card, daysSignature])
+  }, [visible, signature, card, daysSignature, coverImage, splitKey, pagingPending])
 
   useEffect(() => {
-    if (!visible || process.env.TARO_ENV !== 'h5') {
+    if (!visible || !IS_H5) {
       return
     }
     const handleKey = (event: KeyboardEvent) => {
@@ -228,21 +283,30 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
   }
 
   const handleSave = async () => {
-    if (!imagePath || saving) {
+    if (!imagePaths.length || saving) {
       return
     }
     setSaving(true)
     try {
-      if (process.env.TARO_ENV === 'h5') {
-        const link = document.createElement('a')
-        link.href = imagePath
-        link.download = `${plan.name}-${card === 'today' ? '今日推荐' : '战绩长图'}.png`
-        document.body.appendChild(link)
-        link.click()
-        link.remove()
-        Taro.showToast({ title: '已开始下载', icon: 'success' })
+      if (IS_H5) {
+        for (let index = 0; index < imagePaths.length; index += 1) {
+          const link = document.createElement('a')
+          link.href = imagePaths[index]
+          link.download = posterFileName(plan.name, card, index, imagePaths.length)
+          document.body.appendChild(link)
+          link.click()
+          link.remove()
+          // 连点多个下载会被浏览器拦，逐张隔一帧
+          if (index < imagePaths.length - 1) {
+            await new Promise((resolve) => window.setTimeout(resolve, 150))
+          }
+        }
+        Taro.showToast({
+          title: imagePaths.length > 1 ? '已开始下载 ' + imagePaths.length + ' 张' : '已开始下载',
+          icon: 'success',
+        })
       } else {
-        await Taro.saveImageToPhotosAlbum({ filePath: imagePath })
+        await Taro.saveImageToPhotosAlbum({ filePath: imagePaths[0] })
         Taro.showToast({ title: '已保存到相册', icon: 'success' })
       }
     } catch (error) {
@@ -267,21 +331,82 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
   }
 
   const handleShare = async () => {
-    if (!imagePath) {
+    if (!imagePaths.length) {
       return
     }
-    if (process.env.TARO_ENV === 'h5') {
+    if (IS_H5) {
       Taro.showToast({ title: '请保存图片后分享', icon: 'none' })
       return
     }
     try {
-      await Taro.showShareImageMenu({ path: imagePath })
+      await Taro.showShareImageMenu({ path: imagePaths[0] })
     } catch {
       Taro.showToast({ title: '分享失败，请保存图片后分享', icon: 'none' })
     }
   }
 
-  const isWeapp = process.env.TARO_ENV !== 'h5'
+  const handlePickBackground = async () => {
+    if (picking) {
+      return
+    }
+    setPicking(true)
+    try {
+      const dataUrl = await pickPosterBackground()
+      if (!dataUrl) {
+        return
+      }
+      setCoverImage(savePosterBackground(dataUrl))
+      Taro.showToast({ title: '背景图已更新', icon: 'success' })
+    } catch (error) {
+      console.error('[SharePoster] pick background failed', error)
+      Taro.showToast({ title: '换图失败，请重试', icon: 'none' })
+    } finally {
+      setPicking(false)
+    }
+  }
+
+  const handleResetBackground = () => {
+    clearPosterBackground()
+    setCoverImage('')
+    Taro.showToast({ title: '已恢复默认背景', icon: 'none' })
+  }
+
+  const isWeapp = !IS_H5
+
+  const sheetRanges: PosterRecordPage[] =
+    splitRanges && splitRanges.length ? splitRanges : [{ start: 0, end: recordRows.length }]
+  const sheetIds = sheetNodeIds(card === 'today' ? 1 : sheetRanges.length)
+  const pages: PosterPage[] =
+    card === 'today'
+      ? [
+          {
+            id: sheetIds[0],
+            node: <PlanPosterA plan={plan} dateText={dateText} timeText={timeText} stats={stats} history={history} />,
+          },
+        ]
+      : sheetRanges.map((range, index) => ({
+          id: sheetIds[index],
+          label: sheetRanges.length > 1 ? '第 ' + (index + 1) + ' / ' + sheetRanges.length + ' 张' : undefined,
+          node: (
+            <PlanPosterB
+              planName={plan.name}
+              dateText={dateText}
+              rows={recordRows.slice(range.start, range.end)}
+              coverImage={coverImage}
+              stats={stats}
+              slice={
+                sheetRanges.length > 1
+                  ? {
+                      index,
+                      total: sheetRanges.length,
+                      showCover: index === 0,
+                      showTail: index === sheetRanges.length - 1,
+                    }
+                  : undefined
+              }
+            />
+          ),
+        }))
 
   return (
     <View className={styles.mask}>
@@ -297,21 +422,25 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
         {/* 页顶分段：只换当前那张卡，不做横向封面流（D75 按来源单张） */}
         <PosterSegments value={card} onChange={setCard} />
 
+        {/* B 卡背景图工具条：在 PosterStage 之外，任何工具条都不进截图节点 */}
+        {IS_H5 && card === 'history' ? (
+          <View className={styles.coverBar}>
+            <Text className={styles.coverBarHint}>背景图</Text>
+            <View
+              className={classnames(styles.coverBtn, picking ? styles.coverBtnBusy : null)}
+              onClick={() => void handlePickBackground()}
+            >
+              <Text className={styles.coverBtnText}>{picking ? '处理中…' : '更换背景图'}</Text>
+            </View>
+            <View className={styles.coverBtn} onClick={handleResetBackground}>
+              <Text className={styles.coverBtnText}>恢复默认</Text>
+            </View>
+          </View>
+        ) : null}
+
         <View className={styles.previewWrap}>
-          {/* 预览＝导出：同一份卡片 DOM，H5 直接截这份 1:1 副本 */}
-          <PosterStage captureNodeId={PREVIEW_NODE_ID}>
-            {card === 'today' ? (
-              <PlanPosterA plan={plan} dateText={dateText} timeText={timeText} stats={stats} history={history} />
-            ) : (
-              <PlanPosterB
-                planName={plan.name}
-                dateText={dateText}
-                rows={recordRows}
-                coverImage={coverImage}
-                stats={stats}
-              />
-            )}
-          </PosterStage>
+          {/* 预览＝导出：同一份卡片 DOM，H5 直接截这份 1:1 副本（分张时每张一个截图节点） */}
+          <PosterStage pages={pages} />
           {status === 'drawing' ? <Text className={styles.statusText}>正在生成图片…</Text> : null}
           {status === 'error' ? <Text className={styles.statusError}>图片生成失败，请关闭后重试</Text> : null}
         </View>
@@ -319,21 +448,25 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
         <View className={styles.actions}>
           <View
             className={classnames(styles.actionBtn, styles.actionGhost, status !== 'ready' && styles.actionDisabled)}
-            onClick={handleSave}
+            onClick={() => void handleSave()}
           >
             <Text className={styles.actionText}>{saving ? '保存中…' : isWeapp ? '保存到相册' : '下载图片'}</Text>
           </View>
           {isWeapp ? (
             <View
               className={classnames(styles.actionBtn, styles.actionPrimary, status !== 'ready' && styles.actionDisabled)}
-              onClick={handleShare}
+              onClick={() => void handleShare()}
             >
               <Text className={styles.actionText}>分享给好友</Text>
             </View>
           ) : null}
         </View>
         <Text className={styles.tip}>
-          {isWeapp ? '预览为方案海报，保存的图片仍为票据海报' : '下载的图片就是上方这张海报（750 宽）'}
+          {isWeapp
+            ? '预览为方案海报，保存的图片仍为票据海报'
+            : imagePaths.length > 1
+              ? '成品超过 3000px，已按行切成 ' + imagePaths.length + ' 张长图，逐张下载'
+              : '下载的图片就是上方这张海报（750 宽）'}
         </Text>
       </View>
     </View>

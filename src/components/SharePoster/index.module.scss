@@ -115,6 +115,44 @@
   text-align: center;
 }
 
+// B 卡背景图工具条：在 PosterStage 之外的弹层里，截图节点不含它
+.coverBar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-md 0;
+}
+
+.coverBarHint {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.coverBtn {
+  @include button-reset;
+  height: 56rpx;
+  padding: 0 $spacing-md;
+  border: 2rpx solid $color-primary;
+  border-radius: $radius-button;
+  background: $color-bg-card;
+
+  &:active {
+    opacity: 0.85;
+  }
+}
+
+.coverBtnBusy {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.coverBtnText {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
 .actions {
   display: flex;
   flex-shrink: 0;

@@ -2,7 +2,6 @@
  * 方案海报（A 今日推荐 / B 战绩长图）的数据装配层。
  * 只读消费 plan-store 的按天记录；「判中」由 plan-store 侧写入，本批只做消费与兜底。
  */
-import Taro from '@tarojs/taro'
 import type { PlanLeg, SelectionSummary, SportKey } from '@/components/PlanCalculator'
 import type { StoredPlanDay } from '@/services/plan-store'
 import { summarizeResults } from '../SharePoster/model'
@@ -12,8 +11,7 @@ import type { PlanHistoryEntry, SharePlan, WinStats } from '../SharePoster/model
 export const MAX_RECORD_ROWS = 50
 /** A 卡历史行上限 */
 export const MAX_HISTORY_ROWS = 5
-/** 背景图存储 key：值为 base64 dataURL 或图片地址 */
-export const POSTER_BG_STORAGE_KEY = 'mc.poster.bg.v1'
+/* B 卡背景图（storage key / 读写 / 压缩）都在 poster-bg.ts，本文件末尾转出以保持既有导入 */
 /** 休息日理由兜底：记录上带 note 时优先用 note（如「国庆休息 4 天」） */
 export const REST_REASON = '休息'
 
@@ -182,7 +180,7 @@ export interface PosterRecordRow {
 /**
  * B 卡战绩表：旧 → 新，连中列数字累积（命中 +1、未中归 0、待开奖写「待」）；
  * 当前方案固定最后一行且连中列写「待」；休息日整行展示理由（day.note），连中列写「—」且不打不断计数；
- * 超过 MAX_RECORD_ROWS 只保留最新 N 行（长图分张见 B4b 待办，本批单张）。
+ * 超过 MAX_RECORD_ROWS 只保留最新 N 行（超长分张见 planRecordPages）。
  */
 export function buildRecordRows(days: StoredPlanDay[], current?: CurrentPlanEntry | null): PosterRecordRow[] {
   const rows: PosterRecordRow[] = []
@@ -248,21 +246,105 @@ export function historyOutcome(entry: PlanHistoryEntry): { text: string; tone: '
   return { text: '待', tone: 'pending' }
 }
 
-/** B 卡顶部背景图：读 storage，非法值返回空串，由调用方回落到静态占位图 */
-export function readPosterBackground(): string {
-  try {
-    const raw = Taro.getStorageSync(POSTER_BG_STORAGE_KEY) as unknown
-    if (typeof raw === 'string') {
-      const value = raw.trim()
-      return /^(https?:\/\/|data:image\/)/.test(value) ? value : ''
-    }
-    if (raw && typeof raw === 'object') {
-      const record = raw as { url?: unknown; src?: unknown }
-      const url = typeof record.url === 'string' ? record.url : record.src
-      return typeof url === 'string' && url ? url : ''
-    }
-  } catch {
-    // 读不到 storage 就用静态占位图，不打断海报渲染
+/* B 卡背景图：storage 读写与压缩在 poster-bg.ts，这里转出以保持既有导入路径不变 */
+export { POSTER_BG_STORAGE_KEY, readPosterBackground } from './poster-bg'
+
+/* ---------- 超长 B 卡自动分张 ---------- */
+
+/** 分张阈值：单张成品图（750 宽口径）的最高像素 */
+export const POSTER_PAGE_MAX_HEIGHT = 3000
+/**
+ * 第 2 张起要重复「页顶条 + 表头」的高度预估（成品 px）。
+ * 运行时由 DOM 实测值传入，这个默认值只服务纯函数的默认调用（测试 / 兜底）。
+ */
+export const POSTER_PAGE_REPEAT_HEIGHT = 96
+
+/** 一张里放哪几行：左闭右开的行下标区间 */
+export interface PosterRecordPage {
+  start: number
+  end: number
+}
+
+/**
+ * 内容总高 → 每张的目标高度（成品 px，数组长度即张数）。
+ *
+ * 第 2 张起多一条重复的页顶 + 表头，所以张数 N 要满足
+ * content ≤ N × max - (N - 1) × repeat；定下 N 后把 content 均分：
+ * 均分后每张 ≤ max - repeat，再加回 repeat 也不顶破 max。
+ */
+export function posterPageHeights(
+  contentHeight: number,
+  repeatHeight: number = POSTER_PAGE_REPEAT_HEIGHT,
+  maxHeight: number = POSTER_PAGE_MAX_HEIGHT,
+): number[] {
+  const limit = maxHeight > 0 ? maxHeight : POSTER_PAGE_MAX_HEIGHT
+  const content = Number.isFinite(contentHeight) ? Math.max(0, contentHeight) : 0
+  if (content <= limit) return [content]
+  const repeat = Number.isFinite(repeatHeight) ? Math.min(Math.max(repeatHeight, 0), limit - 1) : 0
+  const count = Math.ceil((content - repeat) / (limit - repeat))
+  const body = content / count
+  return Array.from({ length: count }, (_, index) => (index === 0 ? body : body + repeat))
+}
+
+/** 分张计算的输入：全部是成品 px（CSS 高 × POSTER_EXPORT_SCALE） */
+export interface PosterPagingInput {
+  /** 每行高度，按渲染顺序 */
+  rowHeights: number[]
+  /** 第 1 张除表格外的固定高度：页顶 + 封面 + 表头 */
+  firstFixed: number
+  /** 第 2 张起除表格外的固定高度：页顶 + 重复表头 */
+  repeatFixed: number
+  /** 说明 + 引流区高度，只加在最后一张 */
+  tailFixed: number
+  /** 单张上限，默认 POSTER_PAGE_MAX_HEIGHT */
+  maxHeight?: number
+}
+
+/**
+ * 按行边界把战绩行分到若干张：放满目标高度就换下一张，切点永远落在行边界上。
+ * 说明与引流只跟最后一张，装不下就把最后一张末尾的行挪到新的一张。
+ */
+export function planRecordPages(input: PosterPagingInput): PosterRecordPage[] {
+  const heights = input.rowHeights
+  const total = heights.length
+  const limit = input.maxHeight && input.maxHeight > 0 ? input.maxHeight : POSTER_PAGE_MAX_HEIGHT
+  const sum = (start: number, end: number): number => {
+    let value = 0
+    for (let index = start; index < end; index += 1) value += heights[index]
+    return value
   }
-  return ''
+  const fixedOf = (index: number): number => (index === 0 ? input.firstFixed : input.repeatFixed)
+  const heightOf = (index: number, page: PosterRecordPage, withTail: boolean): number =>
+    fixedOf(index) + sum(page.start, page.end) + (withTail ? input.tailFixed : 0)
+
+  const content = sum(0, total) + input.firstFixed + input.tailFixed
+  if (total === 0 || content <= limit) return [{ start: 0, end: total }]
+
+  const targets = posterPageHeights(content, input.repeatFixed, limit)
+  const pages: PosterRecordPage[] = []
+  let cursor = 0
+  while (cursor < total) {
+    const capacity = targets[pages.length] ?? limit
+    let used = fixedOf(pages.length)
+    let end = cursor
+    while (end < total && used + heights[end] <= capacity) {
+      used += heights[end]
+      end += 1
+    }
+    // 单行就顶破目标高度也要落一行，行不能丢
+    if (end === cursor) end = cursor + 1
+    pages.push({ start: cursor, end })
+    cursor = end
+  }
+
+  // 说明 + 引流只跟最后一张：装不下就把末尾的行挪到新的一张，直到装得下或只剩一行
+  for (;;) {
+    const lastIndex = pages.length - 1
+    const last = pages[lastIndex]
+    if (heightOf(lastIndex, last, true) <= limit) break
+    if (last.end - last.start <= 1) break
+    last.end -= 1
+    pages.push({ start: last.end, end: total })
+  }
+  return pages
 }

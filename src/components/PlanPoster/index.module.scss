@@ -40,6 +40,20 @@
   z-index: -1;
 }
 
+/* 分张：预览里每张独立一段（截图节点不在预览里，标签不会进成品） */
+.sheet {
+  display: block;
+}
+
+.sheetLabel {
+  display: block;
+  padding: 0 0 6rpx;
+  font-size: 20rpx;
+  letter-spacing: 0.06em;
+  color: rgba(245, 217, 139, 0.78);
+  text-align: center;
+}
+
 /* ---------- 页顶分段 ---------- */
 .seg {
   display: flex;
