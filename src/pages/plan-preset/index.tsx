@@ -6,7 +6,6 @@ import {
   MULTI_PASS_OPTIONS,
   formatAmount,
   formatOdds,
-  useSportSchedule,
   type SportKey,
 } from '@/components/PlanCalculator'
 import {
@@ -17,13 +16,15 @@ import {
   findPresetPass,
   findPresetPassByLabel,
   isMultiPass,
-  pickDayMatches,
+  presetAvailableMatches,
   presetBonusText,
-  presetLegText,
+  presetMatchNo,
+  type PresetPassOption,
   resolveCandidateIndex,
   samePreset,
   todayKey,
 } from '@/pages/recommend/preset-plan'
+import { findMatrix } from '@/services/matrix-store'
 import { findPreset, savePreset } from '@/services/preset-store'
 import styles from './index.module.scss'
 
@@ -34,6 +35,11 @@ const PASS_TABS = [
   { key: 'p3x1', label: '3串1' },
   { key: 'multi', label: 'M串N' },
 ]
+
+/** 串法至少需要的场次数：多串档按最大串数（一注里装几场）算，与 buildPresetCandidates 的门槛同口径 */
+function passMatchNeed(option: PresetPassOption): number {
+  return Math.max(...option.sizes)
+}
 
 const MULTIPLE_MAX = 9999
 const MULTIPLE_STEPS = [1, 2, 5, 10]
@@ -64,21 +70,20 @@ export default function PlanPresetPage() {
   const pass = findPresetPass(passId)
   const multiSelected = isMultiPass(pass)
 
-  const { states, load } = useSportSchedule(sport)
-  const current = states[sport]
+  /** 候选只由当日矩阵已选选项算出（§6.1.8-2、AC-22） */
+  const matrixDate = todayKey()
+  const matrixRows = useMemo(() => findMatrix(sport, matrixDate)?.rows ?? [], [sport, matrixDate])
+  const available = useMemo(() => presetAvailableMatches(matrixRows), [matrixRows])
+  /** 各串法按钮所需的场次数：M串N 主按钮只要任一子档可用即可点 */
+  const passNeed = (key: string) =>
+    key === 'multi'
+      ? Math.min(...MULTI_PASS_OPTIONS.map((option) => passMatchNeed(option)))
+      : passMatchNeed(findPresetPass(key))
 
-  const candidates = useMemo(() => {
-    if (current.status !== 'ready' || !current.schedule.matches.length) {
-      return []
-    }
-    return buildPresetCandidates(
-      pickDayMatches(current.schedule.matches),
-      pass,
-      multiple,
-      def.pick,
-      sport
-    )
-  }, [current.status, current.schedule, sport, pass, multiple, def.pick])
+  const candidates = useMemo(
+    () => buildPresetCandidates({ rows: matrixRows, date: matrixDate, sport }, pass, multiple, def.pick),
+    [matrixRows, matrixDate, sport, pass, multiple, def.pick],
+  )
 
   const activeIndex = resolveCandidateIndex(candidateIndex, candidates.length)
   const active = candidates.length ? candidates[activeIndex - 1] : null
@@ -110,11 +115,21 @@ export default function PlanPresetPage() {
   }
 
   const handlePassTab = (key: string) => {
+    if (available < passNeed(key)) {
+      return
+    }
     if (key === 'multi') {
       setPassId(multiSelected ? pass.id : MULTI_PASS_FALLBACK_ID)
       return
     }
     setPassId(key)
+  }
+
+  const handleSubPass = (id: string) => {
+    if (available < passMatchNeed(findPresetPass(id))) {
+      return
+    }
+    setPassId(id)
   }
 
   const handleMultiple = (value: number) => {
@@ -136,10 +151,11 @@ export default function PlanPresetPage() {
       <View className={styles.ways}>
         {PASS_TABS.map((tab) => {
           const tabOn = tab.key === 'multi' ? multiSelected : pass.id === tab.key
+          const tabOff = available < passNeed(tab.key)
           return (
             <View
               key={tab.key}
-              className={classnames(styles.way, tabOn && styles.wayOn)}
+              className={classnames(styles.way, tabOn && styles.wayOn, tabOff && styles.wayOff)}
               onClick={() => handlePassTab(tab.key)}
             >
               <Text className={classnames(styles.wayText, tabOn && styles.wayTextOn)}>
@@ -155,8 +171,12 @@ export default function PlanPresetPage() {
           {MULTI_PASS_OPTIONS.map((option) => (
             <View
               key={option.id}
-              className={classnames(styles.way2, pass.id === option.id && styles.way2On)}
-              onClick={() => setPassId(option.id)}
+              className={classnames(
+                styles.way2,
+                pass.id === option.id && styles.way2On,
+                available < passMatchNeed(option) && styles.way2Off
+              )}
+              onClick={() => handleSubPass(option.id)}
             >
               <Text
                 className={classnames(styles.way2Text, pass.id === option.id && styles.way2TextOn)}
@@ -168,29 +188,28 @@ export default function PlanPresetPage() {
         </View>
       ) : null}
 
-      {current.status === 'loading' ? (
+      {!matrixRows.length ? (
         <View className={styles.hint}>
-          <Text className={styles.hintText}>赛程加载中…</Text>
+          <Text className={styles.hintText}>综合大数据里还没选场次，先去矩阵勾选今天的比赛</Text>
         </View>
       ) : null}
 
-      {current.status === 'error' ? (
+      {matrixRows.length && !candidates.length ? (
         <View className={styles.hint}>
-          <Text className={styles.hintText}>{current.error || '赛程加载失败'}</Text>
-          <Text className={styles.hintAction} onClick={() => void load(sport)}>
-            重试
+          <Text className={styles.hintText}>
+            {`矩阵已选 ${available} 场，不够 ${pass.label} 所需场次，今天不生成该预设`}
           </Text>
-        </View>
-      ) : null}
-
-      {current.status === 'ready' && !candidates.length ? (
-        <View className={styles.hint}>
-          <Text className={styles.hintText}>场次不足，今天不生成该预设</Text>
         </View>
       ) : null}
 
       {candidates.length ? (
         <View className={styles.cands}>
+          <View className={styles.candHead}>
+            <Text className={styles.candHeadTitle}>候选方案</Text>
+            <Text className={styles.candHeadNote}>
+              {`按组合赔率${def.pick === 'max' ? '从高到低' : '从低到高'} · ${candidates.length} 条`}
+            </Text>
+          </View>
           {candidates.map((candidate) => {
             const on = candidate.index === activeIndex
             return (
@@ -200,13 +219,19 @@ export default function PlanPresetPage() {
                 onClick={() => setCandidateIndex(candidate.index)}
               >
                 <View className={styles.candTop}>
-                  <Text className={styles.candNo}>第 {candidate.index} 条</Text>
                   {on ? <Text className={styles.used}>已用第 {candidate.index} 条</Text> : null}
                   <Text className={classnames(styles.candOdds, on && styles.candOddsOn)}>
                     {formatOdds(candidate.odds)}
                   </Text>
                 </View>
-                <Text className={styles.candLegs}>{presetLegText(candidate.legs)}</Text>
+                <Text className={styles.candLegs}>
+                  {candidate.legs
+                    .map(
+                      (leg) =>
+                        `${presetMatchNo(leg)} ${leg.optionLabel} ${formatOdds(leg.odds)}`
+                    )
+                    .join(' ')}
+                </Text>
                 <View className={styles.candFoot}>
                   <Text className={styles.candMeta}>{candidate.summary.betCount} 注</Text>
                   <Text className={styles.candBonus}>
@@ -249,6 +274,7 @@ export default function PlanPresetPage() {
               <Text className={styles.mbtnText}>＋</Text>
             </View>
           </View>
+          <Text className={styles.rwinLabel}>理论奖金</Text>
           <Text className={styles.rbonus}>
             {active ? presetBonusText(active.summary) : '—'}
           </Text>

@@ -83,6 +83,11 @@ $line: #e6dfd2;
   color: #ffffff;
 }
 
+// 当日矩阵场次不够该串法：置灰不可点，选中档变不可用时仍保留选中态
+.wayOff {
+  opacity: 0.4;
+}
+
 .ways2 {
   display: flex;
   gap: $spacing-sm;
@@ -109,6 +114,10 @@ $line: #e6dfd2;
 .way2TextOn {
   color: #8a6520;
   font-weight: $font-weight-semibold;
+}
+
+.way2Off {
+  opacity: 0.4;
 }
 
 .hint {
@@ -157,7 +166,21 @@ $line: #e6dfd2;
   align-items: center;
 }
 
-.candNo {
+// 候选分组头：方向 + 条数
+.candHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 4rpx 0 12rpx;
+}
+
+.candHeadTitle {
+  font-size: 26rpx;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+}
+
+.candHeadNote {
   font-size: 22rpx;
   color: $ink2;
   font-variant-numeric: tabular-nums;
@@ -299,8 +322,15 @@ $line: #e6dfd2;
   font-weight: $font-weight-semibold;
 }
 
-.rbonus {
+.rwinLabel {
   margin-left: auto;
+  margin-right: 8rpx;
+  font-size: 22rpx;
+  color: $ink2;
+}
+
+.rbonus {
+  margin-left: 0;
   font-size: 32rpx;
   font-weight: $font-weight-bold;
   color: $brand;

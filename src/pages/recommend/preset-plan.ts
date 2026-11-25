@@ -4,7 +4,6 @@ import {
   type PlanLeg,
   type SelectionSummary,
   type SportKey,
-  type SportMatch,
 } from '@/components/PlanCalculator/model'
 import { formatAmount, planOdds, summarizeLegs } from '@/components/PlanCalculator/calc'
 import type { PresetId, StoredPreset } from '@/services/preset-store'
@@ -71,76 +70,115 @@ export function isMultiPass(option: PresetPassOption): boolean {
   return option.sizes.length > 1
 }
 
-/** 取今天的场次；当天没场次就用最近一天，避免预设整天空着 */
-export function pickDayMatches(matches: SportMatch[], today = todayKey()): SportMatch[] {
-  const dated = matches.filter((match) => Boolean(match.businessDate))
-  if (!dated.length) {
-    return matches
-  }
-  const todays = dated.filter((match) => match.businessDate === today)
-  if (todays.length) {
-    return todays
-  }
-  const nearest = dated.map((match) => match.businessDate).sort()[0]
-  return dated.filter((match) => match.businessDate === nearest)
+
+/** 矩阵里的一行：与 services/matrix-store 的 MatrixSnapshotRow 同形，只取预设要用的字段 */
+export interface PresetMatrixRow {
+  matchId: number
+  matchNo?: string
+  league?: string
+  home?: string
+  away?: string
+  cells: PresetMatrixCell[]
 }
 
-interface PickedLeg {
-  match: SportMatch
-  leg: PlanLeg
+export interface PresetMatrixCell {
+  poolCode: string
+  line?: string
+  options: PresetMatrixOption[]
 }
 
-/** 该场所有玩法里赔率最高 / 最低的那个选项 */
-function pickLeg(match: SportMatch, pick: PresetPick, sport: SportKey): PlanLeg | null {
-  let picked: { poolCode: PlanLeg['poolCode']; poolName: string; line: string; key: string; label: string; odds: number } | null =
-    null
+export interface PresetMatrixOption {
+  optionKey: string
+  label: string
+  odds: number
+}
 
-  match.rows.forEach((row) => {
-    if (!PRESET_POOL_CODES.includes(row.poolCode)) {
+/** HAD/HHAD 的中文名，腿上的 poolName 用它 */
+const PRESET_POOL_NAMES: Record<string, string> = { HAD: '胜平负', HHAD: '让球胜平负' }
+
+interface PickedOption {
+  poolCode: string
+  line: string
+  optionKey: string
+  label: string
+  odds: number
+}
+
+/** 该场已选选项里赔率最高（或最低）的那个；胜平负/让球胜平负以外一律不看（D88） */
+function pickRowOption(row: PresetMatrixRow, pick: PresetPick): PickedOption | null {
+  let picked: PickedOption | null = null
+
+  const collect = (poolCode: string, line: string, option: PresetMatrixOption) => {
+    if (!Number.isFinite(option.odds) || option.odds <= 0) {
       return
     }
-    row.options.forEach((option) => {
-      if (!picked) {
-        picked = { poolCode: row.poolCode, poolName: row.title, line: row.line, key: option.key, label: option.label, odds: option.odds }
-        return
-      }
-      const better = pick === 'max' ? option.odds > picked.odds : option.odds < picked.odds
-      if (better) {
-        picked = { poolCode: row.poolCode, poolName: row.title, line: row.line, key: option.key, label: option.label, odds: option.odds }
-      }
+    if (!picked) {
+      picked = { poolCode, line, optionKey: option.optionKey, label: option.label, odds: option.odds }
+      return
+    }
+    const better = pick === 'max' ? option.odds > picked.odds : option.odds < picked.odds
+    if (better) {
+      picked = { poolCode, line, optionKey: option.optionKey, label: option.label, odds: option.odds }
+    }
+  }
+
+  row.cells.forEach((cell) => {
+    if (!PRESET_POOL_CODES.includes(cell.poolCode as PlanLeg['poolCode'])) {
+      return
+    }
+    cell.options.forEach((option) => collect(cell.poolCode, cell.line ?? '', option))
+  })
+
+  return picked as PickedOption | null
+}
+
+/** 当日矩阵里能进预设的场次数：串法按钮组据此置灰、候选据此判「场次不足」 */
+export function presetAvailableMatches(rows: readonly PresetMatrixRow[]): number {
+  return rows.filter((row) => pickRowOption(row, 'max') !== null).length
+}
+
+export interface PresetMatrixInput {
+  rows: readonly PresetMatrixRow[]
+  date: string
+  sport: SportKey
+}
+
+/** 当日矩阵已选选项 → 候选场次池：一注一场只取一个结果，按策略方向排序后取前 8 场（§6.1.8-2/3） */
+export function presetPoolFromMatrix(input: PresetMatrixInput, pick: PresetPick): PlanLeg[] {
+  const picked: { matchId: number; leg: PlanLeg }[] = []
+
+  input.rows.forEach((row) => {
+    const chosen = pickRowOption(row, pick)
+    if (!chosen) {
+      return
+    }
+    picked.push({
+      matchId: row.matchId,
+      leg: {
+        sport: input.sport,
+        matchId: row.matchId,
+        matchNumStr: row.matchNo || String(row.matchId),
+        league: row.league || '',
+        matchDate: input.date,
+        homeTeam: row.home || '',
+        awayTeam: row.away || '',
+        poolCode: chosen.poolCode as PlanLeg['poolCode'],
+        poolName: PRESET_POOL_NAMES[chosen.poolCode] || chosen.poolCode,
+        goalLine: chosen.line,
+        optionKey: chosen.optionKey,
+        optionLabel: chosen.label,
+        odds: chosen.odds,
+      },
     })
   })
 
-  const chosen = picked as { poolCode: PlanLeg['poolCode']; poolName: string; line: string; key: string; label: string; odds: number } | null
-  if (!chosen) {
-    return null
-  }
-
-  return {
-    sport,
-    matchId: match.matchId,
-    matchNumStr: match.matchNumStr,
-    league: match.league,
-    matchDate: match.matchDate,
-    homeTeam: match.homeTeam,
-    awayTeam: match.awayTeam,
-    poolCode: chosen.poolCode,
-    poolName: chosen.poolName,
-    goalLine: chosen.line,
-    optionKey: chosen.key,
-    optionLabel: chosen.label,
-    odds: chosen.odds,
-  }
-}
-
-/** 比赛池：按该场最高（或最低）赔率排序取前 8 场 */
-function presetPool(matches: SportMatch[], pick: PresetPick, sport: SportKey): PickedLeg[] {
-  const picked = matches
-    .map((match) => ({ match, leg: pickLeg(match, pick, sport) }))
-    .filter((item): item is { match: SportMatch; leg: PlanLeg } => Boolean(item.leg))
-
-  const sorted = picked.slice().sort((left, right) => (pick === 'max' ? right.leg.odds - left.leg.odds : left.leg.odds - right.leg.odds))
-  return sorted.slice(0, PRESET_MATCH_POOL)
+  return picked
+    .sort((left, right) => {
+      const delta = pick === 'max' ? right.leg.odds - left.leg.odds : left.leg.odds - right.leg.odds
+      return delta || left.matchId - right.matchId
+    })
+    .slice(0, PRESET_MATCH_POOL)
+    .map((item) => item.leg)
 }
 
 function combinations<T>(items: T[], size: number): T[][] {
@@ -172,20 +210,24 @@ export interface PresetCandidate {
   summary: SelectionSummary
 }
 
-/** 候选组合：每场一个结果；最高策略按组合赔率从高到低，最低策略从低到高（第一条即默认值） */
+/** 候选组合：只吃当日矩阵已选选项，场次不足串法所需场次数就一条都不给（AC-22）；第一条即默认值 */
 export function buildPresetCandidates(
-  matches: SportMatch[],
+  input: PresetMatrixInput,
   pass: PresetPassOption,
   multiple: number,
   pick: PresetPick,
-  sport: SportKey,
 ): PresetCandidate[] {
-  const pool = presetPool(matches, pick, sport)
+  const pool = presetPoolFromMatrix(input, pick)
   const size = Math.max(...pass.sizes)
-  const candidates = combinations(pool, size).map((combo) => {
-    const legs = combo.map((item) => item.leg)
-    return { index: 0, legs, odds: planOdds(legs) ?? 0, summary: summarizeLegs(legs, pass.sizes, multiple) }
-  })
+  if (size < 1 || pool.length < size) {
+    return []
+  }
+  const candidates = combinations(pool, size).map((legs) => ({
+    index: 0,
+    legs,
+    odds: planOdds(legs) ?? 0,
+    summary: summarizeLegs(legs, pass.sizes, multiple),
+  }))
 
   candidates.sort((left, right) => {
     const delta = pick === 'max' ? right.odds - left.odds : left.odds - right.odds

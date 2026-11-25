@@ -76,15 +76,20 @@ export default function PlanDetailPage() {
     return toSharePlan(plan)
   }, [presetMode, preset, day])
 
-  const goModify = () => {
-    void Taro.navigateTo({ url: `/pages/selector/index?date=${date}` })
-  }
-
+  /** 预设方案没有当日记录可改，唯一的可改项是预设设置 */
   const goPresetSettings = () => {
     if (!presetMode) {
       return
     }
     void Taro.navigateTo({ url: `/pages/plan-preset/index?id=${presetId}` })
+  }
+
+  const goModify = () => {
+    if (presetMode) {
+      goPresetSettings()
+      return
+    }
+    void Taro.navigateTo({ url: `/pages/selector/index?date=${date}` })
   }
 
   const openPoster = () => {
@@ -152,31 +157,15 @@ export default function PlanDetailPage() {
       )}
 
       <View className={styles.dock}>
-        {presetMode ? (
-          <>
-            <View className={styles.dockGhost} onClick={goPresetSettings}>
-              <Text className={styles.dockGhostText}>预设方案设置</Text>
-            </View>
-            <View
-              className={classnames(styles.dockPrimary, !sharePlan && styles.dockPrimaryOff)}
-              onClick={openPoster}
-            >
-              <Text className={styles.dockPrimaryText}>分享海报</Text>
-            </View>
-          </>
-        ) : (
-          <>
-            <View className={styles.dockGhost} onClick={goModify}>
-              <Text className={styles.dockGhostText}>修改记录</Text>
-            </View>
-            <View
-              className={classnames(styles.dockPrimary, !hasPlan && styles.dockPrimaryOff)}
-              onClick={openPoster}
-            >
-              <Text className={styles.dockPrimaryText}>分享海报</Text>
-            </View>
-          </>
-        )}
+        <View className={styles.dockGhost} onClick={goModify}>
+          <Text className={styles.dockGhostText}>修改记录</Text>
+        </View>
+        <View
+          className={classnames(styles.dockPrimary, !sharePlan && styles.dockPrimaryOff)}
+          onClick={openPoster}
+        >
+          <Text className={styles.dockPrimaryText}>分享海报</Text>
+        </View>
       </View>
 
       <SharePoster

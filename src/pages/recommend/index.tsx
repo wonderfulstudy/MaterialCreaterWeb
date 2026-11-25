@@ -16,6 +16,7 @@ import PlanCardView from '@/components/PlanCardView'
 import SharePoster from '@/components/SharePoster'
 import RenameDialog from '@/components/RenameDialog'
 import TabBar from '@/components/TabBar'
+import { findMatrix } from '@/services/matrix-store'
 import { findPreset, listPresets, savePreset, type StoredPreset } from '@/services/preset-store'
 import { matchRecognizedPicks, parseRecommendationText } from './plan-ocr'
 import {
@@ -30,11 +31,11 @@ import {
   buildPresetCandidates,
   buildStoredPreset,
   findPresetPassByLabel,
-  pickDayMatches,
   presetBonusText,
   presetLegText,
   samePreset,
   todayKey,
+  type PresetMatrixRow,
 } from './preset-plan'
 import styles from './index.module.scss'
 
@@ -89,24 +90,35 @@ export default function RecommendPage() {
   const current = states[sport]
   const currentCards = cards[sport]
 
-  /** 预设方案：设置来自 preset-store，今天的内容按当日赛程重算 */
+  /** 预设方案：设置来自 preset-store，内容只由当日矩阵已选选项算出（AC-22/D39） */
   const [storedPresets, setStoredPresets] = useState<StoredPreset[]>(() => listPresets())
-  // 从「预设方案设置」返回时，读一次存储里的最新设置
-  useDidShow(() => setStoredPresets(listPresets()))
+  const [matrixRows, setMatrixRows] = useState<PresetMatrixRow[]>(
+    () => findMatrix(sport, todayKey())?.rows ?? [],
+  )
+  // 从矩阵/预设设置页返回时，两者都可能是新的
+  useDidShow(() => {
+    setStoredPresets(listPresets())
+    setMatrixRows(findMatrix(sport, todayKey())?.rows ?? [])
+  })
+  useEffect(() => {
+    setMatrixRows(findMatrix(sport, todayKey())?.rows ?? [])
+  }, [sport])
   const presetSettingsSignature = storedPresets
     .map((item) => `${item.id}:${item.passLabel}:${item.multiple}:${item.candidateIndex}`)
     .join('|')
 
   const presetRows = useMemo(() => {
-    if (current.status !== 'ready' || !current.schedule.matches.length) {
-      return null
-    }
-    const matches = pickDayMatches(current.schedule.matches)
+    const matrixDate = todayKey()
     return PRESET_DEFS.map((def) => {
       const stored = storedPresets.find((item) => item.id === def.id)
       const pass = findPresetPassByLabel(stored?.passLabel)
       const multiple = stored?.multiple ?? 1
-      const candidates = buildPresetCandidates(matches, pass, multiple, def.pick, sport)
+      const candidates = buildPresetCandidates(
+        { rows: matrixRows, date: matrixDate, sport },
+        pass,
+        multiple,
+        def.pick,
+      )
       return {
         def,
         preset: buildStoredPreset({
@@ -120,7 +132,7 @@ export default function RecommendPage() {
         }),
       }
     })
-  }, [current.status, current.schedule, sport, presetSettingsSignature])
+  }, [matrixRows, sport, presetSettingsSignature])
 
   /** 算出来的内容与存储不一致就落盘（含换天重算），刷新后仍是最后一次看到的内容 */
   useEffect(() => {
@@ -139,12 +151,9 @@ export default function RecommendPage() {
     }
   }, [presetRows])
 
-  const displayRows = presetRows ?? PRESET_DEFS.map((def) => ({
-    def,
-    preset: storedPresets.find((item) => item.id === def.id) ?? null,
-  }))
+  const displayRows = presetRows
 
-  const scheduleLoading = presetRows === null
+  const matrixMissing = matrixRows.length === 0
 
   const updateCard = (key: SportKey, id: string, patch: Partial<PlanCard>) => {
     setCards((prev) => ({
@@ -471,12 +480,6 @@ export default function RecommendPage() {
           </View>
           <Text className={styles.heroArrow}>›</Text>
         </View>
-        <Text
-          className={styles.heroAct}
-          onClick={() => void Taro.navigateTo({ url: '/pages/plan-record/index' })}
-        >
-          记录
-        </Text>
       </View>
 
       {!supported && (
@@ -499,7 +502,7 @@ export default function RecommendPage() {
       {/* 中部：手动方案卡片 */}
       <View className={styles.sectionHead}>
         <Text className={styles.sectionTitle}>手动方案</Text>
-        <Text className={styles.sectionCount}>{currentCards.length} 个</Text>
+        <Text className={styles.sectionCount}>{currentCards.length} 个系列</Text>
         <View className={styles.sectionTools}>
           <View className={styles.sportDd}>
             <View className={styles.ddTrigger} onClick={() => setSportOpen((prev) => !prev)}>
@@ -526,6 +529,12 @@ export default function RecommendPage() {
               </>
             ) : null}
           </View>
+          <Text
+            className={styles.secAction}
+            onClick={() => void Taro.navigateTo({ url: '/pages/plan-record/index' })}
+          >
+            记录
+          </Text>
         </View>
       </View>
 
@@ -551,6 +560,15 @@ export default function RecommendPage() {
         <Text className={styles.captionHint}>长按卡片可改名</Text>
       </View>
 
+      {deleteMode && (
+        <View className={styles.warn}>
+          <Text className={styles.warnIcon}>⚠</Text>
+          <Text className={styles.warnText}>
+            删除后该方案的全部每日记录、理论奖金与 A/B 海报数据一并删除，无法恢复。
+          </Text>
+        </View>
+      )}
+
       <View className={styles.cardList}>
         {currentCards.length === 0 ? (
           <View className={styles.emptyCard} onClick={openCreate}>
@@ -566,7 +584,7 @@ export default function RecommendPage() {
       {/* 下方：预设方案卡片分组 */}
       <View className={styles.sectionHead}>
         <Text className={styles.sectionTitle}>预设方案</Text>
-        <Text className={styles.sectionHint}>每天按矩阵自动重算</Text>
+        <Text className={styles.sectionHint}>按矩阵自动算出</Text>
       </View>
 
       {deleteMode ? (
@@ -608,7 +626,7 @@ export default function RecommendPage() {
               </>
             ) : (
               <Text className={styles.presetEmpty}>
-                {scheduleLoading ? '赛程加载中，预设待算' : '场次不足，今天不生成该预设'}
+                {matrixMissing ? '综合大数据里还没选场次' : '场次不足，今天不生成该预设'}
               </Text>
             )}
           </View>
@@ -640,7 +658,7 @@ export default function RecommendPage() {
               onClick={handleDeleteSelected}
             >
               <Text className={styles.bottomBtnText}>
-                删除{selectedIds.length ? `(${selectedIds.length})` : ''}
+                {`删除 ${selectedIds.length} 个方案`}
               </Text>
             </View>
           </>

@@ -8,12 +8,14 @@ import {
   findPresetPass,
   findPresetPassByLabel,
   isMultiPass,
-  pickDayMatches,
   presetBonusText,
   presetLegText,
   resolveCandidateIndex,
   samePreset,
+  presetAvailableMatches,
   todayKey,
+  type PresetMatrixInput,
+  type PresetMatrixRow,
 } from './preset-plan'
 
 const TODAY = '2026-11-25'
@@ -53,12 +55,32 @@ const MATCHES: SportMatch[] = [
   match(3, { key: 'a', label: '负', odds: 4.5 }, { key: 'a', label: '让负', odds: 6 }),
 ]
 
+/** 矩阵快照行：与 services/matrix-store 的落盘结构同形 */
+function rowsOf(matches: SportMatch[]): PresetMatrixRow[] {
+  return matches.map((match) => ({
+    matchId: match.matchId,
+    matchNo: match.matchNumStr,
+    league: match.league,
+    home: match.homeTeam,
+    away: match.awayTeam,
+    cells: match.rows.map((row) => ({
+      poolCode: row.poolCode,
+      line: row.line,
+      options: row.options.map((option) => ({ optionKey: option.key, label: option.label, odds: option.odds })),
+    })),
+  }))
+}
+
+function matrixOf(matches: SportMatch[]): PresetMatrixInput {
+  return { rows: rowsOf(matches), date: TODAY, sport: 'football' }
+}
+
 const PASS_2X1 = findPresetPass('p2x1')
 const PASS_3X1 = findPresetPass('p3x1')
 
 describe('preset-plan 候选生成', () => {
   it('最高赔率预设 2串1：按组合赔率降序，首条即默认', () => {
-    const candidates = buildPresetCandidates(MATCHES, PASS_2X1, 2, 'max', 'football')
+    const candidates = buildPresetCandidates(matrixOf(MATCHES), PASS_2X1, 2, 'max')
 
     expect(candidates.map((item) => item.odds)).toEqual([31.8, 18.9, 16.7])
     expect(presetLegText(candidates[0].legs)).toBe('003让负 002让平')
@@ -94,13 +116,13 @@ describe('preset-plan 候选生成', () => {
       ...MATCHES.slice(1),
     ]
 
-    const candidates = buildPresetCandidates(withLongshot, PASS_2X1, 1, 'max', 'football')
+    const candidates = buildPresetCandidates(matrixOf(withLongshot), PASS_2X1, 1, 'max')
     expect(candidates[0].legs.map((leg) => leg.poolCode)).toEqual(['HHAD', 'HHAD'])
     expect(candidates[0].legs.map((leg) => leg.odds)).toEqual([6, 5.3])
   })
 
   it('最低赔率预设 2串1：按组合赔率升序，首条即默认', () => {
-    const candidates = buildPresetCandidates(MATCHES, PASS_2X1, 1, 'min', 'football')
+    const candidates = buildPresetCandidates(matrixOf(MATCHES), PASS_2X1, 1, 'min')
 
     expect(candidates.map((item) => item.odds)).toEqual([6.93, 9.45, 14.85])
     expect(presetLegText(candidates[0].legs)).toBe('001让胜 002平')
@@ -120,11 +142,11 @@ describe('preset-plan 候选生成', () => {
   })
 
   it('切到 3串1 只留一条候选，点第二条即换成第二条的内容', () => {
-    const candidates = buildPresetCandidates(MATCHES, PASS_3X1, 1, 'max', 'football')
+    const candidates = buildPresetCandidates(matrixOf(MATCHES), PASS_3X1, 1, 'max')
     expect(candidates).toHaveLength(1)
     expect(candidates[0].odds).toBe(100.17)
 
-    const two = buildPresetCandidates(MATCHES, PASS_2X1, 1, 'max', 'football')
+    const two = buildPresetCandidates(matrixOf(MATCHES), PASS_2X1, 1, 'max')
     const picked = buildStoredPreset({
       def: PRESET_DEFS[0],
       sport: 'football',
@@ -140,8 +162,8 @@ describe('preset-plan 候选生成', () => {
   })
 
   it('倍数改动即时进入摘要与金额', () => {
-    const one = buildPresetCandidates(MATCHES, PASS_2X1, 1, 'max', 'football')[0]
-    const five = buildPresetCandidates(MATCHES, PASS_2X1, 5, 'max', 'football')[0]
+    const one = buildPresetCandidates(matrixOf(MATCHES), PASS_2X1, 1, 'max')[0]
+    const five = buildPresetCandidates(matrixOf(MATCHES), PASS_2X1, 5, 'max')[0]
 
     expect(one.summary.amount).toBe(2)
     expect(five.summary.amount).toBe(10)
@@ -152,7 +174,7 @@ describe('preset-plan 候选生成', () => {
     const multi = findPresetPass('p3x4')
     expect(isMultiPass(multi)).toBe(true)
 
-    const candidates = buildPresetCandidates(MATCHES, multi, 1, 'max', 'football')
+    const candidates = buildPresetCandidates(matrixOf(MATCHES), multi, 1, 'max')
     expect(candidates).toHaveLength(1)
     expect(candidates[0].summary.betCount).toBe(4)
     expect(candidates[0].summary.amount).toBe(8)
@@ -162,7 +184,7 @@ describe('preset-plan 候选生成', () => {
 
   it('场次不足时没有候选，预设不生成', () => {
     const few = MATCHES.slice(0, 2)
-    expect(buildPresetCandidates(few, PASS_3X1, 1, 'max', 'football')).toEqual([])
+    expect(buildPresetCandidates(matrixOf(few), PASS_3X1, 1, 'max')).toEqual([])
     expect(
       buildStoredPreset({
         def: PRESET_DEFS[0],
@@ -180,21 +202,26 @@ describe('preset-plan 候选生成', () => {
     const many = Array.from({ length: 12 }, (_, index) =>
       match(index + 1, { key: 'h', label: '胜', odds: 1.5 + index * 0.1 }, { key: 'hh', label: '胜胜', odds: 2 + index * 0.1 }),
     )
-    const candidates = buildPresetCandidates(many, findPresetPass('single'), 1, 'max', 'football')
+    const candidates = buildPresetCandidates(matrixOf(many), findPresetPass('single'), 1, 'max')
     expect(candidates).toHaveLength(PRESET_MATCH_POOL)
   })
 })
 
 describe('preset-plan 口径与文案', () => {
-  it('今天的场次优先，没有今天就用最近一天', () => {
-    const mixed = [
-      match(1, { key: 'h', label: '胜', odds: 2 }, { key: 'hh', label: '胜胜', odds: 3 }, '2026-11-24'),
-      match(2, { key: 'h', label: '胜', odds: 2 }, { key: 'hh', label: '胜胜', odds: 3 }, TODAY),
-    ]
-    expect(pickDayMatches(mixed, TODAY).map((item) => item.matchId)).toEqual([2])
-    expect(pickDayMatches(mixed, '2026-11-30').map((item) => item.matchId)).toEqual([1])
+  it('矩阵里没选场次就不生成候选（AC-22）', () => {
+    expect(buildPresetCandidates({ rows: [], date: TODAY, sport: 'football' }, PASS_2X1, 1, 'max')).toEqual([])
+    expect(presetAvailableMatches([])).toBe(0)
   })
 
+  it('只数有胜平负/让球胜平负选项的场次', () => {
+    const rows: PresetMatrixRow[] = [
+      { matchId: 1, cells: [] },
+      { matchId: 2, cells: [{ poolCode: 'CRS', options: [{ optionKey: 's00s05', label: '0:5', odds: 500 }] }] },
+      { matchId: 3, cells: [{ poolCode: 'HAD', options: [{ optionKey: 'h', label: '胜', odds: 2.4 }] }] },
+    ]
+    expect(presetAvailableMatches(rows)).toBe(1)
+    expect(buildPresetCandidates({ rows, date: TODAY, sport: 'football' }, findPresetPass('single'), 1, 'max')).toHaveLength(1)
+  })
   it('选中序号非法时回落到第一条', () => {
     expect(resolveCandidateIndex(9, 3)).toBe(1)
     expect(resolveCandidateIndex(2, 3)).toBe(2)
@@ -227,7 +254,7 @@ describe('preset-plan 口径与文案', () => {
   })
 
   it('samePreset 忽略 updatedAt，但内容变了要算变化', () => {
-    const candidates = buildPresetCandidates(MATCHES, PASS_2X1, 1, 'max', 'football')
+    const candidates = buildPresetCandidates(matrixOf(MATCHES), PASS_2X1, 1, 'max')
     const base = buildStoredPreset({
       def: PRESET_DEFS[0],
       sport: 'football',

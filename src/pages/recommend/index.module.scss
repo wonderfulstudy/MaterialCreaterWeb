@@ -67,17 +67,6 @@ $uiLine: #e6dfd2;
   color: rgba(255, 255, 255, 0.86);
 }
 
-.heroAct {
-  flex: none;
-  margin-left: $spacing-md;
-  padding: 10rpx 20rpx;
-  font-size: 24rpx;
-  font-weight: $font-weight-semibold;
-  color: $brand;
-  background: rgba(179, 18, 27, 0.08);
-  border-radius: $radius-round;
-}
-
 .sectionHead {
   display: flex;
   align-items: baseline;
@@ -107,6 +96,17 @@ $uiLine: #e6dfd2;
   display: flex;
   align-items: center;
   margin-left: auto;
+}
+
+.secAction {
+  flex: none;
+  margin-left: $spacing-md;
+  padding: 8rpx 18rpx;
+  font-size: 24rpx;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+  background: rgba(179, 18, 27, 0.08);
+  border-radius: $radius-round;
 }
 
 .manualBar {
@@ -350,6 +350,32 @@ $uiLine: #e6dfd2;
   padding: $spacing-xs $spacing-md;
   background: #fff1f0;
   border-radius: $radius-sm;
+}
+
+.warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  margin-bottom: $spacing-sm;
+  padding: 16rpx;
+  background: #fdf3f3;
+  border: 2rpx solid #f0c9cc;
+  border-radius: $radius-sm;
+}
+
+.warnIcon {
+  flex: none;
+  margin-top: 2rpx;
+  font-size: 24rpx;
+  line-height: 1.45;
+  color: $brand;
+}
+
+.warnText {
+  flex: 1;
+  font-size: 23rpx;
+  line-height: 1.45;
+  color: #7e0c13;
 }
 
 .deleteTipText {
