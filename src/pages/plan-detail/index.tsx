@@ -5,7 +5,7 @@ import classnames from 'classnames'
 import PlanCardView from '@/components/PlanCardView'
 import SharePoster from '@/components/SharePoster'
 import { formatAmount, formatDateLabel, sportLabel } from '@/components/PlanCalculator'
-import { findDay } from '@/services/plan-store'
+import { findDay, primaryPlanId } from '@/services/plan-store'
 import { findPreset } from '@/services/preset-store'
 import { PRESET_DEFS } from '@/pages/recommend/preset-plan'
 import { toSharePlan, type RecommendPlan } from '@/pages/recommend/plan'
@@ -22,13 +22,20 @@ function resolveDate(raw?: string): string {
   return raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : todayKey()
 }
 
-/** 方案详情：来源可以是某天的记录，也可以是预设方案（?preset=max|min） */
+/** 路由 planId → 缺省回落 primaryPlanId()（v1 单方案语义）；store 为空时 null，页面按空态渲染 */
+function resolvePlanId(raw?: string): string | null {
+  const fromRoute = raw && raw.trim() ? raw.trim() : null
+  return fromRoute ?? primaryPlanId()
+}
+
+/** 方案详情：来源可以是某方案某天的记录，也可以是预设方案（?preset=max|min） */
 export default function PlanDetailPage() {
   const router = useRouter()
+  const planId = useMemo(() => resolvePlanId(router.params?.planId), [router.params?.planId])
   const presetId = router.params?.preset
   const presetMode = presetId === 'max' || presetId === 'min'
   const date = useMemo(() => resolveDate(router.params?.date), [router.params?.date])
-  const [day, setDay] = useState(() => findDay(date))
+  const [day, setDay] = useState(() => (planId ? findDay(date, planId) : null))
   const [preset, setPreset] = useState(() => (presetMode ? findPreset(presetId) : null))
   const [posterVisible, setPosterVisible] = useState(false)
 
@@ -37,7 +44,7 @@ export default function PlanDetailPage() {
       setPreset(findPreset(presetId))
       return
     }
-    setDay(findDay(date))
+    setDay(planId ? findDay(date, planId) : null)
   })
 
   const hasPlan = Boolean(day && day.legs.length)
@@ -73,8 +80,9 @@ export default function PlanDetailPage() {
       legs: day.legs,
       summary: day.summary,
     }
-    return toSharePlan(plan)
-  }, [presetMode, preset, day])
+    // 海报按方案取历史行 / 战绩，记录页与海报必须同一个作用域
+    return { ...toSharePlan(plan), planId: planId ?? undefined }
+  }, [presetMode, preset, day, planId])
 
   /** 预设方案没有当日记录可改，唯一的可改项是预设设置 */
   const goPresetSettings = () => {
@@ -89,7 +97,8 @@ export default function PlanDetailPage() {
       goPresetSettings()
       return
     }
-    void Taro.navigateTo({ url: `/pages/selector/index?date=${date}` })
+    const scope = planId ? `&planId=${planId}` : ''
+    void Taro.navigateTo({ url: `/pages/selector/index?date=${date}${scope}` })
   }
 
   const openPoster = () => {
@@ -171,6 +180,7 @@ export default function PlanDetailPage() {
       <SharePoster
         visible={posterVisible}
         plan={sharePlan}
+        planId={planId ?? undefined}
         onClose={() => setPosterVisible(false)}
       />
     </View>

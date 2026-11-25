@@ -7,7 +7,7 @@ import {
 } from '@/api/lottery/results'
 import type { PlanLeg, PoolCode } from '@/components/PlanCalculator/model'
 import { judgeLegs, judgePlan, type MatchResults } from './plan-result'
-import { findDay, saveDay, type StoredPlanDay } from './plan-store'
+import { findDay, listDays, saveDay, type StoredPlanDay } from './plan-store'
 import {
   JUDGE_WINDOW_DAYS,
   judgePlans,
@@ -508,5 +508,33 @@ describe('judgeRecentPlans：窗口与入口', () => {
     const second = await judgeRecentPlans(7, '2026-11-25', makeSources())
     expect(second).toEqual(first)
     expect(findDay(FOOTBALL_DATE)?.judged).toBe('hit')
+  })
+})
+
+// ============ AC-11 / AC-15：方案之间的记录与判定互不覆盖 ============
+
+describe('按方案隔离（AC-11 / AC-15）', () => {
+  test('两个方案同名日期各自判中，互不覆盖', async () => {
+    saveDay(makeDay({ planId: 'plan-a', date: FOOTBALL_DATE, legs: [makeLeg({ optionKey: 'h' })] }))
+    saveDay(makeDay({ planId: 'plan-b', date: FOOTBALL_DATE, legs: [makeLeg({ optionKey: 'a' })] }))
+
+    const out = await judgeRecentPlans(7, '2026-11-25', makeSources())
+
+    // 两个方案各有一条同名日期的记录，各自落自己的 judged
+    expect(out).toHaveLength(2)
+    expect(out.every((item) => item.date === FOOTBALL_DATE)).toBe(true)
+    expect(findDay(FOOTBALL_DATE, 'plan-a')?.judged).toBe('hit')
+    expect(findDay(FOOTBALL_DATE, 'plan-b')?.judged).toBe('miss')
+  })
+
+  test('listDays(planA) 只含本方案记录，同名日期的 planB 记录不串方案', () => {
+    saveDay(makeDay({ planId: 'plan-a', date: FOOTBALL_DATE }))
+    saveDay(makeDay({ planId: 'plan-b', date: FOOTBALL_DATE }))
+    saveDay(makeDay({ planId: 'plan-b', date: TRADITIONAL_DATE }))
+
+    expect(listDays('plan-a').map((day) => day.date)).toEqual([FOOTBALL_DATE])
+    expect(listDays('plan-a').every((day) => day.planId === 'plan-a')).toBe(true)
+    // date 倒序：plan-b 自己那两天，plan-a 的记录不进来
+    expect(listDays('plan-b').map((day) => day.date)).toEqual([FOOTBALL_DATE, TRADITIONAL_DATE])
   })
 })

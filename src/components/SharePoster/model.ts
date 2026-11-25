@@ -38,6 +38,8 @@ export interface SharePlan {
   history?: PlanHistoryEntry[]
   /** 备注，如识别来源说明 */
   note?: string
+  /** 所属方案 id：海报的历史行与战绩统计按它取数（缺省回落 primaryPlanId()） */
+  planId?: string
 }
 
 /** 一组投注的中奖统计 */

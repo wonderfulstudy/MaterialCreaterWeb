@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input, Text, View } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import classnames from 'classnames'
 import {
   formatAmount,
@@ -9,8 +9,16 @@ import {
   type SelectionSummary,
   type SportKey,
 } from '@/components/PlanCalculator'
-import { judgeRecentPlans } from '@/services/plan-judge'
-import { findDay, listDaysMap, markRest, primaryPlanId, saveDay, type StoredPlanDay } from '@/services/plan-store'
+import { JUDGE_WINDOW_DAYS, judgeRecentPlans } from '@/services/plan-judge'
+import {
+  findDay,
+  findPlan,
+  listDaysMap,
+  markRest,
+  primaryPlanId,
+  saveDay,
+  type StoredPlanDay,
+} from '@/services/plan-store'
 import styles from './index.module.scss'
 
 const WEEK_HEADS = ['日', '一', '二', '三', '四', '五', '六']
@@ -74,21 +82,40 @@ function restOnlyDay(date: string, sport: SportKey, planId: string): StoredPlanD
   }
 }
 
+/** 路由 planId → 缺省回落 primaryPlanId()（v1 单方案语义）；store 为空时 null，页面按空态渲染 */
+function resolvePlanId(raw?: string): string | null {
+  const fromRoute = raw && raw.trim() ? raw.trim() : null
+  return fromRoute ?? primaryPlanId()
+}
+
+/** 本方案的日历：没有方案时是空表，绝不回落到「全部方案」的合并日历（AC-11） */
+function readDayMap(planId: string | null): Record<string, StoredPlanDay> {
+  return planId ? listDaysMap(planId) : {}
+}
+
 export default function PlanRecordPage() {
+  const router = useRouter()
+  const planId = useMemo(() => resolvePlanId(router.params?.planId), [router.params?.planId])
+  const plan = useMemo(() => (planId ? findPlan(planId) : null), [planId])
   const [today] = useState(startOfToday)
-  const [days, setDays] = useState<Record<string, StoredPlanDay>>(() => listDaysMap())
+  const [days, setDays] = useState<Record<string, StoredPlanDay>>(() => readDayMap(planId))
   const [selected, setSelected] = useState(() => dayKey(startOfToday()))
   const [cursor, setCursor] = useState(() => ({ year: today.getFullYear(), month: today.getMonth() }))
 
   const refresh = useCallback(() => {
-    setDays(listDaysMap())
-  }, [])
+    setDays(readDayMap(planId))
+  }, [planId])
+
+  /** 只在有方案时读记录：store 为空时一律 null，不猜任何全局记录 */
+  const findScopedDay = (date: string): StoredPlanDay | null =>
+    planId ? findDay(date, planId) : null
 
   // AC-17：赛果回填后自动判中，写回 plan-store 后重读一次让徽标立即生效。
   // 判定本身只覆盖近 7 天且有 legs 的天，失败静默：不弹错、不阻塞页面。
   useDidShow(() => {
     refresh()
-    void judgeRecentPlans()
+    // 第 4 参是本方案：别的方案的记录不在这里重判，写回也保留各自的 planId
+    void judgeRecentPlans(JUDGE_WINDOW_DAYS, undefined, undefined, planId ?? undefined)
       .then((judged) => {
         if (judged.length) refresh()
       })
@@ -103,17 +130,17 @@ export default function PlanRecordPage() {
 
   // 只在 onBlur 存太脆（未聚焦的输入框不会有 blur），输入即落盘，失焦再收尾 trim
   const persistNote = (raw: string) => {
-    const current = findDay(selected)
-    if (!current || (current.note ?? '') === raw) return
-    saveDay({ ...current, note: raw, updatedAt: Date.now() })
+    const current = findScopedDay(selected)
+    if (!planId || !current || (current.note ?? '') === raw) return
+    saveDay({ ...current, planId, note: raw, updatedAt: Date.now() })
     refresh()
   }
 
   const commitNote = () => {
-    const current = findDay(selected)
+    const current = findScopedDay(selected)
     const next = noteDraft.trim()
-    if (!current || (current.note ?? '') === next) return
-    saveDay({ ...current, note: next, updatedAt: Date.now() })
+    if (!planId || !current || (current.note ?? '') === next) return
+    saveDay({ ...current, planId, note: next, updatedAt: Date.now() })
     refresh()
   }
 
@@ -168,21 +195,27 @@ export default function PlanRecordPage() {
   }
 
   const toggleRest = () => {
-    const current = findDay(selected)
+    // 没有方案就没有可标记的日历：不造孤儿记录
+    if (!planId) {
+      return
+    }
+    const current = findScopedDay(selected)
     if (current?.rest) {
-      markRest(selected, false)
+      markRest(selected, false, planId)
     } else if (current) {
-      markRest(selected, true)
+      markRest(selected, true, planId)
     } else {
-      saveDay(restOnlyDay(selected, 'football', primaryPlanId() ?? 'plan-1'))
+      saveDay(restOnlyDay(selected, 'football', planId))
     }
     refresh()
   }
 
   const goNext = () => {
+    // planId 一路带到下一屏，详情页 / 选择器才不会回落到别的方案
+    const scope = planId ? `&planId=${planId}` : ''
     const url = selectedRecord
-      ? `/pages/plan-detail/index?date=${selected}`
-      : `/pages/selector/index?date=${selected}`
+      ? `/pages/plan-detail/index?date=${selected}${scope}`
+      : `/pages/selector/index?date=${selected}${scope}`
     void Taro.navigateTo({ url })
   }
 
@@ -226,6 +259,11 @@ export default function PlanRecordPage() {
 
   return (
     <View className={styles.page}>
+      {plan ? (
+        <View className={styles.planHead}>
+          <Text className={styles.planHeadName}>{plan.name}</Text>
+        </View>
+      ) : null}
       <View className={styles.calCard}>
         <View className={styles.calHead}>
           <View

@@ -1,7 +1,7 @@
 import type { PlanLeg, SelectionSummary, SportKey } from '@/components/PlanCalculator'
 import { summarizeCardLegs } from '@/components/PlanCardView'
 import type { PlanHistoryEntry, PlanLegResult, SharePlan } from '@/components/SharePoster'
-import type { StoredPlanDay } from '@/services/plan-store'
+import type { StoredPlan, StoredPlanDay } from '@/services/plan-store'
 
 /** 一张推荐单卡片 */
 export interface RecommendPlan {
@@ -112,10 +112,11 @@ export function toStoredDay(
   }
 }
 
-/** 推荐单卡片 → 海报数据模型 */
+/** 推荐单卡片 → 海报数据模型；planId 让海报战绩与方案列表卡同源（AC-11 / AC-21） */
 export function toSharePlan(plan: RecommendPlan): SharePlan {
   return {
     id: plan.id,
+    planId: plan.id,
     sport: plan.sport,
     name: plan.name,
     legs: plan.legs,
@@ -124,4 +125,23 @@ export function toSharePlan(plan: RecommendPlan): SharePlan {
     history: plan.history,
     note: plan.note || undefined,
   }
+}
+
+/** 落盘方案 → 计算器 / 每日记录需要的推荐单结构（id 沿用 store 里的方案 id） */
+export function storedPlanToRecommend(plan: StoredPlan): RecommendPlan {
+  return {
+    id: plan.id,
+    sport: plan.sport,
+    name: plan.name,
+    imagePath: '',
+    recognizedText: '',
+    note: '',
+    legs: plan.legs,
+    summary: plan.summary,
+  }
+}
+
+/** 落盘方案 → 海报数据模型（多方案并存时海报按 planId 取自己的记录） */
+export function storedPlanToSharePlan(plan: StoredPlan): SharePlan {
+  return toSharePlan(storedPlanToRecommend(plan))
 }

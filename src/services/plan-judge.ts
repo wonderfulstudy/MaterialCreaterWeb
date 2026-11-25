@@ -9,7 +9,7 @@ import {
 } from '@/api/lottery/results'
 import type { SportKey } from '@/components/PlanCalculator/model'
 import { extractMatchResults, judgeLegs, judgePlan, type MatchResults } from './plan-result'
-import { findDay, listDays, saveDay, type StoredPlanDay } from './plan-store'
+import { findDay, listDays, listPlans, saveDay, type StoredPlanDay } from './plan-store'
 
 /**
  * 赛果回填触发判中（AC-17）：把 plan-result 的纯判定接到真实赛果上，
@@ -155,11 +155,13 @@ export async function judgePlans(
     })),
   )
 
-  judged.forEach((item) => {
+  // 写回按「方案 + 日期」定位：同名日期的另一个方案不在这次范围内（AC-11 / AC-15）
+  judged.forEach((item, index) => {
     if (item.judged === 'pending') return
-    const current = findDay(item.date)
+    const planId = targets[index].planId
+    const current = findDay(item.date, planId)
     if (!current || current.judged === item.judged) return
-    saveDay({ ...current, judged: item.judged, updatedAt: Date.now() })
+    saveDay({ ...current, planId, judged: item.judged, updatedAt: Date.now() })
   })
 
   return judged
@@ -173,11 +175,14 @@ export async function judgeRecentPlans(
   windowDays: number = JUDGE_WINDOW_DAYS,
   today: string = toDateKey(new Date()),
   sources: JudgeSources = defaultJudgeSources,
+  /** 只判这个方案；不传则逐个方案各判各的（同一日期在不同方案下互不影响） */
+  planId?: string,
 ): Promise<DayJudgement[]> {
   const window = new Set(recentDateKeys(windowDays, today))
-  const days = listDays().filter(
-    (day) => window.has(day.date) && Array.isArray(day.legs) && day.legs.length > 0,
-  )
+  const scopes = planId ? [planId] : listPlans().map((plan) => plan.id)
+  const days = scopes
+    .flatMap((id) => listDays(id))
+    .filter((day) => window.has(day.date) && Array.isArray(day.legs) && day.legs.length > 0)
   try {
     return await judgePlans(days, sources)
   } catch {

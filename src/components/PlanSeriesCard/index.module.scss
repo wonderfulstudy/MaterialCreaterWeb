@@ -1,0 +1,168 @@
+@use '@/styles/variables.scss' as *;
+
+$uiInk: #201b15;
+$uiInk2: #6b6459;
+$uiLine: #e6dfd2;
+$uiPaper: #f6f3ec;
+$brand: #b3121b;
+$win: #1e9e50;
+$lose: #9a9894;
+$pend: #c07607;
+$pendBg: #fdf0da;
+
+// ============ 方案系列卡（手动 / 预设同一套结构，D60） ============
+.seriesCard {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 14rpx 20rpx;
+  background: #fff;
+  border: 2rpx solid $uiLine;
+  border-radius: 24rpx;
+  box-sizing: border-box;
+  box-shadow: 0 4rpx 18rpx rgba(32, 27, 21, 0.05);
+
+  &:active {
+    opacity: 0.92;
+  }
+}
+
+// 删除模式的勾选态
+.seriesCardPicked {
+  border-color: $brand;
+  background: #fffcfc;
+  box-shadow: 0 0 0 2rpx $brand inset;
+}
+
+// 勾选热区：卡头左侧，撑到卡边便于点击
+.seriesHit {
+  @include flex-center;
+  flex: none;
+  align-self: stretch;
+  width: 64rpx;
+  margin: -14rpx 0 -14rpx -12rpx;
+}
+
+.seriesCheckbox {
+  @include flex-center;
+  width: 40rpx;
+  height: 40rpx;
+  border: 2rpx solid #cfc6b6;
+  border-radius: $radius-round;
+  background: #fff;
+  box-sizing: border-box;
+  transition: background $transition-fast, border-color $transition-fast;
+}
+
+.seriesCheckboxOn {
+  background: $brand;
+  border-color: $brand;
+}
+
+.seriesCheckboxMark {
+  font-size: 24rpx;
+  line-height: 1;
+  color: #fff;
+}
+
+.seriesThumb {
+  flex: none;
+  align-self: stretch;
+  min-height: 104rpx;
+  overflow: hidden;
+  border-radius: 16rpx;
+  background: linear-gradient(150deg, #5c1a1f 0%, $brand 58%, #c9973b 100%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 10rpx;
+}
+
+.seriesThumbImage {
+  width: 100%;
+  height: 100%;
+}
+
+.seriesThumbGlyph {
+  font-size: 22rpx;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.seriesMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.seriesTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.seriesName {
+  flex: 1;
+  min-width: 0;
+  font-size: 30rpx;
+  font-weight: $font-weight-bold;
+  color: $uiInk;
+  @include text-ellipsis;
+}
+
+.seriesPill {
+  flex: none;
+  padding: 4rpx 16rpx;
+  font-size: 22rpx;
+  line-height: 1.4;
+  border-radius: $radius-round;
+}
+
+.seriesPillWin {
+  color: $win;
+  background: #e6f4ea;
+}
+
+.seriesPillLose {
+  color: $lose;
+  background: #f0efec;
+}
+
+.seriesPillPend {
+  color: $pend;
+  background: $pendBg;
+}
+
+.seriesMeta {
+  display: block;
+  margin-top: 2rpx;
+  font-size: 24rpx;
+  color: $uiInk2;
+  font-variant-numeric: tabular-nums;
+  @include text-ellipsis;
+}
+
+.seriesBot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 8rpx;
+}
+
+.seriesChip {
+  padding: 4rpx 14rpx;
+  font-size: 24rpx;
+  line-height: 1.35;
+  color: $uiInk2;
+  background: $uiPaper;
+  border: 2rpx solid $uiLine;
+  border-radius: 12rpx;
+  font-variant-numeric: tabular-nums;
+}
+
+.seriesChipOn {
+  color: $brand;
+  background: #fdf3f3;
+  border-color: #f0c9cc;
+}

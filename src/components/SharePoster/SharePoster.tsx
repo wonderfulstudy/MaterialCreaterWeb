@@ -22,7 +22,7 @@ import PosterStage, {
   type PosterRecordPage,
 } from '@/components/PlanPoster'
 import { clearPosterBackground, pickPosterBackground, savePosterBackground } from '@/components/PlanPoster/poster-bg'
-import { listDays } from '@/services/plan-store'
+import { listDays, planStats, primaryPlanId } from '@/services/plan-store'
 import { captureNodeToDataUrl } from '@/utils/posters/capture'
 import { drawSharePoster, measurePosterHeight, POSTER_WIDTH } from './draw'
 import { planSignature, type SharePlan } from './model'
@@ -36,6 +36,8 @@ export interface SharePosterProps {
   onClose: () => void
   /** 海报图片生成成功后回调，参数为图片临时路径 / dataURL（分张时是第一张） */
   onGenerated?: (filePath: string) => void
+  /** 方案作用域（AC-11 / AC-21）：不传则用 plan.planId，再退到 primaryPlanId() */
+  planId?: string
 }
 
 type PosterStatus = 'idle' | 'drawing' | 'ready' | 'error'
@@ -134,7 +136,7 @@ async function exportImage(canvas: OffscreenLike, width: number, height: number)
  * <SharePoster visible={open} plan={sharePlan} onClose={() => setOpen(false)} />
  * ```
  */
-export default function SharePoster({ visible, plan, onClose, onGenerated }: SharePosterProps) {
+export default function SharePoster({ visible, plan, onClose, onGenerated, planId }: SharePosterProps) {
   const [status, setStatus] = useState<PosterStatus>('idle')
   const [imagePaths, setImagePaths] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
@@ -152,13 +154,23 @@ export default function SharePoster({ visible, plan, onClose, onGenerated }: Sha
   // 以内容签名为依赖：调用方每次渲染传入新对象引用时，只要内容不变就不重复生成
   const signature = useMemo(() => (plan ? planSignature(plan) : ''), [plan])
 
-  // 每日记录：只读消费 plan-store；card 作为重读触发器，切卡时拿最新 judged / note
-  const dayRecords = useMemo(() => (visible ? listDays() : []), [visible, card])
+  // 方案作用域：历史行、战绩统计都只取这一个方案的记录，不合并别方案的日历
+  const scopeId = useMemo(() => planId ?? plan?.planId ?? primaryPlanId(), [planId, plan])
+
+  // 每日记录：只读消费本方案；card 作为重读触发器，切卡时拿最新 judged / note
+  const dayRecords = useMemo(
+    () => (visible && scopeId ? listDays(scopeId) : []),
+    [visible, card, scopeId]
+  )
   const daysSignature = useMemo(
     () => dayRecords.map((day) => day.date + ':' + readJudged(day) + (day.rest ? ':rest' : '')).join(','),
     [dayRecords]
   )
-  const stats = useMemo(() => dayStats(dayRecords), [dayRecords])
+  // A/B 卡的战绩口径与方案列表卡同源：planStats(planId)；没有方案时才用当页记录兜底
+  const stats = useMemo(
+    () => (scopeId ? planStats(scopeId) : dayStats(dayRecords)),
+    [scopeId, dayRecords]
+  )
   const recordRows = useMemo(
     () => buildRecordRows(dayRecords, plan ? { date: dateKey(), legs: plan.legs, amount: plan.summary?.amount ?? 0 } : null),
     [dayRecords, plan]

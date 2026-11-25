@@ -116,74 +116,47 @@ $uiLine: #e6dfd2;
   margin-bottom: $spacing-sm;
 }
 
-// ============ 预设方案卡片（与手动方案卡同一套票根口径） ============
-.presetCard {
-  padding: 20rpx $spacing-md 18rpx;
-  margin-bottom: $spacing-sm;
-  background: #ffffff;
-  border: 2rpx solid $uiLine;
-  border-radius: $radius-lg;
-  box-shadow: 0 4rpx 18rpx rgba(32, 27, 21, 0.05);
+// ============ 方案系列卡（手动方案与预设方案共用 PlanSeriesCard） ============
+.seriesList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.seriesItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.seriesActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-lg;
+  padding: 12rpx $spacing-md 0;
+}
+
+.seriesAction {
+  font-size: 24rpx;
+  color: $uiInk2;
 
   &:active {
-    opacity: 0.92;
+    opacity: 0.6;
   }
 }
 
-.presetTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.seriesEmpty {
+  padding: 48rpx $spacing-md;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.7);
+  border: 2rpx dashed $uiLine;
+  border-radius: $radius-lg;
 }
 
-.presetName {
-  font-size: 30rpx;
-  font-weight: $font-weight-semibold;
-  color: $uiInk;
-}
-
-.presetPass {
-  padding: 2rpx 14rpx;
-  font-size: 20rpx;
-  color: $brand;
-  background: rgba(179, 18, 27, 0.08);
-  border-radius: $radius-round;
-}
-
-.presetPassMute {
-  color: $uiInk2;
-  background: rgba(107, 100, 89, 0.1);
-}
-
-.presetLegs {
-  display: block;
-  margin-top: 10rpx;
+.seriesEmptyText {
   font-size: 26rpx;
-  line-height: $line-height-normal;
-  color: $uiInk;
-  font-variant-numeric: tabular-nums;
-}
-
-.presetBottom {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-top: 10rpx;
-  padding-top: 10rpx;
-  border-top: 2rpx dashed $uiLine;
-}
-
-.presetMeta {
-  font-size: 22rpx;
   color: $uiInk2;
-  font-variant-numeric: tabular-nums;
-}
-
-.presetBonus {
-  font-size: 26rpx;
-  font-weight: $font-weight-semibold;
-  color: $brand;
-  font-variant-numeric: tabular-nums;
 }
 
 .presetEmpty {

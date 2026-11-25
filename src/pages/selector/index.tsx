@@ -9,7 +9,7 @@ import PlanCalculator, {
   type SelectionSummary,
   type SportKey,
 } from '@/components/PlanCalculator'
-import { findDay, saveDay } from '@/services/plan-store'
+import { findDay, findPlan, primaryPlanId, saveDay, savePlan } from '@/services/plan-store'
 import { toStoredDay, type RecommendPlan } from '@/pages/recommend/plan'
 
 const MULTI_PASS_IDS = MULTI_PASS_OPTIONS.map((option) => option.id)
@@ -43,11 +43,19 @@ function passIdOf(sizes: number[]): string {
   return hit || `s${sizes.length}`
 }
 
-/** 选择器页：整页铺开计算器，选完把结果写进 mc.plans.v1 的当日记录 */
+/** 路由 planId → 缺省回落 primaryPlanId()（v1 单方案语义）；store 为空时 null，只渲染不落盘 */
+function resolvePlanId(raw?: string): string | null {
+  const fromRoute = raw && raw.trim() ? raw.trim() : null
+  return fromRoute ?? primaryPlanId()
+}
+
+/** 选择器页：整页铺开计算器，选完把结果写进 mc.plans.v1 中该方案的那一天 */
 export default function SelectorPage() {
   const router = useRouter()
+  const planId = useMemo(() => resolvePlanId(router.params?.planId), [router.params?.planId])
   const date = useMemo(() => resolveDate(router.params?.date), [router.params?.date])
-  const record = useMemo(() => findDay(date), [date])
+  // 回填只认本方案当天的记录（AC-11）
+  const record = useMemo(() => (planId ? findDay(date, planId) : null), [date, planId])
 
   const [sport, setSport] = useState<SportKey>(record?.sport ?? 'football')
   const { states, load } = useSportSchedule(sport)
@@ -69,7 +77,23 @@ export default function SelectorPage() {
       legs,
       summary,
     }
-    saveDay(toStoredDay(plan, date, [passIdOf(passSizes)], summary.multiple))
+    const head = planId ? findPlan(planId) : null
+    // store 为空（一个方案都没有）时没有归属可写：按空态处理，不造孤儿记录
+    if (!planId || !head) {
+      Taro.navigateBack()
+      return
+    }
+    const passIds = [passIdOf(passSizes)]
+    saveDay({ ...toStoredDay(plan, date, passIds, summary.multiple), planId })
+    // 方案头与当日记录同源：方案列表卡上的腿/过关/倍数/投入必须跟着一起改
+    savePlan({
+      ...head,
+      legs,
+      passIds,
+      multiple: summary.multiple,
+      summary,
+      updatedAt: Date.now(),
+    })
     Taro.navigateBack()
   }
 

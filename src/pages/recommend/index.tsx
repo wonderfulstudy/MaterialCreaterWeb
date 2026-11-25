@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Text, View } from '@tarojs/components'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Text, View } from '@tarojs/components'
 import Taro, { useDidShow, useRouter, useShareAppMessage } from '@tarojs/taro'
 import classnames from 'classnames'
 import { isOcrSupported, recognizeImage } from '@/services/ocr'
 import PlanCalculator, {
+  MULTI_PASS_OPTIONS,
   SPORTS,
   formatAmount,
   sportLabel,
@@ -12,26 +13,35 @@ import PlanCalculator, {
   type SelectionSummary,
   type SportKey,
 } from '@/components/PlanCalculator'
-import PlanCardView from '@/components/PlanCardView'
-import SharePoster from '@/components/SharePoster'
+import PlanSeriesCard from '@/components/PlanSeriesCard'
 import RenameDialog from '@/components/RenameDialog'
+import SharePoster from '@/components/SharePoster'
 import TabBar from '@/components/TabBar'
 import { findMatrix } from '@/services/matrix-store'
+import {
+  listDays,
+  listPlans,
+  planStats,
+  removePlans,
+  saveDay,
+  savePlan,
+  type StoredPlan,
+} from '@/services/plan-store'
 import { findPreset, listPresets, savePreset, type StoredPreset } from '@/services/preset-store'
+import { buildManualSeries, buildPresetSeries } from '@/services/plan-series'
 import { matchRecognizedPicks, parseRecommendationText } from './plan-ocr'
 import {
-  createPlan,
-  pushHistory,
+  createPlanId,
+  storedPlanToRecommend,
+  storedPlanToSharePlan,
   summarizePlan,
-  toSharePlan,
-  type RecommendPlan,
+  toStoredDay,
 } from './plan'
 import {
   PRESET_DEFS,
   buildPresetCandidates,
   buildStoredPreset,
   findPresetPassByLabel,
-  presetBonusText,
   presetLegText,
   samePreset,
   todayKey,
@@ -39,16 +49,18 @@ import {
 } from './preset-plan'
 import styles from './index.module.scss'
 
-interface PlanCard extends RecommendPlan {
-  error: string
+interface ManualRow {
+  plan: StoredPlan
+  stats: ReturnType<typeof planStats>
+  day: ReturnType<typeof listDays>[number] | null
 }
 
-interface PanelState {
-  open: boolean
-  mode: 'create' | 'pick'
-  targetId: string
+interface PresetRow {
+  def: (typeof PRESET_DEFS)[number]
+  preset: StoredPreset | null
 }
 
+/** 识别 / 拍照失败的错误文案 */
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message
@@ -59,166 +71,135 @@ function getErrorMessage(error: unknown): string {
   return '识别失败'
 }
 
-export default function RecommendPage() {
-  const supported = useMemo(() => isOcrSupported(), [])
-  const router = useRouter()
-  const initialSport: SportKey =
-    router.params?.sport === 'basketball' ? 'basketball' : 'football'
+/** 过关档位反查：单档 s{size}，多档按 sizes 精确比对（与 selector 同口径） */
+function passIdOf(sizes: number[]): string {
+  if (!sizes.length) {
+    return 's1'
+  }
+  if (sizes.length === 1) {
+    return `s${sizes[0]}`
+  }
+  const hit = MULTI_PASS_OPTIONS.find(
+    (option) => option.sizes.length === sizes.length && option.sizes.every((size, index) => size === sizes[index])
+  )
+  return hit ? hit.id : `s${sizes.length}`
+}
 
-  const [sport, setSport] = useState<SportKey>(initialSport)
+/** 新方案名：按当前项目的方案数递增，撞名就继续往后找 */
+function nextPlanName(existing: StoredPlan[]): string {
+  const used = new Set(existing.map((plan) => plan.name))
+  let index = existing.length + 1
+  while (used.has(`方案 ${index}`)) {
+    index += 1
+  }
+  return `方案 ${index}`
+}
+
+export default function RecommendPage() {
+  const router = useRouter()
+  const [sport, setSport] = useState<SportKey>(router.params?.sport === 'basketball' ? 'basketball' : 'football')
   const [sportOpen, setSportOpen] = useState(false)
   const { states, load } = useSportSchedule(sport)
-  const [cards, setCards] = useState<Record<SportKey, PlanCard[]>>({
-    football: [{ ...createPlan('football', '方案 1'), error: '' }],
-    basketball: [{ ...createPlan('basketball', '方案 1'), error: '' }],
-  })
-
-  const [panel, setPanel] = useState<PanelState>({ open: false, mode: 'create', targetId: '' })
+  const [plans, setPlans] = useState<StoredPlan[]>([])
+  const [matrixRows, setMatrixRows] = useState<PresetMatrixRow[]>([])
+  const [presets, setPresets] = useState<StoredPreset[]>([])
+  const [panelPlanId, setPanelPlanId] = useState('')
   const [recognizingId, setRecognizingId] = useState('')
   const [statusText, setStatusText] = useState('')
   const [errorText, setErrorText] = useState('')
   const [deleteMode, setDeleteMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [renameId, setRenameId] = useState('')
+  const [renamePlanId, setRenamePlanId] = useState('')
   const [posterPlanId, setPosterPlanId] = useState('')
-  /** 已展开的方案 id：默认全部收起 */
-  const [expandedIds, setExpandedIds] = useState<string[]>([])
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  /** 长按触发时刻：用于吞掉长按松手后补发的幽灵 click */
   const longPressFiredAt = useRef(0)
 
+  const supported = useMemo(() => isOcrSupported(), [])
   const current = states[sport]
-  const currentCards = cards[sport]
 
-  /** 预设方案：设置来自 preset-store，内容只由当日矩阵已选选项算出（AC-22/D39） */
-  const [storedPresets, setStoredPresets] = useState<StoredPreset[]>(() => listPresets())
-  const [matrixRows, setMatrixRows] = useState<PresetMatrixRow[]>(
-    () => findMatrix(sport, todayKey())?.rows ?? [],
-  )
-  // 从矩阵/预设设置页返回时，两者都可能是新的
-  useDidShow(() => {
-    setStoredPresets(listPresets())
-    setMatrixRows(findMatrix(sport, todayKey())?.rows ?? [])
-  })
-  useEffect(() => {
-    setMatrixRows(findMatrix(sport, todayKey())?.rows ?? [])
+  const reloadPlans = useCallback(() => {
+    setPlans(listPlans())
+  }, [])
+
+  const reloadPresets = useCallback(() => {
+    setPresets(listPresets())
+  }, [])
+
+  const reloadMatrix = useCallback(() => {
+    const snapshot = findMatrix(sport, todayKey())
+    setMatrixRows((snapshot?.rows as unknown as PresetMatrixRow[]) ?? [])
   }, [sport])
-  const presetSettingsSignature = storedPresets
-    .map((item) => `${item.id}:${item.passLabel}:${item.multiple}:${item.candidateIndex}`)
-    .join('|')
 
-  const presetRows = useMemo(() => {
-    const matrixDate = todayKey()
-    return PRESET_DEFS.map((def) => {
-      const stored = storedPresets.find((item) => item.id === def.id)
-      const pass = findPresetPassByLabel(stored?.passLabel)
-      const multiple = stored?.multiple ?? 1
-      const candidates = buildPresetCandidates(
-        { rows: matrixRows, date: matrixDate, sport },
-        pass,
-        multiple,
-        def.pick,
-      )
-      return {
-        def,
-        preset: buildStoredPreset({
+  useDidShow(() => {
+    reloadPlans()
+    reloadPresets()
+    reloadMatrix()
+  })
+
+  useEffect(() => {
+    reloadPlans()
+    reloadPresets()
+  }, [reloadPlans, reloadPresets])
+
+  useEffect(() => {
+    reloadMatrix()
+  }, [reloadMatrix])
+
+  const manualPlans = useMemo(() => plans.filter((plan) => plan.sport === sport), [plans, sport])
+
+  /** 手动方案 → 卡面数据：方案本身 + 连中统计 + 最近一条每日记录 */
+  const manualRows = useMemo<ManualRow[]>(
+    () =>
+      manualPlans.map((plan) => {
+        const stats = planStats(plan.id)
+        const day = listDays(plan.id)[0] ?? null
+        return { plan, stats, day }
+      }),
+    [manualPlans]
+  )
+
+  const presetRows = useMemo<PresetRow[]>(
+    () =>
+      PRESET_DEFS.map((def) => {
+        const stored = presets.find((item) => item.id === def.id) ?? null
+        const pass = findPresetPassByLabel(stored?.passLabel)
+        const multiple = stored && stored.multiple > 0 ? stored.multiple : 1
+        const date = todayKey()
+        const candidates = buildPresetCandidates({ rows: matrixRows, date, sport }, pass, multiple, def.pick)
+        const preset = buildStoredPreset({
           def,
           sport,
           pass,
           multiple,
           candidates,
           candidateIndex: stored?.candidateIndex ?? 1,
-          date: todayKey(),
-        }),
-      }
-    })
-  }, [matrixRows, sport, presetSettingsSignature])
+          date,
+        })
+        return { def, preset }
+      }),
+    [matrixRows, presets, sport]
+  )
 
-  /** 算出来的内容与存储不一致就落盘（含换天重算），刷新后仍是最后一次看到的内容 */
+  /** 矩阵变化后把预设同步落盘，其它页面读到的就是同一份（D60） */
   useEffect(() => {
-    if (!presetRows) {
-      return
-    }
     let changed = false
     presetRows.forEach((row) => {
-      if (row.preset && !samePreset(findPreset(row.preset.id), row.preset)) {
+      if (row.preset && !samePreset(row.preset, findPreset(row.def.id))) {
         savePreset(row.preset)
         changed = true
       }
     })
     if (changed) {
-      setStoredPresets(listPresets())
+      reloadPresets()
     }
-  }, [presetRows])
-
-  const displayRows = presetRows
+  }, [presetRows, reloadPresets])
 
   const matrixMissing = matrixRows.length === 0
-
-  const updateCard = (key: SportKey, id: string, patch: Partial<PlanCard>) => {
-    setCards((prev) => ({
-      ...prev,
-      [key]: prev[key].map((card) => (card.id === id ? { ...card, ...patch } : card)),
-    }))
-  }
-
-  const handleSportChange = (next: SportKey) => {
-    setSportOpen(false)
-    if (next === sport) {
-      return
-    }
-    setSport(next)
-    setDeleteMode(false)
-    setSelectedIds([])
-    setStatusText('')
-    setErrorText('')
-  }
-
-  const openCreate = () => {
-    if (states[sport].status !== 'ready') {
-      void load(sport)
-    }
-    setPanel({ open: true, mode: 'create', targetId: '' })
-  }
-
-  const openPicker = (id: string) => {
-    if (states[sport].status !== 'ready') {
-      void load(sport)
-    }
-    setPanel({ open: true, mode: 'pick', targetId: id })
-  }
-
-  const closePanel = () => {
-    setPanel({ open: false, mode: 'create', targetId: '' })
-  }
-
-  const handlePanelConfirm = (legs: PlanLeg[], summary: SelectionSummary) => {
-    if (panel.mode === 'create') {
-      const name = `方案 ${cards[sport].length + 1}`
-      const card: PlanCard = { ...createPlan(sport, name, legs), summary, error: '' }
-      setCards((prev) => ({ ...prev, [sport]: [...prev[sport], card] }))
-      setStatusText(`已新增方案「${name}」`)
-    } else if (panel.targetId) {
-      const target = cards[sport].find((card) => card.id === panel.targetId)
-      updateCard(sport, panel.targetId, {
-        legs,
-        summary,
-        note: '手动选择方案',
-        error: '',
-        history: target ? pushHistory(target, legs) : undefined,
-        results: undefined,
-      })
-      setStatusText('方案已更新')
-    }
-    closePanel()
-  }
-
-  /** 底部「新增方案」：直接追加一张名为「新增方案」的空卡片 */
-  const handleAddPlan = () => {
-    const card: PlanCard = { ...createPlan(sport, '新增方案'), error: '' }
-    setCards((prev) => ({ ...prev, [sport]: [...prev[sport], card] }))
-    setStatusText('已新增方案「新增方案」')
-  }
+  const panelPlan = useMemo(() => plans.find((plan) => plan.id === panelPlanId) ?? null, [panelPlanId, plans])
+  const panelSport = panelPlan?.sport ?? sport
+  const renamePlan = useMemo(() => plans.find((plan) => plan.id === renamePlanId) ?? null, [plans, renamePlanId])
+  const posterPlan = useMemo(() => plans.find((plan) => plan.id === posterPlanId) ?? null, [plans, posterPlanId])
+  const allSelected = manualPlans.length > 0 && manualPlans.every((plan) => selectedIds.includes(plan.id))
 
   const clearLongPressTimer = () => {
     if (longPressTimer.current) {
@@ -227,12 +208,18 @@ export default function RecommendPage() {
     }
   }
 
+  /** 长按触发后 touchend 之后可能补发 click，这里吞掉它避免误开抽屉 */
+  const swallowGhostClick = () => Date.now() - longPressFiredAt.current < 400
+
   const startLongPress = (id: string) => {
+    if (deleteMode) {
+      return
+    }
     clearLongPressTimer()
     longPressTimer.current = setTimeout(() => {
       longPressTimer.current = null
       longPressFiredAt.current = Date.now()
-      setRenameId(id)
+      setRenamePlanId(id)
       try {
         Taro.vibrateShort?.({ type: 'light' })?.catch?.(() => undefined)
       } catch {
@@ -242,21 +229,87 @@ export default function RecommendPage() {
   }
 
   const confirmRename = (name: string) => {
-    if (renameId && name) {
-      updateCard(sport, renameId, { name })
+    const value = name.trim()
+    if (renamePlan && value && value !== renamePlan.name) {
+      savePlan({ ...renamePlan, name: value, updatedAt: Date.now() })
+      reloadPlans()
+      setStatusText(`方案已改名为「${value}」`)
     }
-    setRenameId('')
+    setRenamePlanId('')
   }
 
-  /** 长按触发后 touchend 之后可能补发 click，这里吞掉它避免误开抽屉 */
-  const swallowGhostClick = () => Date.now() - longPressFiredAt.current < 400
+  /** 方案内容（计算器 / OCR）落盘：方案头 + 今天的每日记录 */
+  const persistPlanContent = useCallback(
+    (plan: StoredPlan, legs: PlanLeg[], summary?: SelectionSummary | null, passSizes?: number[]) => {
+      const nextSummary = summary ?? (legs.length ? summarizePlan(legs, plan.multiple) : undefined)
+      const next: StoredPlan = {
+        ...plan,
+        legs,
+        summary: nextSummary,
+        multiple: nextSummary?.multiple && nextSummary.multiple > 0 ? nextSummary.multiple : plan.multiple,
+        passIds: passSizes?.length ? [passIdOf(passSizes)] : plan.passIds,
+        updatedAt: Date.now(),
+      }
+      savePlan(next)
+      if (legs.length && nextSummary) {
+        saveDay(toStoredDay(storedPlanToRecommend(next), todayKey(), next.passIds, next.multiple))
+      }
+      reloadPlans()
+    },
+    [reloadPlans]
+  )
 
-  const openPoster = (card: PlanCard) => {
-    if (!card.legs.length) {
-      Taro.showToast({ title: '请先为方案选择比赛', icon: 'none' })
+  const openPicker = (plan: StoredPlan) => {
+    setPanelPlanId(plan.id)
+    if (states[plan.sport].status !== 'ready') {
+      void load(plan.sport)
+    }
+  }
+
+  const closePanel = () => setPanelPlanId('')
+
+  const handlePanelConfirm = (legs: PlanLeg[], summary: SelectionSummary, passSizes: number[]) => {
+    if (panelPlan) {
+      persistPlanContent(panelPlan, legs, summary, passSizes)
+      setStatusText(legs.length ? '方案已保存' : '方案已清空')
+    }
+    closePanel()
+  }
+
+  /** 底部「新增方案」：建空方案 → 直接进选号页挑比赛 */
+  const handleAddPlan = () => {
+    const now = Date.now()
+    const plan: StoredPlan = {
+      id: createPlanId(),
+      name: nextPlanName(manualPlans),
+      sport,
+      legs: [],
+      passIds: [],
+      multiple: 1,
+      createdAt: now,
+      updatedAt: now,
+    }
+    savePlan(plan)
+    reloadPlans()
+    setStatusText(`已新增方案「${plan.name}」`)
+    void Taro.navigateTo({ url: `/pages/selector/index?planId=${plan.id}&date=${todayKey()}` })
+  }
+
+  const handleSportChange = (next: SportKey) => {
+    setSportOpen(false)
+    setSport(next)
+    setDeleteMode(false)
+    setSelectedIds([])
+    setStatusText('')
+    setErrorText('')
+  }
+
+  const openPoster = (plan: StoredPlan) => {
+    if (!plan.legs.length) {
+      void Taro.showToast({ title: '请先为方案选择比赛', icon: 'none' })
       return
     }
-    setPosterPlanId(card.id)
+    setPosterPlanId(plan.id)
   }
 
   /** 顶部只有一个入口：综合大数据矩阵页 */
@@ -268,21 +321,37 @@ export default function RecommendPage() {
     void Taro.navigateTo({ url: `/pages/plan-detail/index?preset=${id}` })
   }
 
+  const handleCardClick = (plan: StoredPlan) => {
+    if (deleteMode) {
+      setSelectedIds((prev) =>
+        prev.includes(plan.id) ? prev.filter((item) => item !== plan.id) : [...prev, plan.id]
+      )
+      return
+    }
+    if (swallowGhostClick()) {
+      return
+    }
+    openPicker(plan)
+  }
+
   useShareAppMessage(() => {
-    const card = currentCards[0]
-    if (!card) {
+    const plan = manualPlans[0]
+    if (!plan) {
       return { title: '竞彩推荐方案', path: '/pages/recommend/index' }
     }
-    const summary = card.summary ?? summarizePlan(card.legs)
+    const shared = storedPlanToSharePlan(plan)
+    const summary = shared.summary
     return {
-      title: `${card.name}｜投注金额 ${formatAmount(summary.amount)}，最高可中 ${formatAmount(summary.maxBonus)}`,
+      title: summary
+        ? `${plan.name}｜投注金额 ¥${formatAmount(summary.amount)}，最高可中 ¥${formatAmount(summary.maxBonus)}`
+        : plan.name,
       path: '/pages/recommend/index',
     }
   })
 
-  const handleUpload = async (card: PlanCard) => {
+  const handleUpload = async (plan: StoredPlan) => {
     if (recognizingId) {
-      Taro.showToast({ title: '正在识别中，请稍候', icon: 'none' })
+      void Taro.showToast({ title: '正在识别中，请稍候', icon: 'none' })
       return
     }
     if (!supported) {
@@ -302,7 +371,7 @@ export default function RecommendPage() {
       }
 
       setErrorText('')
-      setRecognizingId(card.id)
+      setRecognizingId(plan.id)
       setStatusText('正在识别推荐单…')
 
       const ocr = await recognizeImage(path, {
@@ -315,7 +384,7 @@ export default function RecommendPage() {
         },
       })
 
-      const key = card.sport
+      const key = plan.sport
       const schedule =
         states[key].status === 'ready' ? states[key].schedule : (await load(key)) ?? states[key].schedule
 
@@ -323,29 +392,19 @@ export default function RecommendPage() {
       const parsed = parseRecommendationText(ocr.text, key, now)
       const matched = matchRecognizedPicks(parsed, key, schedule.matches, now)
 
-      updateCard(key, card.id, {
-        imagePath: path,
-        recognizedText: ocr.text,
-        legs: matched.legs,
-        summary: matched.legs.length ? summarizePlan(matched.legs) : undefined,
-        note: matched.note,
-        error: '',
-        history: pushHistory(card, matched.legs),
-        results: undefined,
-      })
+      persistPlanContent(plan, matched.legs, matched.legs.length ? summarizePlan(matched.legs, plan.multiple) : null)
 
       if (matched.legs.length) {
         setStatusText(`识别完成，已匹配 ${matched.legs.length} 场比赛`)
       } else {
-        setStatusText('识别完成，但未匹配到赛程，请手动选择方案')
-        Taro.showToast({ title: '未匹配到赛程，请手动选择', icon: 'none' })
+        setStatusText(matched.note || '识别完成，但未匹配到赛程，请手动选择方案')
+        void Taro.showToast({ title: '未匹配到赛程，请手动选择', icon: 'none' })
       }
     } catch (error) {
       const message = getErrorMessage(error)
       if (message.includes('cancel')) {
         return
       }
-      updateCard(card.sport, card.id, { error: message })
       setErrorText(message)
       setStatusText('识别失败，可重新上传')
     } finally {
@@ -354,15 +413,18 @@ export default function RecommendPage() {
   }
 
   const toggleSelected = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    )
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
   }
 
-  const allSelected = currentCards.length > 0 && selectedIds.length === currentCards.length
-
   const toggleSelectAll = () => {
-    setSelectedIds(allSelected ? [] : currentCards.map((card) => card.id))
+    setSelectedIds(allSelected ? [] : manualPlans.map((plan) => plan.id))
+  }
+
+  const enterDeleteMode = () => {
+    setDeleteMode(true)
+    setSelectedIds([])
+    setStatusText('')
+    setErrorText('')
   }
 
   const exitDeleteMode = () => {
@@ -370,103 +432,15 @@ export default function RecommendPage() {
     setSelectedIds([])
   }
 
-  const enterDeleteMode = () => {
-    setDeleteMode(true)
-    setSelectedIds([])
-  }
-
+  /** 一次删掉勾选的方案，连带它们的每日记录（removePlans） */
   const handleDeleteSelected = () => {
-    if (!selectedIds.length) {
-      return
+    if (selectedIds.length) {
+      removePlans(selectedIds)
+      reloadPlans()
+      setStatusText(`已删除 ${selectedIds.length} 个方案`)
     }
-    const count = selectedIds.length
-    setCards((prev) => ({
-      ...prev,
-      [sport]: prev[sport].filter((card) => !selectedIds.includes(card.id)),
-    }))
     setSelectedIds([])
     setDeleteMode(false)
-    setStatusText(`已删除 ${count} 个方案`)
-  }
-
-  const panelCard = currentCards.find((card) => card.id === panel.targetId)
-  const posterCard = currentCards.find((card) => card.id === posterPlanId)
-  const renameCard = currentCards.find((card) => card.id === renameId)
-
-  const toggleExpanded = (id: string) => {
-    setExpandedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    )
-  }
-
-  /**
-   * 卡片外观与内容统一由 PlanCardView 渲染（与分享海报共用同一组件），
-   * 这里只保留交互外壳：长按改名、点击去选比赛、删除勾选与操作行。
-   */
-  const renderCard = (card: PlanCard) => {
-    const busy = recognizingId === card.id
-    const selected = selectedIds.includes(card.id)
-    const expanded = expandedIds.includes(card.id)
-
-    return (
-      <View
-        key={card.id}
-        onTouchStart={() => startLongPress(card.id)}
-        onTouchMove={clearLongPressTimer}
-        onTouchEnd={clearLongPressTimer}
-        onTouchCancel={clearLongPressTimer}
-        onClick={() => {
-          if (deleteMode || swallowGhostClick()) {
-            return
-          }
-          openPicker(card.id)
-        }}
-      >
-        <PlanCardView
-          className={deleteMode && selected ? styles.cardSelected : undefined}
-          name={card.name}
-          legs={card.legs}
-          summary={card.summary}
-          expanded={expanded}
-          error={card.error}
-          onToggleExpand={() => toggleExpanded(card.id)}
-          headExtra={
-            deleteMode ? (
-              <View
-                className={classnames(styles.checkbox, selected && styles.checkboxChecked)}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  toggleSelected(card.id)
-                }}
-              >
-                <Text className={styles.checkboxMark}>{selected ? '✓' : ''}</Text>
-              </View>
-            ) : undefined
-          }
-        >
-          {!deleteMode && (
-            <View
-              className={styles.cardActions}
-              onTouchStart={(event) => event.stopPropagation()}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <Button
-                className={classnames(styles.actionBtn, busy && styles.btnDisabled)}
-                disabled={busy}
-                onClick={() => handleUpload(card)}
-              >
-                <Text className={classnames(styles.actionBtnText, styles.actionTextPrimary)}>
-                  {busy ? '识别中' : '上传图片'}
-                </Text>
-              </Button>
-              <Button className={classnames(styles.actionBtn, styles.actionBtnDivider)} onClick={() => openPoster(card)}>
-                <Text className={classnames(styles.actionBtnText, styles.actionTextShare)}>分享方案</Text>
-              </Button>
-            </View>
-          )}
-        </PlanCardView>
-      </View>
-    )
   }
 
   return (
@@ -499,10 +473,10 @@ export default function RecommendPage() {
         </View>
       )}
 
-      {/* 中部：手动方案卡片 */}
+      {/* 中部：手动方案系列卡 */}
       <View className={styles.sectionHead}>
         <Text className={styles.sectionTitle}>手动方案</Text>
-        <Text className={styles.sectionCount}>{currentCards.length} 个系列</Text>
+        <Text className={styles.sectionCount}>{manualPlans.length} 个系列</Text>
         <View className={styles.sectionTools}>
           <View className={styles.sportDd}>
             <View className={styles.ddTrigger} onClick={() => setSportOpen((prev) => !prev)}>
@@ -516,10 +490,7 @@ export default function RecommendPage() {
                   {SPORTS.map((option) => (
                     <View
                       key={option.key}
-                      className={classnames(
-                        styles.ddItem,
-                        option.key === sport && styles.ddItemActive
-                      )}
+                      className={classnames(styles.ddItem, option.key === sport && styles.ddItemActive)}
                       onClick={() => handleSportChange(option.key)}
                     >
                       <Text className={styles.ddItemText}>{option.label}</Text>
@@ -539,12 +510,7 @@ export default function RecommendPage() {
       </View>
 
       <View className={styles.manualBar}>
-        <Text
-          className={classnames(
-            styles.scheduleText,
-            current.status === 'error' && styles.scheduleError
-          )}
-        >
+        <Text className={classnames(styles.scheduleText, current.status === 'error' && styles.scheduleError)}>
           {current.status === 'loading' && '赛程加载中…'}
           {current.status === 'ready' &&
             `${current.schedule.matches.length} 场赛程${
@@ -569,19 +535,49 @@ export default function RecommendPage() {
         </View>
       )}
 
-      <View className={styles.cardList}>
-        {currentCards.length === 0 ? (
-          <View className={styles.emptyCard} onClick={openCreate}>
-            <Text className={styles.emptyIcon}>＋</Text>
-            <Text className={styles.emptyTitle}>还没有推荐单</Text>
-            <Text className={styles.emptyHint}>点击下方「新增方案」添加</Text>
+      <View className={styles.seriesList}>
+        {manualRows.length === 0 ? (
+          <View className={styles.seriesEmpty} onClick={handleAddPlan}>
+            <Text className={styles.seriesEmptyText}>还没有方案，点右下角新增</Text>
           </View>
         ) : (
-          currentCards.map(renderCard)
+          manualRows.map(({ plan, stats, day }) => {
+            const view = buildManualSeries(plan, stats, day)
+            return (
+              <View
+                key={plan.id}
+                className={styles.seriesItem}
+                onTouchStart={() => startLongPress(plan.id)}
+                onTouchMove={clearLongPressTimer}
+                onTouchEnd={clearLongPressTimer}
+                onTouchCancel={clearLongPressTimer}
+              >
+                <PlanSeriesCard
+                  name={view.name}
+                  status={view.status}
+                  meta={view.meta}
+                  chips={view.chips}
+                  selected={selectedIds.includes(plan.id)}
+                  onSelect={deleteMode ? () => toggleSelected(plan.id) : undefined}
+                  onClick={() => handleCardClick(plan)}
+                />
+                {deleteMode ? null : (
+                  <View className={styles.seriesActions}>
+                    <Text className={styles.seriesAction} onClick={() => void handleUpload(plan)}>
+                      {recognizingId === plan.id ? '识别中…' : '上传图片'}
+                    </Text>
+                    <Text className={styles.seriesAction} onClick={() => openPoster(plan)}>
+                      分享方案
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )
+          })
         )}
       </View>
 
-      {/* 下方：预设方案卡片分组 */}
+      {/* 下方：预设方案分组（D60：与手动卡同一个组件、同一套卡面） */}
       <View className={styles.sectionHead}>
         <Text className={styles.sectionTitle}>预设方案</Text>
         <Text className={styles.sectionHint}>按矩阵自动算出</Text>
@@ -590,7 +586,7 @@ export default function RecommendPage() {
       {deleteMode ? (
         <View className={styles.presetLocked}>
           <Text className={styles.presetLockedHint}>删除模式只作用于手动方案，预设方案不参与删除</Text>
-          {displayRows.map((row) => (
+          {presetRows.map((row) => (
             <View className={styles.presetLockedRow} key={row.def.id}>
               <Text className={styles.presetLockedName}>{row.def.name}</Text>
               <Text className={styles.presetLockedMeta}>
@@ -600,37 +596,35 @@ export default function RecommendPage() {
           ))}
         </View>
       ) : (
-        displayRows.map((row) => (
-          <View
-            key={row.def.id}
-            className={styles.presetCard}
-            onClick={() => (row.preset ? goPresetDetail(row.def.id) : undefined)}
-          >
-            <View className={styles.presetTop}>
-              <Text className={styles.presetName}>{row.def.name}</Text>
-              <Text className={classnames(styles.presetPass, !row.preset && styles.presetPassMute)}>
-                {row.preset ? row.preset.passLabel : '待算'}
-              </Text>
-            </View>
-            {row.preset ? (
-              <>
-                <Text className={styles.presetLegs}>{presetLegText(row.preset.legs)}</Text>
-                <View className={styles.presetBottom}>
-                  <Text className={styles.presetMeta}>
-                    {`${row.preset.multiple} 倍 · 投入 ¥${formatAmount(row.preset.summary.amount)}`}
-                  </Text>
-                  <Text className={styles.presetBonus}>
-                    {`理论 ${presetBonusText(row.preset.summary)}`}
-                  </Text>
-                </View>
-              </>
-            ) : (
-              <Text className={styles.presetEmpty}>
-                {matrixMissing ? '综合大数据里还没选场次' : '场次不足，今天不生成该预设'}
-              </Text>
-            )}
-          </View>
-        ))
+        <View className={styles.seriesList}>
+          {presetRows.map(({ def, preset }) => {
+            if (!preset) {
+              return (
+                <Text key={def.id} className={styles.presetEmpty}>
+                  {matrixMissing ? '综合大数据里还没选场次' : '场次不足，今天不生成该预设'}
+                </Text>
+              )
+            }
+            const view = buildPresetSeries({
+              name: def.name,
+              date: preset.date,
+              passLabel: preset.passLabel,
+              multiple: preset.multiple,
+              summary: preset.summary,
+              legsText: presetLegText(preset.legs),
+            })
+            return (
+              <PlanSeriesCard
+                key={def.id}
+                name={view.name}
+                status={view.status}
+                meta={view.meta}
+                chips={view.chips}
+                onClick={() => goPresetDetail(def.id)}
+              />
+            )
+          })}
+        </View>
       )}
 
       {(statusText || errorText) && (
@@ -643,10 +637,7 @@ export default function RecommendPage() {
       <View className={styles.bottomBar}>
         {deleteMode ? (
           <>
-            <View
-              className={classnames(styles.bottomBtn, styles.bottomBtnGhost)}
-              onClick={exitDeleteMode}
-            >
+            <View className={classnames(styles.bottomBtn, styles.bottomBtnGhost)} onClick={exitDeleteMode}>
               <Text className={styles.bottomBtnText}>取消</Text>
             </View>
             <View
@@ -657,9 +648,7 @@ export default function RecommendPage() {
               )}
               onClick={handleDeleteSelected}
             >
-              <Text className={styles.bottomBtnText}>
-                {`删除 ${selectedIds.length} 个方案`}
-              </Text>
+              <Text className={styles.bottomBtnText}>{`删除 ${selectedIds.length} 个方案`}</Text>
             </View>
           </>
         ) : (
@@ -674,9 +663,9 @@ export default function RecommendPage() {
               className={classnames(
                 styles.bottomBtn,
                 styles.bottomBtnGhost,
-                !currentCards.length && styles.btnDisabled
+                !manualPlans.length && styles.btnDisabled
               )}
-              onClick={currentCards.length ? enterDeleteMode : undefined}
+              onClick={manualPlans.length ? enterDeleteMode : undefined}
             >
               <Text className={styles.bottomBtnText}>删除方案</Text>
             </View>
@@ -687,30 +676,33 @@ export default function RecommendPage() {
       <TabBar active='material' />
 
       <RenameDialog
-        visible={Boolean(renameId)}
-        name={renameCard?.name ?? ''}
-        onCancel={() => setRenameId('')}
+        visible={Boolean(renamePlanId)}
+        name={renamePlan?.name ?? ''}
+        onCancel={() => setRenamePlanId('')}
         onConfirm={confirmRename}
       />
 
       <PlanCalculator
-        visible={panel.open}
-        variant="sheet"
-        title={panel.mode === 'create' ? '新增方案' : '选择方案'}
-        sport={sport}
-        schedule={current.schedule}
-        status={current.status}
-        error={current.error}
-        initialLegs={panel.mode === 'pick' ? panelCard?.legs ?? [] : []}
-        confirmText="保存"
-        onRetry={() => void load(sport)}
+        visible={Boolean(panelPlan)}
+        variant='sheet'
+        title='选择方案'
+        sport={panelSport}
+        schedule={states[panelSport].schedule}
+        status={states[panelSport].status}
+        error={states[panelSport].error}
+        initialLegs={panelPlan?.legs ?? []}
+        initialPassId={panelPlan?.passIds[0]}
+        initialMultiple={panelPlan?.multiple}
+        confirmText='保存'
+        onRetry={() => void load(panelSport)}
         onCancel={closePanel}
         onConfirm={handlePanelConfirm}
       />
 
       <SharePoster
-        visible={Boolean(posterPlanId)}
-        plan={posterCard ? toSharePlan(posterCard) : null}
+        visible={Boolean(posterPlan)}
+        plan={posterPlan ? storedPlanToSharePlan(posterPlan) : null}
+        planId={posterPlan?.id}
         onClose={() => setPosterPlanId('')}
       />
     </View>

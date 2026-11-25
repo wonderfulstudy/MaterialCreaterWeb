@@ -18,6 +18,20 @@ $line: #e6dfd2;
   background: $paper;
 }
 
+// ============ 方案名（AC-11：日历按方案隔离，头部要说明是哪一套） ============
+.planHead {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.planHeadName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  letter-spacing: 1rpx;
+}
+
 // ============ 日历卡 ============
 .calCard {
   padding: $spacing-md $spacing-md $spacing-sm;
