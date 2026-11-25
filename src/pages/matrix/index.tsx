@@ -134,6 +134,15 @@ export default function MatrixPage() {
     })
   }
 
+  /** 右下常驻入口：分享当日已保存的矩阵长图（需求 §6.1.7） */
+  const handleSharePoster = () => {
+    if (!date || !findMatrix(sport, date)) {
+      void Taro.showToast({ title: '请先保存矩阵', icon: 'none' })
+      return
+    }
+    void Taro.navigateTo({ url: `/pages/share/index?source=matrix&sport=${sport}&date=${date}` })
+  }
+
   /** 点未选 = 加入该格（复式），点已选 = 从该格移除；移除到空该格回到未填 */
   const handlePick = (row: MatrixTableRow, cell: MatrixCell, option: OddsOption) => {
     setSelections((prev) =>
@@ -344,6 +353,10 @@ export default function MatrixPage() {
         >
           保存矩阵
         </Text>
+      </View>
+
+      <View className={styles.fab} onClick={handleSharePoster}>
+        <Text className={styles.fabIcon}>↗</Text>
       </View>
 
       {drawerOpen && (

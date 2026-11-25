@@ -445,3 +445,25 @@ $line: #e6dfd2;
   font-size: 22rpx;
   color: $ink2;
 }
+
+/** 右下常驻分享入口：口径同首页 .fab（52px 圆形 + 同源阴影），抬在底部保存条之上 */
+.fab {
+  position: fixed;
+  right: 33rpx;
+  bottom: calc(160rpx + env(safe-area-inset-bottom));
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 108rpx;
+  height: 108rpx;
+  border-radius: $radius-round;
+  background: $brand;
+  box-shadow: 0 12rpx 36rpx rgba(179, 18, 27, 0.35);
+}
+
+.fabIcon {
+  color: #ffffff;
+  font-size: 50rpx;
+  line-height: 1;
+}

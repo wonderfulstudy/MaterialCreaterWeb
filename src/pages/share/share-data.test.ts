@@ -6,6 +6,7 @@ import {
   pickDrawEntries,
   resolveShareSource,
   selectAllGames,
+  shareMatrixPosterFileName,
   sharePosterFileName,
   shareSportPosterFileName,
   toggleGameSelection,
@@ -131,6 +132,43 @@ describe('分享来源分流', () => {
     expect(resolved.kind).toBe('unsupported')
     expect(resolved.directPreview).toBe(false)
     expect(resolved.title).toBe('分享海报')
+  })
+})
+
+describe('综合大数据矩阵来源', () => {
+  it('matrix 直接进预览态，带上日期与运动', () => {
+    const resolved = resolveShareSource('matrix', { sport: 'basketball', date: '2026-11-25' })
+    expect(resolved.kind).toBe('matrix')
+    expect(resolved.title).toBe('综合大数据')
+    expect(resolved.directPreview).toBe(true)
+    expect(resolved.date).toBe('2026-11-25')
+    expect(resolved.sport).toBe('basketball')
+  })
+
+  it('没带 sport 时按足球兜底，其它来源一律是足球', () => {
+    expect(resolveShareSource('matrix').sport).toBe('football')
+    expect(resolveShareSource('jc-football', { sport: 'basketball' }).sport).toBe('football')
+  })
+
+  it('矩阵日期只落在竞彩与矩阵来源上', () => {
+    expect(resolveShareSource('matrix', { date: '2026-11-25' }).date).toBe('2026-11-25')
+    expect(resolveShareSource('draw', { date: '2026-11-25' }).date).toBe('')
+  })
+})
+
+describe('综合大数据海报文件名', () => {
+  it('单张用「日期 综合大数据.png」', () => {
+    expect(shareMatrixPosterFileName('2026-11-25')).toBe('2026-11-25 综合大数据.png')
+    expect(shareMatrixPosterFileName('2026-11-25', 0, 1)).toBe('2026-11-25 综合大数据.png')
+  })
+
+  it('分张时追加张序号', () => {
+    expect(shareMatrixPosterFileName('2026-11-25', 0, 3)).toBe('2026-11-25 综合大数据-1.png')
+    expect(shareMatrixPosterFileName('2026-11-25', 2, 3)).toBe('2026-11-25 综合大数据-3.png')
+  })
+
+  it('没有日期时不留前导空格', () => {
+    expect(shareMatrixPosterFileName('')).toBe('综合大数据.png')
   })
 })
 

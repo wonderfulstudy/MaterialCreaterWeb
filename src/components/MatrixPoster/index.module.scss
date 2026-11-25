@@ -1,0 +1,188 @@
+// 综合大数据长图海报：画布内尺寸走行内 px（SCSS 的 px 会被 pxtransform 转 rem），
+// 这里只管颜色、排版和框线；字号用 rpx（设计宽 750），在 750px 画布里正好是 2 倍 px。
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+}
+
+.sheetGap {
+  margin-top: 20rpx;
+}
+
+.sheetLabel {
+  padding: 0 22rpx 12rpx;
+  font-size: 22rpx;
+  color: #8b7a63;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.title {
+  font-size: 88rpx;
+  font-weight: 600;
+  color: #fff3d6;
+  letter-spacing: 2rpx;
+}
+
+.headMeta {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+}
+
+.headDate {
+  font-size: 40rpx;
+  color: #ffd98a;
+}
+
+.headSport {
+  margin-left: 16rpx;
+  padding: 2rpx 14rpx;
+  border: 1rpx solid rgba(255, 217, 138, 0.6);
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  color: #ffd98a;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.headRow {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  border-bottom: 1rpx solid rgba(255, 217, 138, 0.5);
+}
+
+.infoHead {
+  flex: 0 0 28%;
+  box-sizing: border-box;
+  padding-left: 6rpx;
+  font-size: 40rpx;
+  color: #ffd98a;
+}
+
+.cellHead {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 40rpx;
+  color: #ffd98a;
+  text-align: center;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  border-bottom: 1rpx solid rgba(255, 217, 138, 0.16);
+}
+
+.infoCell {
+  display: flex;
+  flex: 0 0 28%;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-left: 6rpx;
+}
+
+.matchTop {
+  font-size: 44rpx;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #fff3d6;
+}
+
+.matchLeague {
+  font-size: 32rpx;
+  line-height: 1.25;
+  color: rgba(255, 243, 214, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.matchTeams {
+  font-size: 34rpx;
+  line-height: 1.25;
+  color: #fff3d6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cell {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 4rpx;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.cellLabel {
+  font-size: 40rpx;
+  line-height: 1.25;
+  color: #fff3d6;
+  text-align: center;
+}
+
+.cellLabelEmpty {
+  color: rgba(255, 243, 214, 0.42);
+}
+
+.cellOdds {
+  font-size: 32rpx;
+  line-height: 1.25;
+  color: #ffd98a;
+  text-align: center;
+}
+
+.emptyBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptyText {
+  font-size: 36rpx;
+  color: rgba(255, 243, 214, 0.7);
+}
+
+// 页脚放大层：占位高度由组件实测写入 inline style
+.footerStage {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+.footerScale {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+
+.hint {
+  margin-top: 20rpx;
+  font-size: 22rpx;
+  color: #8b7a63;
+  text-align: center;
+}

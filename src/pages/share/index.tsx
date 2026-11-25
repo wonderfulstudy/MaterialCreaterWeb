@@ -5,6 +5,7 @@ import Taro, { useRouter } from '@tarojs/taro'
 import classnames from 'classnames'
 import LotteryCardView from '@/components/LotteryCardView'
 import MatchCardView from '@/components/MatchCardView'
+import MatrixPoster, { type MatrixPosterHandle } from '@/components/MatrixPoster'
 import TraditionalCardView from '@/components/MatchCardView/traditional'
 import PosterFrame, { type PosterFrameHandle } from '@/components/PosterFrame'
 import PosterFooter from '@/components/PosterFrame/poster-footer'
@@ -22,6 +23,8 @@ import {
   type TraditionalDraw,
 } from '@/api/lottery/results'
 import { DEMO_DRAWS, IS_DEMO_MODE } from '@/config/demo'
+import { todayKey, type MatrixSnapshot } from '@/pages/matrix/matrix-data'
+import { findMatrix } from '@/services/matrix-store'
 import { LATEST_LOTTERIES, type LotteryGameCode } from '@/models/lottery.model'
 import { formatDrawDate, formatIssue } from '@/utils/lottery-format'
 import {
@@ -30,6 +33,7 @@ import {
   pickDrawEntries,
   resolveShareSource,
   selectAllGames,
+  shareMatrixPosterFileName,
   sharePosterFileName,
   shareSportPosterFileName,
   toggleGameSelection,
@@ -51,6 +55,16 @@ const DEFAULT_SPORT_DATE = shiftDateKey(toDateKey(new Date()), -1)
 
 type Phase = 'select' | 'preview'
 type LoadStatus = 'loading' | 'ready' | 'empty' | 'error'
+
+/** H5 下载 dataURL；矩阵长图分张时逐张触发 */
+function downloadImage(dataUrl: string, fileName: string): void {
+  const link = document.createElement('a')
+  link.href = dataUrl
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
 
 /** 一个彩种的最新开奖 → 海报入参；落款统一走 config 默认值 */
 function createEntry(code: LotteryGameCode, source: DrawSource): ShareDrawEntry {
@@ -115,8 +129,9 @@ export default function SharePage() {
       resolveShareSource(router.params.source, {
         date: router.params.date,
         issue: router.params.issue,
+        sport: router.params.sport,
       }),
-    [router.params.source, router.params.date, router.params.issue]
+    [router.params.source, router.params.date, router.params.issue, router.params.sport]
   )
 
   const [selected, setSelected] = useState<LotteryGameCode[]>(DEFAULT_SELECTION)
@@ -124,11 +139,15 @@ export default function SharePage() {
   const [entries, setEntries] = useState<ShareDrawEntry[]>([])
   const [matches, setMatches] = useState<SportMatchResult[]>([])
   const [draw, setDraw] = useState<TraditionalDraw | null>(null)
+  const [snapshot, setSnapshot] = useState<MatrixSnapshot | null>(null)
   const [status, setStatus] = useState<LoadStatus>('loading')
-  const [imagePath, setImagePath] = useState('')
+  /** 矩阵长图可能分多张，其余来源就是 1 张 */
+  const [images, setImages] = useState<string[]>([])
   const [capturing, setCapturing] = useState(false)
   const frameRef = useRef<PosterFrameHandle | null>(null)
+  const matrixRef = useRef<MatrixPosterHandle | null>(null)
   const requestId = useRef(0)
+  const imagePath = images[0] ?? ''
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: '分享海报' })
@@ -136,6 +155,8 @@ export default function SharePage() {
 
   /** 竞彩赛果日期：分享页没带 date 时回落到昨天 */
   const sportDate = resolved.date || DEFAULT_SPORT_DATE
+  /** 矩阵快照日期：没带 date 时回落到今天（矩阵页按当天保存） */
+  const matrixDate = resolved.date || todayKey()
 
   const load = useCallback(async () => {
     const current = ++requestId.current
@@ -143,8 +164,24 @@ export default function SharePage() {
     setEntries([])
     setMatches([])
     setDraw(null)
+    setSnapshot(null)
 
     try {
+      if (resolved.kind === 'matrix') {
+        const found = findMatrix(resolved.sport, matrixDate)
+        if (!found) {
+          setStatus('empty')
+          void Taro.showToast({ title: '今日还没有保存的矩阵', icon: 'none' })
+          setTimeout(() => {
+            void Taro.navigateBack().catch(() => Taro.redirectTo({ url: '/pages/home/index' }))
+          }, 600)
+          return
+        }
+        setSnapshot(found)
+        setStatus('ready')
+        return
+      }
+
       if (resolved.kind === 'draw') {
         const list = await loadDrawEntries()
         if (requestId.current !== current) {
@@ -197,7 +234,7 @@ export default function SharePage() {
       console.error('[SharePage] 开奖数据加载失败', error)
       setStatus('error')
     }
-  }, [resolved.kind, resolved.issue, sportDate])
+  }, [resolved.kind, resolved.issue, resolved.sport, sportDate, matrixDate])
 
   useEffect(() => {
     void load()
@@ -211,6 +248,10 @@ export default function SharePage() {
     if (status !== 'ready') {
       return null
     }
+    if (resolved.kind === 'matrix') {
+      // 长图自带 PosterFrame（一张一个），预览与 H5 截图都在 MatrixPoster 里
+      return snapshot ? <MatrixPoster ref={matrixRef} snapshot={snapshot} /> : null
+    }
     if (resolved.kind === 'draw') {
       return cards.length > 0 ? <LotteryCardView cards={cards} /> : null
     }
@@ -221,7 +262,7 @@ export default function SharePage() {
       return draw ? <TraditionalCardView draw={draw} /> : null
     }
     return null
-  }, [status, resolved.kind, cards, matches, draw])
+  }, [status, resolved.kind, cards, matches, draw, snapshot])
 
   /** 预览态下先让版式定下来再截图，避免拿到半张图 */
   useEffect(() => {
@@ -230,19 +271,27 @@ export default function SharePage() {
     }
     const current = ++requestId.current
     setCapturing(true)
-    setImagePath('')
+    setImages([])
     const timer = setTimeout(() => {
-      const frame = frameRef.current
-      if (!frame) {
+      // 矩阵长图自带 PosterFrame，一次可能出多张；其余来源仍是单张
+      const task: Promise<string[]> | null =
+        resolved.kind === 'matrix'
+          ? matrixRef.current
+            ? matrixRef.current.capture()
+            : null
+          : frameRef.current
+            ? frameRef.current.capture().then((dataUrl) => [dataUrl])
+            : null
+      if (!task) {
         setCapturing(false)
         return
       }
-      frame.capture().then(
-        (dataUrl) => {
+      task.then(
+        (urls) => {
           if (requestId.current !== current) {
             return
           }
-          setImagePath(dataUrl)
+          setImages(urls)
           setCapturing(false)
         },
         (error: unknown) => {
@@ -258,7 +307,7 @@ export default function SharePage() {
     return () => {
       clearTimeout(timer)
     }
-  }, [phase, posterBody])
+  }, [phase, posterBody, resolved.kind])
 
   function handleBack(): void {
     void Taro.navigateBack()
@@ -271,12 +320,12 @@ export default function SharePage() {
       return
     }
     setSelected(result.selected)
-    setImagePath('')
+    setImages([])
   }
 
   function handleSelectAll(): void {
     setSelected(selectAllGames())
-    setImagePath('')
+    setImages([])
   }
 
   function handleGenerate(): void {
@@ -288,23 +337,30 @@ export default function SharePage() {
   }
 
   function handleSave(): void {
-    if (capturing || !imagePath) {
+    if (capturing || images.length === 0) {
       void Taro.showToast({ title: '海报还在生成中', icon: 'none' })
       return
     }
     if (IS_H5 && typeof document !== 'undefined') {
-      const link = document.createElement('a')
-      link.href = imagePath
-      link.download =
-        resolved.kind === 'draw' ? sharePosterFileName(selectedEntries) : shareSportPosterFileName(resolved)
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+      if (resolved.kind === 'matrix') {
+        // 分张时逐张触发下载
+        images.forEach((dataUrl, index) => {
+          downloadImage(dataUrl, shareMatrixPosterFileName(matrixDate, index, images.length))
+        })
+      } else {
+        downloadImage(
+          imagePath,
+          resolved.kind === 'draw' ? sharePosterFileName(selectedEntries) : shareSportPosterFileName(resolved)
+        )
+      }
       void Taro.showToast({ title: '已开始下载', icon: 'success' })
       return
     }
     // 小程序端的画布导出随 Skyline 迁移一起做，本轮只保证 H5 所见即所得
-    void Taro.showToast({ title: '小程序端暂不支持保存，请用浏览器打开', icon: 'none' })
+    void Taro.showToast({
+      title: resolved.kind === 'matrix' ? '小程序端暂不支持保存长图' : '小程序端暂不支持保存，请用浏览器打开',
+      icon: 'none',
+    })
   }
 
   function handleShare(): void {
@@ -334,9 +390,17 @@ export default function SharePage() {
     return found ? found.input.issue : ''
   }
 
-  /** 预览态占位文案：三种 jc-* 来源进入页面时可能还在取数 */
+  /** 预览态占位文案：竞彩与矩阵来源进入页面时可能还在取数 */
   const placeholderTitle =
-    status === 'loading' ? '海报生成中…' : status === 'error' ? '赛果加载失败' : '暂无可分享的赛果'
+    status === 'loading'
+      ? '海报生成中…'
+      : status === 'error'
+        ? resolved.kind === 'matrix'
+          ? '矩阵加载失败'
+          : '赛果加载失败'
+        : resolved.kind === 'matrix'
+          ? '矩阵里还没有场次'
+          : '暂无可分享的赛果'
   const placeholderHint =
     status === 'loading' ? '正在获取赛果数据，请稍候' : '请返回开奖页刷新后重试'
 
@@ -396,9 +460,13 @@ export default function SharePage() {
         <>
           <ScrollView scrollY className={styles.body}>
             {posterBody ? (
-              <PosterFrame ref={frameRef} footer={<PosterFooter />}>
-                {posterBody}
-              </PosterFrame>
+              resolved.kind === 'matrix' ? (
+                posterBody
+              ) : (
+                <PosterFrame ref={frameRef} footer={<PosterFooter />}>
+                  {posterBody}
+                </PosterFrame>
+              )
             ) : (
               <View className={styles.placeholder}>
                 <Text className={styles.placeholderTitle}>{placeholderTitle}</Text>
@@ -411,7 +479,11 @@ export default function SharePage() {
               <Text className={styles.actionGhostText}>分享好友</Text>
             </View>
             <View
-              className={classnames(styles.action, styles.actionPrimary, (capturing || !imagePath) && styles.actionIdle)}
+              className={classnames(
+                styles.action,
+                styles.actionPrimary,
+                (capturing || images.length === 0) && styles.actionIdle
+              )}
               onClick={handleSave}
             >
               <Text className={styles.actionPrimaryText}>

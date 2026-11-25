@@ -69,14 +69,25 @@ export function sharePosterFileName(entries: readonly ShareDrawEntry[]): string 
   return `数字彩合集-${entries.length}个彩种-开奖海报.png`
 }
 
-/** 分享页来源种类：数字彩合集 + 三种竞彩赛果 + 不支持的来源 */
-export type ShareSourceKind = 'draw' | 'jc-football' | 'jc-basketball' | 'jc-traditional' | 'unsupported'
+/** 分享页来源种类：数字彩合集 + 三种竞彩赛果 + 综合大数据矩阵 + 不支持的来源 */
+export type ShareSourceKind =
+  | 'draw'
+  | 'jc-football'
+  | 'jc-basketball'
+  | 'jc-traditional'
+  | 'matrix'
+  | 'unsupported'
+
+/** 矩阵来源的运动类型，与 matrix-store 的 sport 口径一致 */
+export type ShareMatrixSport = 'football' | 'basketball'
 
 export interface ShareSourceParams {
-  /** 竞彩赛果日期 'YYYY-MM-DD' */
+  /** 竞彩赛果 / 矩阵快照日期 'YYYY-MM-DD' */
   date?: string
   /** 传统足彩期次 */
   issue?: string
+  /** 矩阵来源的运动类型 */
+  sport?: string
 }
 
 export interface ResolvedShareSource {
@@ -87,10 +98,12 @@ export interface ResolvedShareSource {
   title: string
   /** true 表示没有勾选步骤，进页面直接展示海报预览 */
   directPreview: boolean
-  /** 竞彩赛果日期；非竞彩来源为空串 */
+  /** 竞彩赛果 / 矩阵快照日期；其它来源为空串 */
   date: string
   /** 传足期次；非传足来源为空串 */
   issue: string
+  /** 矩阵来源的运动类型；其它来源一律按足球兜底 */
+  sport: ShareMatrixSport
 }
 
 const SOURCE_TITLES: Record<Exclude<ShareSourceKind, 'unsupported'>, string> = {
@@ -98,18 +111,25 @@ const SOURCE_TITLES: Record<Exclude<ShareSourceKind, 'unsupported'>, string> = {
   'jc-football': '竞彩足球',
   'jc-basketball': '竞彩篮球',
   'jc-traditional': '传统足彩',
+  matrix: '综合大数据',
 }
 
-const SOURCE_KINDS: readonly ShareSourceKind[] = ['draw', 'jc-football', 'jc-basketball', 'jc-traditional']
+const SOURCE_KINDS: readonly ShareSourceKind[] = [
+  'draw',
+  'jc-football',
+  'jc-basketball',
+  'jc-traditional',
+  'matrix',
+]
 
 function isKnownSource(source: string): source is Exclude<ShareSourceKind, 'unsupported'> {
   return (SOURCE_KINDS as readonly string[]).includes(source)
 }
 
 /**
- * router 的 source/date/issue → 页面要用的来源种类与标题。
- * 竞彩三种来源没有勾选步骤（直接进预览态），参数只各取所需：
- * 足球/篮球用 date，传足用 issue。
+ * router 的 source/date/issue/sport → 页面要用的来源种类与标题。
+ * 竞彩三种来源与矩阵来源都没有勾选步骤（直接进预览态），参数只各取所需：
+ * 足球/篮球用 date，传足用 issue，矩阵用 sport + date。
  */
 export function resolveShareSource(
   source: string | undefined,
@@ -118,14 +138,17 @@ export function resolveShareSource(
   const normalized = source || 'draw'
   const kind: ShareSourceKind = isKnownSource(normalized) ? normalized : 'unsupported'
   const isSport = kind === 'jc-football' || kind === 'jc-basketball'
+  const isMatrix = kind === 'matrix'
+  const sport: ShareMatrixSport = params.sport === 'basketball' ? 'basketball' : 'football'
 
   return {
     source: normalized,
     kind,
     title: kind === 'unsupported' ? '分享海报' : SOURCE_TITLES[kind],
     directPreview: kind !== 'draw' && kind !== 'unsupported',
-    date: isSport ? (params.date ?? '') : '',
+    date: isSport || isMatrix ? (params.date ?? '') : '',
     issue: kind === 'jc-traditional' ? (params.issue ?? '') : '',
+    sport: isMatrix ? sport : 'football',
   }
 }
 
@@ -133,4 +156,14 @@ export function resolveShareSource(
 export function shareSportPosterFileName(resolved: ResolvedShareSource): string {
   const suffix = resolved.issue ? `-${resolved.issue}期` : resolved.date ? `-${resolved.date}` : ''
   return `${resolved.title}${suffix}-赛果海报.png`
+}
+
+/**
+ * 综合大数据长图的下载文件名：'${date} 综合大数据.png'；
+ * 分张时按张序号追加 -1 / -2（total 缺省或为 1 时不带序号）。
+ */
+export function shareMatrixPosterFileName(date: string, index?: number, total?: number): string {
+  const base = date ? `${date} 综合大数据` : '综合大数据'
+  const multi = typeof total === 'number' && total > 1 && typeof index === 'number'
+  return multi ? `${base}-${index + 1}.png` : `${base}.png`
 }
