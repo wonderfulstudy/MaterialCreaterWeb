@@ -10,7 +10,7 @@ import {
   type SportKey,
 } from '@/components/PlanCalculator'
 import { judgeRecentPlans } from '@/services/plan-judge'
-import { findDay, loadStore, markRest, saveDay, type StoredPlanDay } from '@/services/plan-store'
+import { findDay, listDaysMap, markRest, primaryPlanId, saveDay, type StoredPlanDay } from '@/services/plan-store'
 import styles from './index.module.scss'
 
 const WEEK_HEADS = ['日', '一', '二', '三', '四', '五', '六']
@@ -60,8 +60,9 @@ function bonusRange(summary: SelectionSummary): string {
 }
 
 /** 无记录日期也能标记休息：plan-store 的 markRest 只更新已有记录，因此先落一条空记录 */
-function restOnlyDay(date: string, sport: SportKey): StoredPlanDay {
+function restOnlyDay(date: string, sport: SportKey, planId: string): StoredPlanDay {
   return {
+    planId,
     date,
     sport,
     multiple: 1,
@@ -75,12 +76,12 @@ function restOnlyDay(date: string, sport: SportKey): StoredPlanDay {
 
 export default function PlanRecordPage() {
   const [today] = useState(startOfToday)
-  const [days, setDays] = useState<Record<string, StoredPlanDay>>(() => loadStore().days)
+  const [days, setDays] = useState<Record<string, StoredPlanDay>>(() => listDaysMap())
   const [selected, setSelected] = useState(() => dayKey(startOfToday()))
   const [cursor, setCursor] = useState(() => ({ year: today.getFullYear(), month: today.getMonth() }))
 
   const refresh = useCallback(() => {
-    setDays(loadStore().days)
+    setDays(listDaysMap())
   }, [])
 
   // AC-17：赛果回填后自动判中，写回 plan-store 后重读一次让徽标立即生效。
@@ -173,7 +174,7 @@ export default function PlanRecordPage() {
     } else if (current) {
       markRest(selected, true)
     } else {
-      saveDay(restOnlyDay(selected, 'football'))
+      saveDay(restOnlyDay(selected, 'football', primaryPlanId() ?? 'plan-1'))
     }
     refresh()
   }

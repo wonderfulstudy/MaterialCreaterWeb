@@ -130,6 +130,7 @@ function makeLeg(overrides: Partial<PlanLeg>): PlanLeg {
 
 function makeDay(overrides: Partial<StoredPlanDay>): StoredPlanDay {
   return {
+    planId: 'plan-1',
     date: FOOTBALL_DATE,
     sport: 'football',
     multiple: 1,

@@ -100,6 +100,7 @@ export function toStoredDay(
   multiple: number,
 ): StoredPlanDay {
   return {
+    planId: plan.id,
     date,
     sport: plan.sport,
     multiple,
