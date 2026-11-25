@@ -6,6 +6,7 @@
  */
 import Taro from '@tarojs/taro'
 import AppConfig from '@/config/app'
+import { ApiError, HttpStatusError, requestDetailed } from '@/api/client'
 import {
   AuthError,
   MOCK_LOGIN_RESPONSE,
@@ -64,15 +65,27 @@ function toErrorCode(raw: string): AuthErrorCode | null {
   }
 }
 
-/** 把契约失败体与 HTTP 状态映射为 AuthError */
+/** 把契约失败体与 HTTP 状态映射为 AuthError；statusCode 一并带出（gate 靠 403 识别 not_allowed） */
 function responseError(statusCode: number, body: unknown): AuthError {
   const code = toErrorCode(readErrorField(body, 'code'))
-  if (code) return new AuthError(code, readErrorField(body, 'message') || '登录失败')
-  if (statusCode === 400) return new AuthError('invalid_payload', '登录失败')
-  if (statusCode === 401) return new AuthError('session_expired', '登录状态已失效')
-  if (statusCode === 429) return new AuthError('rate_limited', '操作太频繁')
-  if (statusCode === 502) return new AuthError('wx_upstream_error', '微信服务异常')
-  if (statusCode >= 500) return new AuthError('internal_error', '服务异常')
+  if (code) return new AuthError(code, readErrorField(body, 'message') || '登录失败', statusCode)
+  if (statusCode === 400) return new AuthError('invalid_payload', '登录失败', statusCode)
+  if (statusCode === 401) return new AuthError('session_expired', '登录状态已失效', statusCode)
+  // 403 not_allowed 落在最后的兜底分支：AuthErrorCode 联合被 pages/profile 穷举，不新增码，
+  // 调用方（gate 页）改读 statusCode === 403 识别这个终态
+  if (statusCode === 429) return new AuthError('rate_limited', '操作太频繁', statusCode)
+  if (statusCode === 502) return new AuthError('wx_upstream_error', '微信服务异常', statusCode)
+  if (statusCode >= 500) return new AuthError('internal_error', '服务异常', statusCode)
+  return new AuthError('network_error', '网络异常', statusCode)
+}
+
+/** client.ts 的异常投影回 AuthError；已是 AuthError 的原样返回 */
+function toAuthError(error: unknown): AuthError {
+  if (error instanceof AuthError) return error
+  if (error instanceof HttpStatusError) return responseError(error.statusCode, error.body)
+  if (error instanceof ApiError) {
+    return new AuthError('internal_error', error.message)
+  }
   return new AuthError('network_error', '网络异常')
 }
 
@@ -91,24 +104,19 @@ async function postLogin(code: string, payload: LoginPayload): Promise<AuthSessi
   if (payload.nickname) data.nickname = payload.nickname
   if (payload.avatarUrl) data.avatarUrl = payload.avatarUrl
 
-  let response
   try {
-    response = await Taro.request<AuthSession | AuthErrorBody>({
+    const response = await requestDetailed<AuthSession | AuthErrorBody>({
       url: apiBaseUrl() + LOGIN_PATH,
       method: 'POST',
       header: { 'content-type': JSON_HEADER },
       data,
     })
-  } catch {
-    throw new AuthError('network_error', '网络异常')
-  }
-
-  if (response.statusCode === 200) {
     const session = parseSession(response.data)
-    if (!session) throw new AuthError('internal_error', '登录响应异常')
+    if (!session) throw new AuthError('internal_error', '登录响应异常', response.statusCode)
     return session
+  } catch (error) {
+    throw toAuthError(error)
   }
-  throw responseError(response.statusCode, response.data)
 }
 
 async function loginWithWechat(payload: LoginPayload): Promise<AuthResult> {
@@ -127,7 +135,7 @@ async function loginWithWechat(payload: LoginPayload): Promise<AuthResult> {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof AuthError ? error : new AuthError('network_error', '网络异常'),
+      error: toAuthError(error),
     }
   }
 }
@@ -184,26 +192,21 @@ export async function updateProfile(patch: LoginPayload): Promise<AuthResult> {
   }
 
   try {
-    const response = await Taro.request<AuthUser | AuthErrorBody>({
+    const response = await requestDetailed<AuthUser | AuthErrorBody>({
       url: apiBaseUrl() + PROFILE_PATH,
       method: 'PUT',
       header: { 'content-type': JSON_HEADER, Authorization: 'Bearer ' + current.token },
       data: patch,
     })
-    if (response.statusCode === 200) {
-      const user = parseAuthUser(response.data)
-      if (!user) return { ok: false, error: new AuthError('internal_error', '资料响应异常') }
-      const session: AuthSession = { ...current, user }
-      saveSession(session)
-      return { ok: true, session }
-    }
-    if (response.statusCode === 401) clearSession()
-    return { ok: false, error: responseError(response.statusCode, response.data) }
+    const user = parseAuthUser(response.data)
+    if (!user) return { ok: false, error: new AuthError('internal_error', '资料响应异常') }
+    const session: AuthSession = { ...current, user }
+    saveSession(session)
+    return { ok: true, session }
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof AuthError ? error : new AuthError('network_error', '网络异常'),
-    }
+    const authError = toAuthError(error)
+    if (authError.statusCode === 401) clearSession()
+    return { ok: false, error: authError }
   }
 }
 

@@ -42,11 +42,14 @@ export interface AuthErrorBody {
 
 export class AuthError extends Error {
   readonly code: AuthErrorCode
+  /** 失败对应的 HTTP 状态码；纯前端降级（wx_login_failed / network_error）为 0 */
+  readonly statusCode: number
 
-  constructor(code: AuthErrorCode, message: string) {
+  constructor(code: AuthErrorCode, message: string, statusCode: number = 0) {
     super(message)
     this.name = 'AuthError'
     this.code = code
+    this.statusCode = statusCode
   }
 }
 

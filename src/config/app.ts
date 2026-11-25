@@ -12,7 +12,7 @@ const config: AppConfigType = {
   app: {
     name: "彩店管理助手",
     api_base_url: "",
-    auth_mock: true,
+    auth_mock: false,
   },
   
   navigation: {
