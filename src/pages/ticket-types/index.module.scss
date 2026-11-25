@@ -1,0 +1,314 @@
+@use '@/styles/variables.scss' as *;
+
+$brand: #b3121b;
+$brand-deep: #8c0e16;
+$gold: #c9973b;
+$paper: #f6f3ec;
+$card: #ffffff;
+$ink: #201b15;
+$ink2: #6b6459;
+$line: #e6dfd2;
+
+.page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 0 0 calc(200rpx + env(safe-area-inset-bottom));
+  background: $paper;
+  color: $ink;
+}
+
+.header {
+  padding: $spacing-lg $page-padding $spacing-xl;
+  background: linear-gradient(135deg, $brand-deep, $brand 62%, $gold 190%);
+  color: #fff;
+}
+
+.headerTitle {
+  display: block;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+}
+
+.headerHint {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.errorBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: $spacing-md $page-padding 0;
+  padding: $spacing-sm $spacing-md;
+  border: 2rpx solid rgba(179, 18, 27, 0.24);
+  border-radius: $radius-md;
+  background: rgba(179, 18, 27, 0.06);
+}
+
+.errorText {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $brand;
+}
+
+.errorAction {
+  margin-left: $spacing-md;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+}
+
+.placeholder {
+  display: block;
+  padding: $spacing-lg $page-padding;
+  font-size: $font-size-sm;
+  color: $ink2;
+  text-align: center;
+}
+
+.list {
+  margin: $spacing-lg $page-padding 0;
+  border-radius: $radius-lg;
+  background: $card;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 2rpx solid $line;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.itemMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.itemNameRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.itemName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  @include text-ellipsis;
+}
+
+.itemOff {
+  padding: 2rpx $spacing-sm;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  color: $ink2;
+  background: rgba(107, 100, 89, 0.12);
+}
+
+.itemMeta {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.itemRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: $spacing-xs;
+  margin-left: $spacing-md;
+}
+
+.itemCount {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+}
+
+.itemAction {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.footbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: $spacing-md $page-padding calc($spacing-md + env(safe-area-inset-bottom));
+  border-top: 2rpx solid $line;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.addBtn {
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  color: #fff;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  background: linear-gradient(135deg, $brand-deep, $brand);
+  @include button-reset;
+}
+
+/* ===== 新增 / 编辑 表单 ===== */
+.mask {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(20, 16, 12, 0.45);
+}
+
+.sheet {
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: $spacing-lg $page-padding calc($spacing-lg + env(safe-area-inset-bottom));
+  border-radius: $radius-xl $radius-xl 0 0;
+  background: $paper;
+  box-sizing: border-box;
+}
+
+.sheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheetTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+}
+
+.sheetClose {
+  font-size: $font-size-md;
+  color: $ink2;
+}
+
+.field {
+  margin-top: $spacing-md;
+}
+
+.fieldLabel {
+  display: block;
+  font-size: $font-size-sm;
+  color: $ink2;
+}
+
+.fieldInput {
+  margin-top: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  min-height: 88rpx;
+  border: 2rpx solid $line;
+  border-radius: $radius-sm;
+  background: #fff;
+  font-size: $font-size-md;
+  box-sizing: border-box;
+}
+
+.fieldPlaceholder {
+  font-size: $font-size-sm;
+  color: $ink2;
+}
+
+.fieldError {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $brand;
+}
+
+.bookAmount {
+  display: block;
+  margin-top: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-sm;
+  background: rgba(201, 151, 59, 0.12);
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: #8c6a1f;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $spacing-lg;
+}
+
+.switch {
+  position: relative;
+  width: 84rpx;
+  height: 48rpx;
+  border-radius: $radius-round;
+  background: rgba(107, 100, 89, 0.24);
+  transition: background $transition-fast;
+}
+
+.switchOn {
+  background: $brand;
+}
+
+.switchDot {
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $radius-round;
+  background: #fff;
+  transition: transform $transition-fast;
+}
+
+.switchDotOn {
+  transform: translateX(36rpx);
+}
+
+.saveError {
+  display: block;
+  margin-top: $spacing-md;
+  font-size: $font-size-sm;
+  color: $brand;
+}
+
+.sheetActions {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+.btn {
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  @include button-reset;
+}
+
+.btnGhost {
+  color: $ink2;
+  border: 2rpx solid $line;
+  background: #fff;
+}
+
+.btnPrimary {
+  color: #fff;
+  background: linear-gradient(135deg, $brand-deep, $brand);
+}
+
+.btnDisabled {
+  opacity: 0.5;
+}

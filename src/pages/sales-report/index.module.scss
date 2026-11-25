@@ -1,0 +1,406 @@
+@use '@/styles/variables.scss' as *;
+
+$paper: #f6f3ec;
+$card: #ffffff;
+$ink: #201b15;
+$ink2: #6b6459;
+$line: #e6dfd2;
+$brand: #b3121b;
+$gold-ink: #9a6f1c;
+$sub-bg: #fbf7ec;
+
+.page {
+  min-height: 100vh;
+  background: $paper;
+}
+
+.content {
+  padding: $spacing-md $spacing-md calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.monthRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.monthStep {
+  @include flex-center;
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: $radius-md;
+  background: $card;
+  border: 2rpx solid $line;
+  font-size: $font-size-lg;
+  color: $ink;
+
+  &:active {
+    background: $sub-bg;
+  }
+}
+
+.monthStepOff {
+  color: $color-text-tertiary;
+  opacity: 0.5;
+}
+
+.monthCurrent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rpx;
+}
+
+.monthText {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $ink;
+}
+
+.monthSub {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.ticket {
+  margin-top: $spacing-md;
+  padding: $spacing-md;
+  border-radius: $radius-lg;
+  background: $card;
+  box-shadow: 0 4rpx 18rpx rgba(32, 27, 21, 0.06);
+}
+
+.totRow {
+  display: flex;
+  align-items: flex-end;
+  gap: $spacing-lg;
+}
+
+.totCell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  min-width: 0;
+}
+
+.totLabel {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.totSales {
+  font-size: 52rpx;
+  font-weight: $font-weight-bold;
+  color: $brand;
+  font-variant-numeric: tabular-nums;
+}
+
+.totProfit {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $gold-ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.totHint {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.emptyHint {
+  display: block;
+  margin-top: $spacing-md;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.rows {
+  margin-top: $spacing-md;
+  border-radius: $radius-lg;
+  background: $card;
+  padding: $spacing-xs 0;
+  box-shadow: 0 2rpx 10rpx rgba(32, 27, 21, 0.05);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 18rpx $spacing-md;
+}
+
+.rowSub {
+  margin: 4rpx $spacing-sm;
+  padding: 14rpx $spacing-sm;
+  border-radius: $radius-sm;
+  background: $sub-bg;
+}
+
+.rowTotal {
+  margin-top: 4rpx;
+  border-top: 2rpx solid $line;
+}
+
+.rowName {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+  min-width: 0;
+}
+
+.rowLabel {
+  font-size: $font-size-sm;
+  color: $ink;
+}
+
+.rowTotal .rowLabel {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $brand;
+}
+
+.rowHint {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.rowMoney {
+  width: 168rpx;
+  text-align: right;
+  font-size: $font-size-sm;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowTotal .rowMoney {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $brand;
+}
+
+.rowPct {
+  width: 108rpx;
+  text-align: right;
+  font-size: $font-size-xs;
+  color: $ink2;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowChevron {
+  width: 32rpx;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  transition: transform $transition-fast;
+}
+
+.rowChevronOpen {
+  transform: rotate(180deg);
+  color: $brand;
+}
+
+.subgames {
+  margin: 0 $spacing-sm $spacing-sm;
+  padding: $spacing-sm $spacing-sm $spacing-xs;
+  border-radius: $radius-sm;
+  background: #fffefa;
+  border: 2rpx dashed $line;
+}
+
+.subgameRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 8rpx 0;
+}
+
+.subgameLabel {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-xs;
+  color: $ink2;
+  @include text-ellipsis;
+}
+
+.subgameMoney {
+  width: 152rpx;
+  text-align: right;
+  font-size: $font-size-xs;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.subgamePct {
+  width: 96rpx;
+  text-align: right;
+  font-size: $font-size-xs;
+  color: $ink2;
+  font-variant-numeric: tabular-nums;
+}
+
+.subgameSum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $spacing-xs;
+  padding-top: $spacing-xs;
+  border-top: 2rpx solid $line;
+}
+
+.subgameSumLabel {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+}
+
+.subgameSumValue {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  color: $brand;
+  font-variant-numeric: tabular-nums;
+}
+
+.checkCard {
+  margin-top: $spacing-md;
+  padding: $spacing-md;
+  border-radius: $radius-lg;
+  background: $card;
+  box-shadow: 0 2rpx 10rpx rgba(32, 27, 21, 0.05);
+}
+
+.checkHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.checkTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $ink;
+}
+
+.checkBadge {
+  font-size: $font-size-xs;
+  color: #1e9e50;
+  background: rgba(30, 158, 80, 0.1);
+  border-radius: $radius-sm;
+  padding: 4rpx 12rpx;
+}
+
+.checkBadgeOff {
+  color: #c07607;
+  background: #fdf0da;
+}
+
+.checkMeta {
+  display: block;
+  margin-top: 6rpx;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.pctGrid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: $spacing-sm;
+}
+
+.pctItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-xs;
+  width: 50%;
+  padding: 6rpx $spacing-xs 6rpx 0;
+  box-sizing: border-box;
+}
+
+.pctLabel {
+  flex: 1;
+  min-width: 0;
+  font-size: 20rpx;
+  color: $ink2;
+  @include text-ellipsis;
+}
+
+.pctValue {
+  font-size: 20rpx;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.pctSum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $spacing-xs;
+  padding-top: $spacing-sm;
+  border-top: 2rpx solid $line;
+}
+
+.pctSumLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+}
+
+.pctSumValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $brand;
+  font-variant-numeric: tabular-nums;
+}
+
+.checkNote {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: 20rpx;
+  line-height: $line-height-loose;
+  color: $color-text-tertiary;
+}
+
+.errorBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-md;
+  background: #fff1f0;
+}
+
+.errorText {
+  flex: 1;
+  font-size: $font-size-xs;
+  color: $color-primary-dark;
+}
+
+.errorAction {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+  padding: 4rpx 14rpx;
+  border-radius: $radius-sm;
+  background: rgba(179, 18, 27, 0.08);
+}
+
+.placeholder {
+  display: block;
+  margin-top: $spacing-md;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.note {
+  display: block;
+  margin-top: $spacing-md;
+  font-size: $font-size-xs;
+  line-height: $line-height-loose;
+  color: $color-text-tertiary;
+}

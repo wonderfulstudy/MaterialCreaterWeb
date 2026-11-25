@@ -1,0 +1,290 @@
+@use '@/styles/variables.scss' as *;
+
+// 经营页配色取自 design/ui-drafts/ui-kit.css：纸底 + 红金
+$paper: #f6f3ec;
+$card: #ffffff;
+$ink: #201b15;
+$ink2: #6b6459;
+$line: #e6dfd2;
+$brand: #b3121b;
+$gold-ink: #9a6f1c;
+$gold-soft: #f5d98b;
+
+.page {
+  min-height: 100vh;
+  background: $paper;
+}
+
+.content {
+  padding: $spacing-md $spacing-md calc(200rpx + env(safe-area-inset-bottom));
+}
+
+.summaryBar {
+  display: flex;
+  align-items: stretch;
+  background: linear-gradient(135deg, #8c0e16 0%, $brand 62%, #c9973b 190%);
+  border-radius: $radius-lg;
+  padding: $spacing-md 0;
+  box-shadow: 0 6rpx 20rpx rgba(179, 18, 27, 0.18);
+}
+
+.summaryCell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: 0 $spacing-md;
+}
+
+.summaryLabel {
+  font-size: $font-size-xs;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.summaryValue {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryGold {
+  color: $gold-soft;
+  font-size: $font-size-xl;
+}
+
+.summaryDivider {
+  width: 1rpx;
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.ticket {
+  margin-top: $spacing-md;
+  background: $card;
+  border-radius: $radius-lg;
+  box-shadow: 0 4rpx 18rpx rgba(32, 27, 21, 0.06);
+  padding: $spacing-md $spacing-md 0;
+  overflow: hidden;
+}
+
+.ticketHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.ticketName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $ink;
+}
+
+.ticketDate {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.bigRow {
+  display: flex;
+  align-items: flex-end;
+  gap: $spacing-lg;
+  margin-top: $spacing-sm;
+}
+
+.bigCell {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.bigLabel {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.bigSales {
+  font-size: 44rpx;
+  font-weight: $font-weight-bold;
+  color: $brand;
+  font-variant-numeric: tabular-nums;
+}
+
+.bigProfit {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $gold-ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.pending {
+  margin-left: auto;
+  font-size: 20rpx;
+  color: #c07607;
+  background: #fdf0da;
+  border-radius: $radius-sm;
+  padding: 4rpx 12rpx;
+}
+
+// 票根撕票虚线，两侧留撕口（签名元素）
+.perf {
+  position: relative;
+  height: 2rpx;
+  margin: $spacing-md (-$spacing-md) 0;
+  background-image: linear-gradient(to right, $line 0, $line 12rpx, transparent 12rpx, transparent 24rpx);
+  background-size: 24rpx 2rpx;
+  background-repeat: repeat-x;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: -13rpx;
+    width: 28rpx;
+    height: 28rpx;
+    border-radius: 50%;
+    background: $paper;
+  }
+
+  &::before {
+    left: -14rpx;
+  }
+
+  &::after {
+    right: -14rpx;
+  }
+}
+
+.primaryButton {
+  @include flex-center;
+  height: 88rpx;
+  margin-top: $spacing-md;
+  border-radius: $radius-lg;
+  background: $brand;
+
+  &:active {
+    background: #7e0c13;
+  }
+}
+
+.primaryButtonText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: #ffffff;
+}
+
+.cardHint {
+  padding: $spacing-sm 0 $spacing-md;
+  text-align: center;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.card {
+  margin-top: $spacing-md;
+  background: $card;
+  border-radius: $radius-lg;
+  box-shadow: 0 4rpx 18rpx rgba(32, 27, 21, 0.06);
+  padding: $spacing-md;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $ink;
+}
+
+.cardGo {
+  font-size: $font-size-xs;
+  color: $brand;
+}
+
+.invGrid {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+.invCell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.invLabel {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.invValue {
+  font-size: 38rpx;
+  font-weight: $font-weight-bold;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.invUnit {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $ink2;
+}
+
+.actionRow {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.ghostButton {
+  @include flex-center;
+  flex: 1;
+  height: 76rpx;
+  border: 2rpx solid $line;
+  border-radius: $radius-md;
+  background: #fffdf8;
+  font-size: $font-size-md;
+  color: $ink;
+
+  &:active {
+    background: #f7f1e4;
+  }
+}
+
+.errorBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-md;
+  background: #fff1f0;
+}
+
+.errorText {
+  flex: 1;
+  font-size: $font-size-xs;
+  color: $color-primary-dark;
+}
+
+.errorAction {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+  padding: 4rpx 14rpx;
+  border-radius: $radius-sm;
+  background: rgba(179, 18, 27, 0.08);
+}
+
+.note {
+  display: block;
+  margin-top: $spacing-md;
+  font-size: $font-size-xs;
+  line-height: $line-height-loose;
+  color: $color-text-tertiary;
+}

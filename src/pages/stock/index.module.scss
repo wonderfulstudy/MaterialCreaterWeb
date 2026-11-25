@@ -1,0 +1,640 @@
+@use '@/styles/variables.scss' as *;
+
+$brand: #b3121b;
+$brand-deep: #8c0e16;
+$gold: #c9973b;
+$paper: #f6f3ec;
+$card: #ffffff;
+$ink: #201b15;
+$ink2: #6b6459;
+$line: #e6dfd2;
+$win: #00b42a;
+
+.page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 0 0 calc(220rpx + env(safe-area-inset-bottom));
+  background: $paper;
+  color: $ink;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-lg $page-padding $spacing-xl;
+  background: linear-gradient(135deg, $brand-deep, $brand 62%, $gold 190%);
+  color: #fff;
+}
+
+.summaryCell {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+
+  &:last-child {
+    align-items: flex-end;
+  }
+}
+
+.summaryLabel {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.summaryValueRow {
+  display: flex;
+  align-items: baseline;
+}
+
+.summaryValue {
+  font-size: 60rpx;
+  font-weight: $font-weight-bold;
+  line-height: 1.1;
+}
+
+.summaryUnit {
+  margin-left: $spacing-xs;
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.summaryAmount {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: #f5d98b;
+}
+
+.errorBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: $spacing-md $page-padding 0;
+  padding: $spacing-sm $spacing-md;
+  border: 2rpx solid rgba(179, 18, 27, 0.24);
+  border-radius: $radius-md;
+  background: rgba(179, 18, 27, 0.06);
+}
+
+.errorText {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $brand;
+}
+
+.errorAction {
+  margin-left: $spacing-md;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: $spacing-lg $page-padding $spacing-sm;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+}
+
+.sectionHint {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.placeholder {
+  display: block;
+  padding: $spacing-lg $page-padding;
+  font-size: $font-size-sm;
+  color: $ink2;
+  text-align: center;
+}
+
+.typeList {
+  margin: 0 $page-padding;
+  border-radius: $radius-lg;
+  background: $card;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+}
+
+.typeItem {
+  border-bottom: 2rpx solid $line;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.typeHead {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md $spacing-lg;
+}
+
+.typeMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.typeName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  @include text-ellipsis;
+}
+
+.typeMeta {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.typeCount {
+  margin-left: $spacing-md;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+}
+
+.typeToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  margin-left: $spacing-xs;
+}
+
+.chevron {
+  font-size: $font-size-md;
+  color: $ink2;
+  transition: transform $transition-fast;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.books {
+  padding: 0 $spacing-lg $spacing-md;
+  background: rgba(246, 243, 236, 0.6);
+}
+
+.bookRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm 0;
+  border-bottom: 2rpx dashed $line;
+}
+
+.bookNo {
+  font-size: $font-size-sm;
+  letter-spacing: 1rpx;
+  color: $ink;
+}
+
+.bookTime {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.bookEmpty {
+  display: block;
+  padding: $spacing-sm 0;
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.bookAll {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: $spacing-sm;
+}
+
+.bookAllText {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+}
+
+.bookAllMeta {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.entryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: $spacing-lg $page-padding 0;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $radius-lg;
+  background: $card;
+  box-shadow: $shadow-card;
+}
+
+.entryTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+}
+
+.entryMeta {
+  font-size: $font-size-sm;
+  color: $ink2;
+}
+
+.movements {
+  margin: $spacing-md $page-padding 0;
+  padding: $spacing-md $spacing-lg $spacing-lg;
+  border-radius: $radius-lg;
+  background: $card;
+  box-shadow: $shadow-card;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.chip {
+  padding: 8rpx $spacing-md;
+  border: 2rpx solid $line;
+  border-radius: $radius-round;
+  font-size: $font-size-sm;
+  color: $ink2;
+  background: #fff;
+}
+
+.chipOn {
+  border-color: $brand;
+  color: #fff;
+  background: $brand;
+}
+
+.dateRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.dateField {
+  min-width: 190rpx;
+  padding: 10rpx $spacing-md;
+  border: 2rpx solid $line;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  color: $ink;
+  text-align: center;
+}
+
+.dateFieldMute {
+  color: $ink2;
+}
+
+.dateSep {
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.dateClear {
+  margin-left: auto;
+  font-size: $font-size-sm;
+  color: $brand;
+}
+
+.movement {
+  padding: $spacing-md 0;
+  border-bottom: 2rpx solid $line;
+}
+
+.movementTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.movementType {
+  padding: 4rpx $spacing-sm;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  color: $ink2;
+  background: rgba(107, 100, 89, 0.12);
+}
+
+.movementTypeIn {
+  color: $win;
+  background: rgba(0, 180, 42, 0.1);
+}
+
+.movementQty {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+}
+
+.movementNo {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  letter-spacing: 1rpx;
+}
+
+.movementBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $spacing-xs;
+}
+
+.movementTypeName {
+  font-size: $font-size-xs;
+  color: $ink2;
+  @include text-ellipsis;
+}
+
+.movementTime {
+  margin-left: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.loadMore {
+  margin-top: $spacing-md;
+  padding: $spacing-sm 0;
+  border: 2rpx solid $line;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  color: $ink2;
+  text-align: center;
+}
+
+.note {
+  display: block;
+  padding: $spacing-md $page-padding 0;
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $ink2;
+}
+
+.manageRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: $spacing-lg $page-padding 0;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $radius-lg;
+  background: $card;
+  box-shadow: $shadow-card;
+}
+
+.manageTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+}
+
+.manageMeta {
+  font-size: $font-size-sm;
+  color: $ink2;
+}
+
+.footbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  gap: $spacing-md;
+  padding: $spacing-md $page-padding calc($spacing-md + env(safe-area-inset-bottom));
+  border-top: 2rpx solid $line;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.footBtn {
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  @include button-reset;
+}
+
+.footIn {
+  color: #fff;
+  background: linear-gradient(135deg, $brand-deep, $brand);
+}
+
+.footOut {
+  color: $brand;
+  border: 2rpx solid $brand;
+  background: #fff;
+}
+
+/* ===== 扫码 / 手输 面板 ===== */
+.mask {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(20, 16, 12, 0.45);
+}
+
+.sheet {
+  width: 100%;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: $spacing-lg $page-padding calc($spacing-lg + env(safe-area-inset-bottom));
+  border-radius: $radius-xl $radius-xl 0 0;
+  background: $paper;
+  box-sizing: border-box;
+}
+
+.sheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheetTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+}
+
+.sheetClose {
+  font-size: $font-size-md;
+  color: $ink2;
+}
+
+.sheetBody {
+  margin-top: $spacing-md;
+}
+
+.sheetHint {
+  display: block;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $ink2;
+}
+
+.codeInput {
+  margin-top: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border: 2rpx solid $line;
+  border-radius: $radius-sm;
+  background: #fff;
+  font-size: $font-size-md;
+  min-height: 88rpx;
+  box-sizing: border-box;
+}
+
+.codePlaceholder {
+  font-size: $font-size-sm;
+  color: $ink2;
+}
+
+.sheetError {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: $font-size-sm;
+  color: $brand;
+}
+
+.sheetActions {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+.btn {
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  @include button-reset;
+}
+
+.btnGhost {
+  color: $ink2;
+  border: 2rpx solid $line;
+  background: #fff;
+}
+
+.btnPrimary {
+  color: #fff;
+  background: linear-gradient(135deg, $brand-deep, $brand);
+}
+
+.btnDisabled {
+  opacity: 0.5;
+}
+
+.scanBookNo {
+  display: block;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  background: #fff;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  letter-spacing: 2rpx;
+  text-align: center;
+  color: $ink;
+}
+
+.bookNote {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.typePickList {
+  margin-top: $spacing-md;
+  border-radius: $radius-md;
+  background: #fff;
+  overflow: hidden;
+}
+
+.pickLabel {
+  display: block;
+  padding: $spacing-md $spacing-md 0;
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.inlineError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+}
+
+.inlineErrorText {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $brand;
+}
+
+.inlineErrorAction {
+  margin-left: $spacing-md;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+}
+
+.pickItem {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md;
+  border-top: 2rpx solid $line;
+}
+
+.pickItemOn {
+  background: rgba(179, 18, 27, 0.05);
+}
+
+.radio {
+  width: 36rpx;
+  height: 36rpx;
+  border: 2rpx solid $line;
+  border-radius: $radius-round;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.radioOn {
+  border: 10rpx solid $brand;
+}
+
+.pickInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  margin-left: $spacing-md;
+}
+
+.pickName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $ink;
+}
+
+.pickMeta {
+  font-size: $font-size-xs;
+  color: $ink2;
+}

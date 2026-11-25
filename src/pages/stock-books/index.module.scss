@@ -1,0 +1,264 @@
+@use '@/styles/variables.scss' as *;
+
+$brand: #b3121b;
+$brand-deep: #8c0e16;
+$gold: #c9973b;
+$paper: #f6f3ec;
+$card: #ffffff;
+$ink: #201b15;
+$ink2: #6b6459;
+$line: #e6dfd2;
+$win: #00b42a;
+
+.page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 0 0 calc(60rpx + env(safe-area-inset-bottom));
+  background: $paper;
+  color: $ink;
+}
+
+.header {
+  padding: $spacing-lg $page-padding $spacing-xl;
+  background: linear-gradient(135deg, $brand-deep, $brand 62%, $gold 190%);
+  color: #fff;
+}
+
+.headerTitle {
+  display: block;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: $spacing-lg;
+}
+
+.summaryCell {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+
+  &:last-child {
+    align-items: flex-end;
+  }
+}
+
+.summaryLabel {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.summaryValue {
+  font-size: 48rpx;
+  font-weight: $font-weight-bold;
+}
+
+.summaryAmount {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: #f5d98b;
+}
+
+.errorBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: $spacing-md $page-padding 0;
+  padding: $spacing-sm $spacing-md;
+  border: 2rpx solid rgba(179, 18, 27, 0.24);
+  border-radius: $radius-md;
+  background: rgba(179, 18, 27, 0.06);
+}
+
+.errorText {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $brand;
+}
+
+.errorAction {
+  margin-left: $spacing-md;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+}
+
+.filters {
+  padding: $spacing-md $page-padding 0;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.chip {
+  padding: 8rpx $spacing-md;
+  border: 2rpx solid $line;
+  border-radius: $radius-round;
+  font-size: $font-size-sm;
+  color: $ink2;
+  background: #fff;
+}
+
+.chipOn {
+  border-color: $brand;
+  color: #fff;
+  background: $brand;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  margin-top: $spacing-md;
+  padding: 0 $spacing-md;
+  border: 2rpx solid $line;
+  border-radius: $radius-round;
+  background: #fff;
+}
+
+.searchInput {
+  flex: 1;
+  height: 76rpx;
+  font-size: $font-size-md;
+}
+
+.searchPlaceholder {
+  font-size: $font-size-sm;
+  color: $ink2;
+}
+
+.searchClear {
+  padding-left: $spacing-sm;
+  font-size: $font-size-sm;
+  color: $ink2;
+}
+
+.list {
+  margin: $spacing-md $page-padding 0;
+  border-radius: $radius-lg;
+  background: $card;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+}
+
+.listItem {
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 2rpx solid $line;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.itemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.itemNo {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  letter-spacing: 1rpx;
+}
+
+.statusTag {
+  padding: 4rpx $spacing-sm;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  color: $ink2;
+  background: rgba(107, 100, 89, 0.12);
+}
+
+.statusTagIn {
+  color: $win;
+  background: rgba(0, 180, 42, 0.1);
+}
+
+.itemMeta {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.itemBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $spacing-xs;
+}
+
+.itemTicket {
+  font-size: $font-size-xs;
+  color: $ink2;
+  @include text-ellipsis;
+}
+
+.itemTime {
+  margin-left: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $ink2;
+}
+
+.placeholder {
+  display: block;
+  padding: $spacing-lg 0;
+  font-size: $font-size-sm;
+  color: $ink2;
+  text-align: center;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  margin: $spacing-lg $page-padding 0;
+  padding: $spacing-xl $spacing-lg;
+  border-radius: $radius-lg;
+  background: $card;
+  box-shadow: $shadow-card;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $ink2;
+  text-align: center;
+}
+
+.emptyActions {
+  display: flex;
+  gap: $spacing-lg;
+}
+
+.emptyAction {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+}
+
+.footNote {
+  display: block;
+  margin-top: $spacing-md;
+  font-size: $font-size-xs;
+  color: $ink2;
+  text-align: center;
+}
+
+.loadMore {
+  margin: $spacing-md $page-padding 0;
+  padding: $spacing-md 0;
+  border: 2rpx solid $line;
+  border-radius: $radius-md;
+  background: #fff;
+  font-size: $font-size-sm;
+  color: $ink2;
+  text-align: center;
+}

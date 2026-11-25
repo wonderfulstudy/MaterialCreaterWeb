@@ -1,0 +1,290 @@
+@use '@/styles/variables.scss' as *;
+
+$paper: #f6f3ec;
+$card: #ffffff;
+$ink: #201b15;
+$ink2: #6b6459;
+$line: #e6dfd2;
+$brand: #b3121b;
+$gold-ink: #9a6f1c;
+
+.page {
+  min-height: 100vh;
+  background: $paper;
+}
+
+.content {
+  padding: $spacing-md $spacing-md calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.seg {
+  display: flex;
+  gap: 8rpx;
+  padding: 6rpx;
+  border-radius: $radius-md;
+  background: #ebe4d6;
+}
+
+.segItem {
+  @include flex-center;
+  flex: 1;
+  height: 64rpx;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  color: $ink2;
+}
+
+.segItemActive {
+  background: $card;
+  color: $brand;
+  font-weight: $font-weight-semibold;
+  box-shadow: 0 2rpx 6rpx rgba(32, 27, 21, 0.08);
+}
+
+.monthRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.monthStep {
+  @include flex-center;
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: $radius-md;
+  background: $card;
+  border: 2rpx solid $line;
+  font-size: $font-size-lg;
+  color: $ink;
+
+  &:active {
+    background: #fbf7ec;
+  }
+}
+
+.monthStepOff {
+  color: $color-text-tertiary;
+  opacity: 0.5;
+}
+
+.monthCurrent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rpx;
+}
+
+.monthText {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $ink;
+}
+
+.monthSub {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.dayList {
+  margin-top: $spacing-md;
+}
+
+.day {
+  margin-bottom: $spacing-sm;
+  border-radius: $radius-md;
+  background: $card;
+  border: 2rpx solid transparent;
+  box-shadow: 0 2rpx 10rpx rgba(32, 27, 21, 0.05);
+  overflow: hidden;
+}
+
+.dayOpen {
+  border-color: $brand;
+  box-shadow: 0 4rpx 16rpx rgba(179, 18, 27, 0.16);
+}
+
+.dayHead {
+  display: flex;
+  align-items: center;
+  min-height: 108rpx;
+  padding: $spacing-sm $spacing-md;
+}
+
+.dayMain {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-sm;
+  min-width: 0;
+}
+
+.dayDate {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $ink;
+}
+
+.dayOperator {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  @include text-ellipsis;
+}
+
+.dayAmounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4rpx;
+}
+
+.dayTotal {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $brand;
+  font-variant-numeric: tabular-nums;
+}
+
+.dayProfit {
+  font-size: $font-size-xs;
+  color: $gold-ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.dayToggle {
+  @include flex-center;
+  width: 64rpx;
+  height: 64rpx;
+  margin-left: $spacing-xs;
+}
+
+.chevron {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  transition: transform $transition-fast;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+  color: $brand;
+}
+
+.detailBody {
+  border-top: 2rpx dashed $line;
+  background: #fffefa;
+  padding: $spacing-sm $spacing-md;
+}
+
+.detailLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6rpx 0;
+}
+
+.detailLabel {
+  font-size: $font-size-sm;
+  color: $ink2;
+}
+
+.detailValue {
+  font-size: $font-size-sm;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.detailMute {
+  color: $color-text-tertiary;
+}
+
+.detailSum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $spacing-xs;
+  padding-top: $spacing-xs;
+  border-top: 2rpx solid $line;
+}
+
+.detailSumLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+}
+
+.detailSumValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $brand;
+  font-variant-numeric: tabular-nums;
+}
+
+.detailHint {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.placeholder {
+  display: block;
+  margin-top: $spacing-md;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.empty {
+  margin-top: $spacing-lg;
+  padding: $spacing-lg $spacing-md;
+  border-radius: $radius-md;
+  background: $card;
+  text-align: center;
+}
+
+.emptyTitle {
+  display: block;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+}
+
+.emptyHint {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.errorBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-md;
+  background: #fff1f0;
+}
+
+.errorText {
+  flex: 1;
+  font-size: $font-size-xs;
+  color: $color-primary-dark;
+}
+
+.errorAction {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+  padding: 4rpx 14rpx;
+  border-radius: $radius-sm;
+  background: rgba(179, 18, 27, 0.08);
+}
+
+.note {
+  display: block;
+  margin-top: $spacing-md;
+  font-size: $font-size-xs;
+  line-height: $line-height-loose;
+  color: $color-text-tertiary;
+}

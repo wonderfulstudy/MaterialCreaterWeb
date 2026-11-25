@@ -20,7 +20,14 @@ export default defineAppConfig({
     'pages/plan-record/index',
     'pages/plan-detail/index',
     'pages/plan-preset/index',
-    'pages/matrix/index'
+    'pages/matrix/index',
+    'pages/business/index',
+    'pages/sales-history/index',
+    'pages/sales-entry/index',
+    'pages/sales-report/index',
+    'pages/stock/index',
+    'pages/stock-books/index',
+    'pages/ticket-types/index'
   ],
   window: {
     backgroundTextStyle: 'light',

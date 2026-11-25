@@ -4,9 +4,10 @@ import classnames from 'classnames'
 import homeIcon from '@/assets/tabbar/home.png'
 import materialIcon from '@/assets/tabbar/material.png'
 import profileIcon from '@/assets/tabbar/profile.png'
+import businessIcon from '@/assets/tabbar/business.png'
 import styles from './index.module.scss'
 
-export type TabBarKey = 'home' | 'material' | 'profile'
+export type TabBarKey = 'home' | 'material' | 'business' | 'profile'
 
 interface TabDefinition {
   key: TabBarKey
@@ -16,8 +17,9 @@ interface TabDefinition {
 }
 
 const TABS: TabDefinition[] = [
-  { key: 'home', label: '首页', icon: homeIcon, url: '/pages/home/index' },
-  { key: 'material', label: '素材', icon: materialIcon, url: '/pages/recommend/index' },
+  { key: 'home', label: '开奖', icon: homeIcon, url: '/pages/home/index' },
+  { key: 'material', label: '方案', icon: materialIcon, url: '/pages/recommend/index' },
+  { key: 'business', label: '经营', icon: businessIcon, url: '/pages/business/index' },
   { key: 'profile', label: '我的', icon: profileIcon, url: '/pages/profile/index' },
 ]
 

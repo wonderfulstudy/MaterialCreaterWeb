@@ -1,0 +1,306 @@
+@use '@/styles/variables.scss' as *;
+
+// 品牌与纸面（照 design/ui-drafts/32-sales-entry.html 与 ui-kit 口径）
+$brand: #b3121b;
+$brand-deep: #7e0c13;
+$gold: #c9973b;
+$paper: #f6f3ec;
+$card: #ffffff;
+$ink: #201b15;
+$ink2: #6b6459;
+$ink3: #8c8578;
+$line: #e6dfd2;
+
+.page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: $spacing-md $page-padding calc(220rpx + env(safe-area-inset-bottom));
+  background: $paper;
+}
+
+// ============ 统计日 ============
+.topbar {
+  margin-bottom: $spacing-md;
+}
+
+.dayChip {
+  display: flex;
+  align-items: center;
+  padding: $spacing-sm $spacing-md;
+  background: $card;
+  border: 1rpx solid $line;
+  border-radius: $radius-lg;
+}
+
+.dayLabel {
+  margin-right: $spacing-sm;
+  font-size: $font-size-sm;
+  color: $ink3;
+}
+
+.dayValue {
+  flex: 1;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  letter-spacing: 1rpx;
+}
+
+.dayAction {
+  padding: 4rpx 16rpx;
+  font-size: $font-size-xs;
+  color: $brand;
+  border: 1rpx solid rgba(179, 18, 27, 0.35);
+  border-radius: $radius-round;
+}
+
+// ============ 提示 / 错误 ============
+.tipBar {
+  margin-bottom: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  color: $ink3;
+}
+
+.errorBar {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  color: $brand-deep;
+  background: rgba(179, 18, 27, 0.08);
+  border: 1rpx solid rgba(179, 18, 27, 0.25);
+  border-radius: $radius-md;
+}
+
+.errorText {
+  flex: 1;
+  margin-right: $spacing-sm;
+  line-height: $line-height-normal;
+}
+
+.retryBtn {
+  padding: 4rpx 20rpx;
+  font-size: $font-size-sm;
+  color: #fff;
+  background: $brand;
+  border-radius: $radius-round;
+}
+
+.recStrip {
+  margin-bottom: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  color: $brand-deep;
+  background: rgba(201, 151, 59, 0.16);
+  border: 1rpx solid rgba(201, 151, 59, 0.4);
+  border-radius: $radius-md;
+}
+
+.ocrNotice {
+  margin-bottom: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  color: $ink2;
+  background: rgba(32, 27, 21, 0.05);
+  border-radius: $radius-md;
+}
+
+// ============ 10 大类表单 ============
+.card {
+  padding: 4rpx $spacing-md;
+  background: $card;
+  border: 1rpx solid $line;
+  border-radius: $radius-lg;
+  box-shadow: 0 4rpx 24rpx rgba(32, 27, 21, 0.06);
+}
+
+.frow {
+  display: flex;
+  align-items: center;
+  min-height: 96rpx;
+  border-bottom: 1rpx solid $line;
+}
+
+.frow:last-child {
+  border-bottom: none;
+}
+
+.recRow {
+  background: rgba(201, 151, 59, 0.14);
+  border-radius: $radius-sm;
+}
+
+.nm {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $ink;
+}
+
+.chip {
+  margin: 0 $spacing-sm;
+  padding: 4rpx 16rpx;
+  font-size: $font-size-xs;
+  color: $brand;
+  background: rgba(179, 18, 27, 0.06);
+  border: 1rpx solid rgba(179, 18, 27, 0.3);
+  border-radius: $radius-round;
+}
+
+.recTag {
+  margin-right: $spacing-sm;
+  padding: 2rpx 12rpx;
+  font-size: 20rpx;
+  color: #fff;
+  background: $gold;
+  border-radius: $radius-xs;
+}
+
+.inWrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 260rpx;
+}
+
+.unit {
+  margin-right: 4rpx;
+  font-size: $font-size-md;
+  color: $ink2;
+}
+
+.in {
+  width: 210rpx;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  text-align: right;
+}
+
+.inRo {
+  color: $ink2;
+}
+
+// ============ 竞彩 13 子玩法 ============
+.jcbox {
+  margin: 0 0 $spacing-md;
+  padding: 4rpx $spacing-md;
+  background: rgba(246, 243, 236, 0.9);
+  border: 1rpx solid $line;
+  border-radius: $radius-md;
+}
+
+.srow {
+  display: flex;
+  align-items: center;
+  min-height: 84rpx;
+  border-bottom: 1rpx dashed $line;
+}
+
+.snm {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $ink2;
+}
+
+.totRow {
+  display: flex;
+  align-items: center;
+  min-height: 84rpx;
+}
+
+.totValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $brand-deep;
+}
+
+// ============ 说明 / H5 提示 ============
+.hint {
+  margin: $spacing-md 0 $spacing-sm;
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $ink3;
+}
+
+.h5Hint {
+  margin-bottom: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  color: $ink2;
+  background: $card;
+  border: 1rpx dashed $line;
+  border-radius: $radius-md;
+}
+
+// ============ 悬浮拍照（FR-14a，小程序独有） ============
+.fab {
+  position: fixed;
+  right: $spacing-lg;
+  bottom: calc(240rpx + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 112rpx;
+  height: 112rpx;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: #fff;
+  background: linear-gradient(135deg, $brand 0%, $brand-deep 100%);
+  border-radius: $radius-round;
+  box-shadow: 0 8rpx 24rpx rgba(126, 12, 19, 0.35);
+  z-index: 20;
+}
+
+.fabBusy {
+  opacity: 0.6;
+}
+
+// ============ 底部确认条 ============
+.footbar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  padding: $spacing-md $page-padding calc($spacing-md + env(safe-area-inset-bottom));
+  background: $card;
+  border-top: 1rpx solid $line;
+  box-shadow: 0 -4rpx 20rpx rgba(32, 27, 21, 0.08);
+  z-index: 30;
+}
+
+.totalBox {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.totalLabel {
+  font-size: $font-size-xs;
+  color: $ink3;
+}
+
+.totalValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $brand-deep;
+}
+
+.submit {
+  width: 260rpx;
+  height: $button-height-lg;
+  margin: 0;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  line-height: $button-height-lg;
+  color: #fff;
+  background: linear-gradient(135deg, $brand 0%, $brand-deep 100%);
+  border-radius: $radius-button;
+}
+
+.submit[disabled] {
+  opacity: 0.6;
+}
