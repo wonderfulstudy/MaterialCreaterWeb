@@ -5,7 +5,7 @@
  * - 保存到相册：微信端 Taro.saveImageToPhotosAlbum，H5 降级为浏览器下载
  */
 import Taro from '@tarojs/taro'
-import { clearQrPath, readQrPath, saveQrPath } from './storage'
+import { readQrPath, saveQrPath } from './storage'
 import {
   MAX_QR_IMAGE_BYTES,
   WECHAT_QR_FILE_NAME,
@@ -20,14 +20,6 @@ function isH5(): boolean {
 
 export function readImage(): string {
   return readQrPath()
-}
-
-export function saveImage(value: string): boolean {
-  return saveQrPath(value)
-}
-
-export function clearImage(): void {
-  clearQrPath()
 }
 
 /** 微信端持久化目标路径（USER_DATA_PATH/wechat-qr.png） */

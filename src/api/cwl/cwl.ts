@@ -18,11 +18,6 @@ export function getKL8History(): Promise<CwlHistory> {
     return getCwlHistory<CwlHistory>('kl8')
 }
 
-/** 上游 findDrawNotice 支持 3d，但代理契约（API.r1）暂未列出该 game，按同路径透传 */
-export function get3DHistory(): Promise<CwlHistory> {
-    return getCwlHistory<CwlHistory>('3d')
-}
-
 export function getQlcHistory(): Promise<CwlHistory> {
     return getCwlHistory<CwlHistory>('qlc')
 }

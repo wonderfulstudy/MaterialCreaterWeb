@@ -280,8 +280,3 @@ export function presetBonusText(summary: SelectionSummary): string {
   const max = formatAmount(summary.maxBonus)
   return min === max ? `¥${max}` : `¥${min}~${max}`
 }
-
-/** 「3串1 · 2 倍 · 投入 ¥4」 */
-export function presetMetaText(preset: Pick<StoredPreset, 'passLabel' | 'multiple' | 'summary'>): string {
-  return `${preset.passLabel} · ${preset.multiple} 倍 · 投入 ¥${formatAmount(preset.summary.amount)}`
-}

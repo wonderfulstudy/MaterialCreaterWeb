@@ -16,10 +16,6 @@ export function font(size: number, weight: FontWeight = 400): string {
   return `${weight} ${size}px ${FONT_STACK}`
 }
 
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
-}
-
 export function roundRectPath(ctx: Ctx, x: number, y: number, w: number, h: number, r: number): void {
   const radius = Math.min(r, w / 2, h / 2)
   ctx.beginPath()
@@ -41,22 +37,6 @@ export function fillRoundRect(ctx: Ctx, x: number, y: number, w: number, h: numb
   ctx.fill()
 }
 
-export function strokeRoundRect(
-  ctx: Ctx,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-  color: string,
-  lineWidth = 2
-): void {
-  roundRectPath(ctx, x, y, w, h, r)
-  ctx.strokeStyle = color
-  ctx.lineWidth = lineWidth
-  ctx.stroke()
-}
-
 /** 填充线性渐变；direction 决定渐变方向 */
 export function fillLinearGradient(
   ctx: Ctx,
@@ -74,11 +54,6 @@ export function fillLinearGradient(
   gradient.addColorStop(1, to)
   ctx.fillStyle = gradient
   ctx.fillRect(x, y, w, h)
-}
-
-export function textWidth(ctx: Ctx, text: string, size: number, weight: FontWeight = 400): number {
-  ctx.font = font(size, weight)
-  return ctx.measureText(text).width
 }
 
 /** 按最大宽度截断文本，超出加省略号 */
@@ -132,23 +107,6 @@ export function drawBall(
   drawText(ctx, text, cx, cy + 1, { size, weight: 600, color: textColor, align: 'center' })
 }
 
-/** 一行号码球，返回该行宽度（不含末尾间距） */
-export function drawBallRow(
-  ctx: Ctx,
-  numbers: readonly string[],
-  startX: number,
-  cy: number,
-  diameter: number,
-  gap: number,
-  bg: string,
-  textColor = '#FFFFFF'
-): number {
-  numbers.forEach((number, index) => {
-    drawBall(ctx, startX + diameter / 2 + index * (diameter + gap), cy, diameter, number, bg, textColor)
-  })
-  return numbers.length ? numbers.length * diameter + (numbers.length - 1) * gap : 0
-}
-
 export function drawDashedLine(
   ctx: Ctx,
   x1: number,
@@ -172,32 +130,6 @@ export function drawDashedLine(
 export interface BallPlacement {
   x: number
   y: number
-}
-
-/** 把号码按每行上限排成多行，返回每个球的中心点 */
-export function layoutBalls(
-  count: number,
-  startX: number,
-  startY: number,
-  diameter: number,
-  gap: number,
-  perRow: number,
-  rowGap: number
-): BallPlacement[] {
-  const placements: BallPlacement[] = []
-  for (let index = 0; index < count; index += 1) {
-    const row = Math.floor(index / perRow)
-    const column = index % perRow
-    placements.push({
-      x: startX + diameter / 2 + column * (diameter + gap),
-      y: startY + diameter / 2 + row * (diameter + rowGap),
-    })
-  }
-  return placements
-}
-
-export function rowsFor(count: number, perRow: number): number {
-  return Math.max(1, Math.ceil(count / perRow))
 }
 
 export interface QrCardOptions {

@@ -7,7 +7,6 @@ import {
   listPresets,
   loadStore,
   parseStore,
-  removePreset,
   savePreset,
   type StoredPreset,
 } from './preset-store'
@@ -103,14 +102,6 @@ describe('preset-store', () => {
 
     expect(listPresets().map((item) => item.id)).toEqual(['max', 'min'])
     expect(findPreset('min')?.name).toBe('最低赔率预设')
-  })
-
-  it('removePreset 只删指定系列', () => {
-    savePreset(preset())
-    savePreset(preset({ id: 'min', name: '最低赔率预设' }))
-
-    expect(Object.keys(removePreset('max').presets)).toEqual(['min'])
-    expect(findPreset('max')).toBeNull()
   })
 
   it('storage 为空时回落空快照', () => {

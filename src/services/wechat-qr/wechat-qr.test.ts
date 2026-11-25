@@ -1,6 +1,5 @@
 import Taro from '@tarojs/taro'
 import {
-  clearImage,
   importFromAlbum,
   readImage,
   saveImageToAlbum,
@@ -106,16 +105,6 @@ describe('wechat-qr service', () => {
     const saveOptions = fs.saveFile.mock.calls[0][0]
     expect(saveOptions.tempFilePath).toBe('wxfile://tmp/qr.png')
     expect(saveOptions.filePath).toBe(QR_PATH)
-  })
-
-  it('clear 后回到空态', async () => {
-    store.set(WECHAT_QR_STORAGE_KEY, QR_PATH)
-    expect(readImage()).toBe(QR_PATH)
-
-    clearImage()
-
-    expect(readImage()).toBe('')
-    expect(store.has(WECHAT_QR_STORAGE_KEY)).toBe(false)
   })
 
   it('取消选择时不写入存储且返回 cancelled', async () => {

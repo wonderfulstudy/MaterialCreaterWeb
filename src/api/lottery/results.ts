@@ -1,9 +1,4 @@
-import {
-  cacheKey,
-  loadWithCache,
-  readCache,
-  type CachedLoad,
-} from '@/services/cache/remote-cache'
+import { cacheKey, loadWithCache, type CachedLoad } from '@/services/cache/remote-cache'
 import { requestProxy, type ProxyResult } from '../proxy'
 import type { LotteryHistory } from './lottery.dto'
 
@@ -104,12 +99,6 @@ export function parseTraditionalDraws(dto: LotteryHistory): TraditionalDraw[] {
         .filter((field) => TRADITIONAL_RESULT_PATTERN.test(field)),
     }))
     .filter((draw) => draw.results.length === TRADITIONAL_FIELD_COUNT)
-}
-
-/** 首屏同步读缓存，供断网/冷启动直接渲染 */
-export function readCachedTraditionalDraws(): TraditionalDraw[] | null {
-  const cached = readCache<TraditionalDraw[]>(TRADITIONAL_CACHE_KEY)
-  return cached ? cached.data : null
 }
 
 /** 拉取传足历史期次；失败回落缓存，两者都无返回 null */

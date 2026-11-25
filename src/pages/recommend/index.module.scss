@@ -232,14 +232,6 @@ $uiLine: #e6dfd2;
 }
 
 // ============ 顶部：项目下拉 + 赛程状态 ============
-.topBar {
-  position: relative;
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  margin-bottom: $spacing-md;
-}
-
 .sportDd {
   position: relative;
   flex-shrink: 0;
@@ -319,15 +311,6 @@ $uiLine: #e6dfd2;
   color: $ink;
 }
 
-.scheduleBar {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-left: $spacing-sm;
-}
-
 .scheduleText {
   font-size: 20rpx;
   color: $muted;
@@ -386,17 +369,6 @@ $uiLine: #e6dfd2;
   align-items: center;
   justify-content: space-between;
   margin-bottom: $spacing-sm;
-}
-
-.captionCount {
-  font-size: 20rpx;
-  color: $muted;
-}
-
-.captionStrong {
-  font-size: 20rpx;
-  font-weight: $font-weight-bold;
-  color: $ink;
 }
 
 .captionHint {

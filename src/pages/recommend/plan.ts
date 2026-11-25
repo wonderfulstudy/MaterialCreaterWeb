@@ -49,16 +49,6 @@ export function createPlan(sport: SportKey, name: string, legs: PlanLeg[] = []):
   }
 }
 
-/** 卡片上展示的场次编号：优先用接口返回的 matchNum（如 2001），取不到时退回编号里的数字 */
-export function legMatchNo(leg: PlanLeg, matchNumById: Map<number, number>): string {
-  const matchNum = matchNumById.get(leg.matchId)
-  if (matchNum) {
-    return String(matchNum)
-  }
-  const digits = leg.matchNumStr.replace(/\D/g, '')
-  return digits || leg.matchNumStr
-}
-
 /** 历史方案最多保留的版本数，避免无限增长 */
 export const MAX_PLAN_HISTORY = 8
 

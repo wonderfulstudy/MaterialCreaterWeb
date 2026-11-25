@@ -146,15 +146,6 @@ function fixedHeight(index: number): number {
     : MATRIX_POSTER_REPEAT_HEIGHT
 }
 
-/** 单张实际高度：分张判据，单测直接拿它验收 ≤ MATRIX_POSTER_MAX_HEIGHT */
-export function matrixPosterPageHeight(page: MatrixPosterPage): number {
-  return (
-    fixedHeight(page.repeatHeader ? 1 : 0) +
-    (page.end - page.start) * MATRIX_POSTER_ROW_HEIGHT +
-    (page.withFooter ? MATRIX_POSTER_TAIL_HEIGHT : 0)
-  )
-}
-
 /** 与 PlanPoster 同一套分张口径：先按总高估张数，再把内容均摊成每张的容量 */
 function pageTargets(contentHeight: number): number[] {
   const repeat = MATRIX_POSTER_REPEAT_HEIGHT

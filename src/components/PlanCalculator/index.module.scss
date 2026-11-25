@@ -241,11 +241,6 @@ $jc-red: #e60012;
   color: $color-text-primary;
 }
 
-.ddCheck {
-  font-size: $font-size-sm;
-  color: $color-primary;
-}
-
 // 游戏类型下拉（竞足/竞篮）
 .gameDd {
   position: relative;
@@ -502,14 +497,6 @@ $jc-red: #e60012;
   padding: 0 $spacing-xs;
 }
 
-.pickedText {
-  display: block;
-  margin-bottom: $spacing-xs;
-  font-size: $font-size-xs;
-  color: $color-primary;
-  @include text-ellipsis;
-}
-
 // ============ 赔率面板 ============
 .oddsBoard {
   display: flex;
@@ -608,17 +595,6 @@ $jc-red: #e60012;
   color: $jc-border;
   writing-mode: vertical-rl;
   letter-spacing: 4rpx;
-}
-
-.morePlaysCount {
-  font-size: $font-size-xs;
-  color: $color-text-white;
-  background: $jc-border;
-  border-radius: $radius-round;
-  min-width: 32rpx;
-  height: 32rpx;
-  line-height: 32rpx;
-  text-align: center;
 }
 
 .updateTime {

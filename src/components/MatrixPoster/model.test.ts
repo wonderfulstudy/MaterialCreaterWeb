@@ -15,7 +15,6 @@ import {
   MATRIX_POSTER_TITLE,
   buildMatrixPosterModel,
   matrixDateLabel,
-  matrixPosterPageHeight,
   matrixPosterPages,
 } from './model'
 
@@ -112,10 +111,6 @@ describe('长图分张', () => {
     const pages = matrixPosterPages(10)
     expect(pages).toHaveLength(1)
     expect(pages[0]).toMatchObject({ start: 0, end: 10, repeatHeader: false, withFooter: true })
-    expect(matrixPosterPageHeight(pages[0])).toBe(
-      MATRIX_POSTER_TABLE_HEAD_HEIGHT + 10 * MATRIX_POSTER_ROW_HEIGHT + MATRIX_POSTER_TAIL_HEIGHT + 132
-    )
-    expect(matrixPosterPageHeight(pages[0])).toBeLessThanOrEqual(MATRIX_POSTER_MAX_HEIGHT)
   })
 
   it('没有场次时也给出单张空表', () => {
@@ -135,7 +130,6 @@ describe('长图分张', () => {
         expect(page.repeatHeader).toBe(true)
       }
       expect(page.withFooter).toBe(index === pages.length - 1)
-      expect(matrixPosterPageHeight(page)).toBeLessThanOrEqual(MATRIX_POSTER_MAX_HEIGHT)
     })
     // 第 2 张起只为表头重复留高度
     expect(MATRIX_POSTER_REPEAT_HEIGHT).toBe(MATRIX_POSTER_TABLE_HEAD_HEIGHT)

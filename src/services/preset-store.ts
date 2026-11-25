@@ -164,10 +164,3 @@ export function savePreset(preset: StoredPreset): PresetStoreSnapshot {
   const snapshot = loadStore()
   return persist({ version: 1, presets: { ...snapshot.presets, [preset.id]: preset } })
 }
-
-export function removePreset(id: string): PresetStoreSnapshot {
-  const snapshot = loadStore()
-  const presets = { ...snapshot.presets }
-  delete presets[id]
-  return persist({ version: 1, presets })
-}
