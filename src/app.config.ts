@@ -11,7 +11,8 @@ export default defineAppConfig({
     'pages/selector/index',
     'pages/profile/index',
     'pages/plan-record/index',
-    'pages/plan-detail/index'
+    'pages/plan-detail/index',
+    'pages/plan-preset/index'
   ],
   window: {
     backgroundTextStyle: 'light',

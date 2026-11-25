@@ -7,12 +7,228 @@ $muted: #8e8e93;
 $hair: #f0f0f2;
 $card-shadow: 0 4rpx 28rpx rgba(16, 44, 103, 0.06);
 $tabbar-height: 132rpx;
+$paper: #f6f3ec;
+$brand: #b3121b;
+$gold: #c9973b;
+$uiInk: #201b15;
+$uiInk2: #6b6459;
+$uiLine: #e6dfd2;
 
 .page {
   min-height: 100vh;
   box-sizing: border-box;
   padding: $spacing-md $page-padding calc(300rpx + env(safe-area-inset-bottom));
-  background: #e5e5ea;
+  background: $paper;
+}
+
+// ============ 页签布局（AC-23）：综合大数据入口 / 手动方案 / 预设方案 / 底部悬浮条 ============
+.heroRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.hero {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 26rpx $spacing-lg;
+  background: linear-gradient(135deg, #5c1a1f 0%, $brand 58%, $gold 100%);
+  border-radius: $radius-lg;
+  box-shadow: 0 10rpx 28rpx rgba(179, 18, 27, 0.22);
+}
+
+.heroMain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.heroTitle {
+  font-size: 34rpx;
+  font-weight: $font-weight-bold;
+  color: #f7dfae;
+  letter-spacing: 1rpx;
+}
+
+.heroHint {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.heroArrow {
+  flex: none;
+  margin-left: $spacing-sm;
+  font-size: 40rpx;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.heroAct {
+  flex: none;
+  margin-left: $spacing-md;
+  padding: 10rpx 20rpx;
+  font-size: 24rpx;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+  background: rgba(179, 18, 27, 0.08);
+  border-radius: $radius-round;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  margin: $spacing-lg 0 $spacing-sm;
+}
+
+.sectionTitle {
+  font-size: 30rpx;
+  font-weight: $font-weight-bold;
+  color: $uiInk;
+}
+
+.sectionCount {
+  margin-left: $spacing-xs;
+  font-size: 22rpx;
+  color: $uiInk2;
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionHint {
+  margin-left: auto;
+  font-size: 20rpx;
+  color: $uiInk2;
+}
+
+.sectionTools {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.manualBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+// ============ 预设方案卡片（与手动方案卡同一套票根口径） ============
+.presetCard {
+  padding: 20rpx $spacing-md 18rpx;
+  margin-bottom: $spacing-sm;
+  background: #ffffff;
+  border: 2rpx solid $uiLine;
+  border-radius: $radius-lg;
+  box-shadow: 0 4rpx 18rpx rgba(32, 27, 21, 0.05);
+
+  &:active {
+    opacity: 0.92;
+  }
+}
+
+.presetTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.presetName {
+  font-size: 30rpx;
+  font-weight: $font-weight-semibold;
+  color: $uiInk;
+}
+
+.presetPass {
+  padding: 2rpx 14rpx;
+  font-size: 20rpx;
+  color: $brand;
+  background: rgba(179, 18, 27, 0.08);
+  border-radius: $radius-round;
+}
+
+.presetPassMute {
+  color: $uiInk2;
+  background: rgba(107, 100, 89, 0.1);
+}
+
+.presetLegs {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  line-height: $line-height-normal;
+  color: $uiInk;
+  font-variant-numeric: tabular-nums;
+}
+
+.presetBottom {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 10rpx;
+  padding-top: 10rpx;
+  border-top: 2rpx dashed $uiLine;
+}
+
+.presetMeta {
+  font-size: 22rpx;
+  color: $uiInk2;
+  font-variant-numeric: tabular-nums;
+}
+
+.presetBonus {
+  font-size: 26rpx;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+  font-variant-numeric: tabular-nums;
+}
+
+.presetEmpty {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: $uiInk2;
+}
+
+.presetLocked {
+  padding: 20rpx $spacing-md;
+  background: rgba(246, 243, 236, 0.9);
+  border: 2rpx dashed $uiLine;
+  border-radius: $radius-lg;
+}
+
+.presetLockedHint {
+  display: block;
+  margin-bottom: 10rpx;
+  font-size: 20rpx;
+  color: $uiInk2;
+}
+
+.presetLockedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10rpx 0;
+  opacity: 0.55;
+  border-top: 2rpx solid rgba(230, 223, 210, 0.7);
+
+  &:first-of-type {
+    border-top: 0;
+  }
+}
+
+.presetLockedName {
+  font-size: 26rpx;
+  color: $uiInk;
+}
+
+.presetLockedMeta {
+  font-size: 22rpx;
+  color: $uiInk2;
+  font-variant-numeric: tabular-nums;
 }
 
 // ============ 顶部：项目下拉 + 赛程状态 ============

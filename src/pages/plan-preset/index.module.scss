@@ -1,0 +1,318 @@
+@use '@/styles/variables.scss' as *;
+
+$brand: #b3121b;
+$gold: #c9973b;
+$paper: #f6f3ec;
+$ink: #201b15;
+$ink2: #6b6459;
+$line: #e6dfd2;
+
+.page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 0 $page-padding calc(260rpx + env(safe-area-inset-bottom));
+  background: $paper;
+}
+
+.head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  background: $paper;
+}
+
+.headBack {
+  flex: none;
+  width: 56rpx;
+  font-size: 40rpx;
+  line-height: 1;
+  color: $ink;
+}
+
+.headTitle {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: $font-weight-bold;
+  color: $ink;
+  text-align: center;
+}
+
+.headDone {
+  flex: none;
+  min-width: 56rpx;
+  font-size: 26rpx;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+  text-align: right;
+}
+
+// 串法按钮组
+.ways {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.way {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 76rpx;
+  background: #ffffff;
+  border: 2rpx solid $line;
+  border-radius: $radius-md;
+}
+
+.wayOn {
+  background: $brand;
+  border-color: $brand;
+  box-shadow: 0 8rpx 20rpx rgba(179, 18, 27, 0.2);
+}
+
+.wayText {
+  font-size: 26rpx;
+  font-weight: $font-weight-semibold;
+  color: $ink2;
+}
+
+.wayTextOn {
+  color: #ffffff;
+}
+
+.ways2 {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.way2 {
+  padding: 10rpx 26rpx;
+  background: #ffffff;
+  border: 2rpx solid $line;
+  border-radius: $radius-round;
+}
+
+.way2On {
+  border-color: $gold;
+  background: rgba(201, 151, 59, 0.12);
+}
+
+.way2Text {
+  font-size: 24rpx;
+  color: $ink2;
+}
+
+.way2TextOn {
+  color: #8a6520;
+  font-weight: $font-weight-semibold;
+}
+
+.hint {
+  display: flex;
+  align-items: center;
+  padding: 24rpx $spacing-md;
+  margin-bottom: $spacing-sm;
+  background: rgba(255, 255, 255, 0.7);
+  border: 2rpx dashed $line;
+  border-radius: $radius-lg;
+}
+
+.hintText {
+  flex: 1;
+  font-size: 24rpx;
+  color: $ink2;
+}
+
+.hintAction {
+  font-size: 24rpx;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+}
+
+// 候选方案列表
+.cands {
+  display: flex;
+  flex-direction: column;
+}
+
+.cand {
+  padding: 20rpx $spacing-md 16rpx;
+  margin-bottom: $spacing-sm;
+  background: #ffffff;
+  border: 2rpx solid $line;
+  border-radius: $radius-lg;
+}
+
+.candOn {
+  border-color: $brand;
+  box-shadow: 0 8rpx 22rpx rgba(179, 18, 27, 0.14);
+}
+
+.candTop {
+  display: flex;
+  align-items: center;
+}
+
+.candNo {
+  font-size: 22rpx;
+  color: $ink2;
+  font-variant-numeric: tabular-nums;
+}
+
+.used {
+  margin-left: $spacing-xs;
+  padding: 2rpx 12rpx;
+  font-size: 20rpx;
+  color: $brand;
+  background: rgba(179, 18, 27, 0.08);
+  border-radius: $radius-round;
+}
+
+.candOdds {
+  margin-left: auto;
+  font-size: 28rpx;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.candOddsOn {
+  color: $brand;
+}
+
+.candLegs {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  line-height: $line-height-normal;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.candFoot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 10rpx;
+  padding-top: 10rpx;
+  border-top: 2rpx dashed $line;
+}
+
+.candMeta {
+  font-size: 22rpx;
+  color: $ink2;
+  font-variant-numeric: tabular-nums;
+}
+
+.candBonus {
+  font-size: 24rpx;
+  color: $ink2;
+  font-variant-numeric: tabular-nums;
+}
+
+// 底部结果条：倍数紧挨奖金
+.rbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  padding: 18rpx $page-padding calc(18rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 2rpx solid $line;
+  box-shadow: 0 -6rpx 24rpx rgba(32, 27, 21, 0.06);
+}
+
+.rrow {
+  display: flex;
+  align-items: center;
+
+  & + & {
+    margin-top: 10rpx;
+  }
+}
+
+.rlabel {
+  flex: none;
+  margin-right: $spacing-sm;
+  font-size: 24rpx;
+  color: $ink2;
+}
+
+.mctl {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.mbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56rpx;
+  height: 56rpx;
+  font-size: 28rpx;
+  color: $ink;
+  background: #ffffff;
+  border: 2rpx solid $line;
+  border-radius: $radius-sm;
+}
+
+.mbtnOff {
+  color: rgba(107, 100, 89, 0.4);
+}
+
+.mbtnText {
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+.mchip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56rpx;
+  height: 56rpx;
+  padding: 0 12rpx;
+  background: #ffffff;
+  border: 2rpx solid $line;
+  border-radius: $radius-sm;
+}
+
+.mchipOn {
+  background: rgba(179, 18, 27, 0.08);
+  border-color: $brand;
+}
+
+.mchipText {
+  font-size: 24rpx;
+  color: $ink2;
+  font-variant-numeric: tabular-nums;
+}
+
+.mchipTextOn {
+  color: $brand;
+  font-weight: $font-weight-semibold;
+}
+
+.rbonus {
+  margin-left: auto;
+  font-size: 32rpx;
+  font-weight: $font-weight-bold;
+  color: $brand;
+  font-variant-numeric: tabular-nums;
+}
+
+.rmeta {
+  font-size: 22rpx;
+  color: $ink2;
+  font-variant-numeric: tabular-nums;
+
+  & + & {
+    margin-left: auto;
+  }
+}

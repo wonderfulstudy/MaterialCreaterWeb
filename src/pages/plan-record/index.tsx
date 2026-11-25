@@ -9,6 +9,7 @@ import {
   type SelectionSummary,
   type SportKey,
 } from '@/components/PlanCalculator'
+import { judgeRecentPlans } from '@/services/plan-judge'
 import { findDay, loadStore, markRest, saveDay, type StoredPlanDay } from '@/services/plan-store'
 import styles from './index.module.scss'
 
@@ -46,6 +47,14 @@ function shiftDay(base: Date, offset: number): Date {
   return new Date(base.getFullYear(), base.getMonth(), base.getDate() + offset)
 }
 
+/** 判中徽标文案：中 / 未 / 待（缺省与 pending 同显示为「待」） */
+function judgeText(judged?: StoredPlanDay['judged']): string {
+  if (judged === 'hit') {
+    return '中'
+  }
+  return judged === 'miss' ? '未' : '待'
+}
+
 function bonusRange(summary: SelectionSummary): string {
   return `${formatAmount(summary.minBonus)}~${formatAmount(summary.maxBonus)}`
 }
@@ -74,7 +83,16 @@ export default function PlanRecordPage() {
     setDays(loadStore().days)
   }, [])
 
-  useDidShow(refresh)
+  // AC-17：赛果回填后自动判中，写回 plan-store 后重读一次让徽标立即生效。
+  // 判定本身只覆盖近 7 天且有 legs 的天，失败静默：不弹错、不阻塞页面。
+  useDidShow(() => {
+    refresh()
+    void judgeRecentPlans()
+      .then((judged) => {
+        if (judged.length) refresh()
+      })
+      .catch(() => undefined)
+  })
 
   // AC-18：休息理由要落到 B 海报那一行，所以休息日可编辑 note
   const [noteDraft, setNoteDraft] = useState('')
@@ -189,6 +207,17 @@ export default function PlanRecordPage() {
       >
         <Text className={styles.cellDay}>{Number(date.slice(-2))}</Text>
         {hasPlan ? <View className={styles.dot} /> : null}
+        {hasPlan ? (
+          <Text
+            className={classnames(
+              styles.judgeTag,
+              record?.judged === 'hit' && styles.judgeTagHit,
+              record?.judged === 'miss' && styles.judgeTagMiss,
+            )}
+          >
+            {judgeText(record?.judged)}
+          </Text>
+        ) : null}
         {rest ? <Text className={styles.restTag}>休</Text> : null}
       </View>
     )
@@ -234,6 +263,10 @@ export default function PlanRecordPage() {
             <Text className={styles.legendRest}>休</Text>
             <Text className={styles.legendText}>已休息</Text>
           </View>
+          <View className={styles.legendItem}>
+            <Text className={styles.legendJudge}>中/未/待</Text>
+            <Text className={styles.legendText}>判中</Text>
+          </View>
           <Text className={styles.legendHint}>仅近 7 天可记录</Text>
         </View>
       </View>
@@ -245,6 +278,17 @@ export default function PlanRecordPage() {
             <Text className={styles.ticketSport}>{sportLabel(selectedRecord.sport)}</Text>
           ) : null}
           {selectedRest ? <Text className={styles.ticketRest}>已休息</Text> : null}
+          {selectedRecord ? (
+            <Text
+              className={classnames(
+                styles.ticketJudge,
+                selectedRecord.judged === 'hit' && styles.ticketJudgeHit,
+                selectedRecord.judged === 'miss' && styles.ticketJudgeMiss,
+              )}
+            >
+              判中 {judgeText(selectedRecord.judged)}
+            </Text>
+          ) : null}
         </View>
 
         {selectedRecord ? (

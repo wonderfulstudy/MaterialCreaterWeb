@@ -15,6 +15,18 @@ $line: #e6dfd2;
   background: $paper;
 }
 
+// ============ 预设来源的右上入口（AC-36） ============
+.navAct {
+  flex: none;
+  margin-left: auto;
+  padding: 8rpx 18rpx;
+  font-size: 24rpx;
+  font-weight: $font-weight-semibold;
+  color: $brand;
+  background: rgba(179, 18, 27, 0.08);
+  border-radius: $radius-round;
+}
+
 // ============ 日期头 ============
 .head {
   display: flex;

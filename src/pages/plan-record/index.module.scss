@@ -127,6 +127,29 @@ $line: #e6dfd2;
   border-radius: $radius-xs;
 }
 
+// 判中徽标（中 / 未 / 待）：与右上角「休」镜像，落在格子左上角
+.judgeTag {
+  position: absolute;
+  top: 2rpx;
+  left: 8rpx;
+  padding: 0 6rpx;
+  font-size: 18rpx;
+  line-height: 1.5;
+  color: $ink3;
+  background: rgba(32, 27, 21, 0.06);
+  border-radius: $radius-xs;
+}
+
+.judgeTagHit {
+  color: $brand;
+  background: rgba(179, 18, 27, 0.12);
+}
+
+.judgeTagMiss {
+  color: $ink2;
+  background: rgba(32, 27, 21, 0.1);
+}
+
 .legend {
   display: flex;
   align-items: center;
@@ -155,6 +178,15 @@ $line: #e6dfd2;
   font-size: 18rpx;
   color: $brand;
   background: rgba(179, 18, 27, 0.08);
+  border-radius: $radius-xs;
+}
+
+.legendJudge {
+  margin-right: 8rpx;
+  padding: 0 6rpx;
+  font-size: 18rpx;
+  color: $ink3;
+  background: rgba(32, 27, 21, 0.06);
   border-radius: $radius-xs;
 }
 
@@ -207,6 +239,25 @@ $line: #e6dfd2;
   color: $gold;
   background: rgba(201, 151, 59, 0.12);
   border-radius: $radius-xs;
+}
+
+.ticketJudge {
+  margin-left: $spacing-xs;
+  padding: 2rpx 12rpx;
+  font-size: $font-size-xs;
+  color: $ink3;
+  background: rgba(32, 27, 21, 0.06);
+  border-radius: $radius-xs;
+}
+
+.ticketJudgeHit {
+  color: $brand;
+  background: rgba(179, 18, 27, 0.12);
+}
+
+.ticketJudgeMiss {
+  color: $ink2;
+  background: rgba(32, 27, 21, 0.1);
 }
 
 .stats {

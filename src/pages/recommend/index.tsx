@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Text, View } from '@tarojs/components'
-import Taro, { useRouter, useShareAppMessage } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter, useShareAppMessage } from '@tarojs/taro'
 import classnames from 'classnames'
 import { isOcrSupported, recognizeImage } from '@/services/ocr'
 import PlanCalculator, {
@@ -16,6 +16,7 @@ import PlanCardView from '@/components/PlanCardView'
 import SharePoster from '@/components/SharePoster'
 import RenameDialog from '@/components/RenameDialog'
 import TabBar from '@/components/TabBar'
+import { findPreset, listPresets, savePreset, type StoredPreset } from '@/services/preset-store'
 import { matchRecognizedPicks, parseRecommendationText } from './plan-ocr'
 import {
   createPlan,
@@ -24,6 +25,17 @@ import {
   toSharePlan,
   type RecommendPlan,
 } from './plan'
+import {
+  PRESET_DEFS,
+  buildPresetCandidates,
+  buildStoredPreset,
+  findPresetPassByLabel,
+  pickDayMatches,
+  presetBonusText,
+  presetLegText,
+  samePreset,
+  todayKey,
+} from './preset-plan'
 import styles from './index.module.scss'
 
 interface PlanCard extends RecommendPlan {
@@ -76,6 +88,63 @@ export default function RecommendPage() {
 
   const current = states[sport]
   const currentCards = cards[sport]
+
+  /** 预设方案：设置来自 preset-store，今天的内容按当日赛程重算 */
+  const [storedPresets, setStoredPresets] = useState<StoredPreset[]>(() => listPresets())
+  // 从「预设方案设置」返回时，读一次存储里的最新设置
+  useDidShow(() => setStoredPresets(listPresets()))
+  const presetSettingsSignature = storedPresets
+    .map((item) => `${item.id}:${item.passLabel}:${item.multiple}:${item.candidateIndex}`)
+    .join('|')
+
+  const presetRows = useMemo(() => {
+    if (current.status !== 'ready' || !current.schedule.matches.length) {
+      return null
+    }
+    const matches = pickDayMatches(current.schedule.matches)
+    return PRESET_DEFS.map((def) => {
+      const stored = storedPresets.find((item) => item.id === def.id)
+      const pass = findPresetPassByLabel(stored?.passLabel)
+      const multiple = stored?.multiple ?? 1
+      const candidates = buildPresetCandidates(matches, pass, multiple, def.pick, sport)
+      return {
+        def,
+        preset: buildStoredPreset({
+          def,
+          sport,
+          pass,
+          multiple,
+          candidates,
+          candidateIndex: stored?.candidateIndex ?? 1,
+          date: todayKey(),
+        }),
+      }
+    })
+  }, [current.status, current.schedule, sport, presetSettingsSignature])
+
+  /** 算出来的内容与存储不一致就落盘（含换天重算），刷新后仍是最后一次看到的内容 */
+  useEffect(() => {
+    if (!presetRows) {
+      return
+    }
+    let changed = false
+    presetRows.forEach((row) => {
+      if (row.preset && !samePreset(findPreset(row.preset.id), row.preset)) {
+        savePreset(row.preset)
+        changed = true
+      }
+    })
+    if (changed) {
+      setStoredPresets(listPresets())
+    }
+  }, [presetRows])
+
+  const displayRows = presetRows ?? PRESET_DEFS.map((def) => ({
+    def,
+    preset: storedPresets.find((item) => item.id === def.id) ?? null,
+  }))
+
+  const scheduleLoading = presetRows === null
 
   const updateCard = (key: SportKey, id: string, patch: Partial<PlanCard>) => {
     setCards((prev) => ({
@@ -179,6 +248,17 @@ export default function RecommendPage() {
       return
     }
     setPosterPlanId(card.id)
+  }
+
+  /** 顶部只有一个入口：综合大数据矩阵页（页面未落地时给提示，不留白屏） */
+  const openMatrix = () => {
+    Taro.navigateTo({ url: '/pages/matrix/index' }).catch(() => {
+      Taro.showToast({ title: '综合大数据页暂未上线', icon: 'none' })
+    })
+  }
+
+  const goPresetDetail = (id: string) => {
+    void Taro.navigateTo({ url: `/pages/plan-detail/index?preset=${id}` })
   }
 
   useShareAppMessage(() => {
@@ -384,56 +464,17 @@ export default function RecommendPage() {
 
   return (
     <View className={styles.page}>
-      <View className={styles.topBar}>
-        <View className={styles.sportDd}>
-          <View className={styles.ddTrigger} onClick={() => setSportOpen((prev) => !prev)}>
-            <Text className={styles.ddValue}>{sportLabel(sport)}</Text>
-            <Text className={classnames(styles.ddArrow, sportOpen && styles.ddArrowOpen)}>▾</Text>
+      {/* 顶部只有「综合大数据」一个入口 */}
+      <View className={styles.heroRow}>
+        <View className={styles.hero} onClick={openMatrix}>
+          <View className={styles.heroMain}>
+            <Text className={styles.heroTitle}>综合大数据</Text>
+            <Text className={styles.heroHint}>今日矩阵 · 预设方案从这里算</Text>
           </View>
-          {sportOpen ? (
-            <>
-              <View className={styles.ddMask} onClick={() => setSportOpen(false)} />
-              <View className={styles.ddMenu}>
-                {SPORTS.map((option) => (
-                  <View
-                    key={option.key}
-                    className={classnames(
-                      styles.ddItem,
-                      option.key === sport && styles.ddItemActive
-                    )}
-                    onClick={() => handleSportChange(option.key)}
-                  >
-                    <Text className={styles.ddItemText}>{option.label}</Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          ) : null}
+          <Text className={styles.heroArrow}>›</Text>
         </View>
-
-        <View className={styles.scheduleBar}>
-          <Text
-            className={classnames(
-              styles.scheduleText,
-              current.status === 'error' && styles.scheduleError
-            )}
-          >
-            {current.status === 'loading' && '赛程加载中…'}
-            {current.status === 'ready' &&
-              `${current.schedule.matches.length} 场赛程${
-                current.schedule.updateTime ? ` · ${current.schedule.updateTime}` : ''
-              }`}
-            {current.status === 'error' && (current.error || '赛程加载失败')}
-          </Text>
-          {current.status === 'error' && (
-            <Text className={styles.scheduleRetry} onClick={() => void load(sport)}>
-              重试
-            </Text>
-          )}
-        </View>
-
         <Text
-          className={styles.scheduleRetry}
+          className={styles.heroAct}
           onClick={() => void Taro.navigateTo({ url: '/pages/plan-record/index' })}
         >
           记录
@@ -457,14 +498,60 @@ export default function RecommendPage() {
         </View>
       )}
 
-      {currentCards.length > 0 && (
-        <View className={styles.caption}>
-          <Text className={styles.captionCount}>
-            <Text className={styles.captionStrong}>{currentCards.length}</Text> 个方案
-          </Text>
-          <Text className={styles.captionHint}>长按卡片可改名</Text>
+      {/* 中部：手动方案卡片 */}
+      <View className={styles.sectionHead}>
+        <Text className={styles.sectionTitle}>手动方案</Text>
+        <Text className={styles.sectionCount}>{currentCards.length} 个</Text>
+        <View className={styles.sectionTools}>
+          <View className={styles.sportDd}>
+            <View className={styles.ddTrigger} onClick={() => setSportOpen((prev) => !prev)}>
+              <Text className={styles.ddValue}>{sportLabel(sport)}</Text>
+              <Text className={classnames(styles.ddArrow, sportOpen && styles.ddArrowOpen)}>▾</Text>
+            </View>
+            {sportOpen ? (
+              <>
+                <View className={styles.ddMask} onClick={() => setSportOpen(false)} />
+                <View className={styles.ddMenu}>
+                  {SPORTS.map((option) => (
+                    <View
+                      key={option.key}
+                      className={classnames(
+                        styles.ddItem,
+                        option.key === sport && styles.ddItemActive
+                      )}
+                      onClick={() => handleSportChange(option.key)}
+                    >
+                      <Text className={styles.ddItemText}>{option.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            ) : null}
+          </View>
         </View>
-      )}
+      </View>
+
+      <View className={styles.manualBar}>
+        <Text
+          className={classnames(
+            styles.scheduleText,
+            current.status === 'error' && styles.scheduleError
+          )}
+        >
+          {current.status === 'loading' && '赛程加载中…'}
+          {current.status === 'ready' &&
+            `${current.schedule.matches.length} 场赛程${
+              current.schedule.updateTime ? ` · ${current.schedule.updateTime}` : ''
+            }`}
+          {current.status === 'error' && (current.error || '赛程加载失败')}
+        </Text>
+        {current.status === 'error' && (
+          <Text className={styles.scheduleRetry} onClick={() => void load(sport)}>
+            重试
+          </Text>
+        )}
+        <Text className={styles.captionHint}>长按卡片可改名</Text>
+      </View>
 
       <View className={styles.cardList}>
         {currentCards.length === 0 ? (
@@ -477,6 +564,58 @@ export default function RecommendPage() {
           currentCards.map(renderCard)
         )}
       </View>
+
+      {/* 下方：预设方案卡片分组 */}
+      <View className={styles.sectionHead}>
+        <Text className={styles.sectionTitle}>预设方案</Text>
+        <Text className={styles.sectionHint}>每天按矩阵自动重算</Text>
+      </View>
+
+      {deleteMode ? (
+        <View className={styles.presetLocked}>
+          <Text className={styles.presetLockedHint}>删除模式只作用于手动方案，预设方案不参与删除</Text>
+          {displayRows.map((row) => (
+            <View className={styles.presetLockedRow} key={row.def.id}>
+              <Text className={styles.presetLockedName}>{row.def.name}</Text>
+              <Text className={styles.presetLockedMeta}>
+                {row.preset ? `${row.preset.passLabel} · ${row.preset.multiple} 倍` : '待算'}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : (
+        displayRows.map((row) => (
+          <View
+            key={row.def.id}
+            className={styles.presetCard}
+            onClick={() => (row.preset ? goPresetDetail(row.def.id) : undefined)}
+          >
+            <View className={styles.presetTop}>
+              <Text className={styles.presetName}>{row.def.name}</Text>
+              <Text className={classnames(styles.presetPass, !row.preset && styles.presetPassMute)}>
+                {row.preset ? row.preset.passLabel : '待算'}
+              </Text>
+            </View>
+            {row.preset ? (
+              <>
+                <Text className={styles.presetLegs}>{presetLegText(row.preset.legs)}</Text>
+                <View className={styles.presetBottom}>
+                  <Text className={styles.presetMeta}>
+                    {`${row.preset.multiple} 倍 · 投入 ¥${formatAmount(row.preset.summary.amount)}`}
+                  </Text>
+                  <Text className={styles.presetBonus}>
+                    {`理论 ${presetBonusText(row.preset.summary)}`}
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <Text className={styles.presetEmpty}>
+                {scheduleLoading ? '赛程加载中，预设待算' : '场次不足，今天不生成该预设'}
+              </Text>
+            )}
+          </View>
+        ))
+      )}
 
       {(statusText || errorText) && (
         <View className={styles.statusWrap}>
