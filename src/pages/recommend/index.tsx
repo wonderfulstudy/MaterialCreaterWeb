@@ -250,11 +250,9 @@ export default function RecommendPage() {
     setPosterPlanId(card.id)
   }
 
-  /** 顶部只有一个入口：综合大数据矩阵页（页面未落地时给提示，不留白屏） */
+  /** 顶部只有一个入口：综合大数据矩阵页 */
   const openMatrix = () => {
-    Taro.navigateTo({ url: '/pages/matrix/index' }).catch(() => {
-      Taro.showToast({ title: '综合大数据页暂未上线', icon: 'none' })
-    })
+    void Taro.navigateTo({ url: '/pages/matrix/index' })
   }
 
   const goPresetDetail = (id: string) => {
