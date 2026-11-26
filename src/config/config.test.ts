@@ -60,6 +60,7 @@ describe('@app-config 别名', () => {
         'common',
         'db',
         'lotteryGames',
+        'mobile',
         'navigation',
         'ocr',
         'sales',
