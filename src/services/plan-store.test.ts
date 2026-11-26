@@ -1,6 +1,10 @@
 import Taro from '@tarojs/taro'
+import { configureCore } from '@mc/core/platform'
+import type { KeyValueStore } from '@mc/core/platform/storage'
 import { summarizeLegs } from '@/components/PlanCalculator/calc'
 import type { PlanLeg } from '@/components/PlanCalculator/model'
+import { taroFeedback } from '@/platform/taro-feedback'
+import { taroTransport } from '@/platform/taro-transport'
 import {
   LEGACY_PLAN_ID,
   PLAN_STORE_KEY,
@@ -35,6 +39,26 @@ interface TaroMock {
 
 const taro = Taro as unknown as TaroMock
 const storage = new Map<string, unknown>()
+
+/** 实现已迁到 @mc/core：把平台存储接回本文件 mock 的 Taro（core 以 JSON 字符串落盘） */
+const coreStorage: KeyValueStore = {
+  get(key) {
+    const value = taro.getStorageSync(key)
+    return value === '' || value === undefined || value === null
+      ? null
+      : typeof value === 'string'
+        ? value
+        : JSON.stringify(value)
+  },
+  set(key, value) {
+    taro.setStorageSync(key, JSON.parse(value) as unknown)
+  },
+  remove(key) {
+    storage.delete(key)
+  },
+}
+
+configureCore({ transport: taroTransport, storage: coreStorage, feedback: taroFeedback, apiBaseUrl: '' })
 
 const LEGS: PlanLeg[] = [
   {

@@ -1,4 +1,6 @@
 import Taro from '@tarojs/taro'
+import { configureCore } from '@mc/core/platform'
+import type { KeyValueStore } from '@mc/core/platform/storage'
 import {
   mapBasketballResults,
   mapFootballResults,
@@ -6,6 +8,8 @@ import {
   type TraditionalDraw,
 } from '@/api/lottery/results'
 import type { PlanLeg, PoolCode } from '@/components/PlanCalculator/model'
+import { taroFeedback } from '@/platform/taro-feedback'
+import { taroTransport } from '@/platform/taro-transport'
 import { judgeLegs, judgePlan, type MatchResults } from './plan-result'
 import { findDay, listDays, saveDay, type StoredPlanDay } from './plan-store'
 import {
@@ -35,6 +39,27 @@ interface TaroMock {
 
 const taro = Taro as unknown as TaroMock
 const storage = new Map<string, unknown>()
+
+/** 实现已迁到 @mc/core：把平台存储接回本文件 mock 的 Taro（core 以 JSON 字符串落盘）
+ *  文件级一次注入，13 条判中用例共享同一份 store；remove 与 set/get 都落在本文件的 storage Map 上 */
+const coreStorage: KeyValueStore = {
+  get(key) {
+    const value = taro.getStorageSync(key)
+    return value === '' || value === undefined || value === null
+      ? null
+      : typeof value === 'string'
+        ? value
+        : JSON.stringify(value)
+  },
+  set(key, value) {
+    taro.setStorageSync(key, JSON.parse(value) as unknown)
+  },
+  remove(key) {
+    storage.delete(key)
+  },
+}
+
+configureCore({ transport: taroTransport, storage: coreStorage, feedback: taroFeedback, apiBaseUrl: '' })
 
 beforeEach(() => {
   storage.clear()

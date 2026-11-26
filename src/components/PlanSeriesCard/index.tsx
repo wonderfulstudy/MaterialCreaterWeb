@@ -1,21 +1,11 @@
 import { Image, Text, View } from '@tarojs/components'
 import classnames from 'classnames'
 import type { ReactNode } from 'react'
+import type { PlanSeriesChip, PlanSeriesStatus } from '@mc/core/services/plan/plan-series'
 import styles from './index.module.scss'
 
-/** 状态徽标色调：命中 / 未中 / 待开奖（含休息） */
-export type PlanSeriesTone = 'win' | 'lose' | 'pend'
-
-export interface PlanSeriesStatus {
-  text: string
-  tone: PlanSeriesTone
-}
-
-/** 第三行的信息 chip；on 为真时用高亮样式（如连中） */
-export interface PlanSeriesChip {
-  text: string
-  on?: boolean
-}
+/** 徽标与 chip 的数据形态归 @mc/core（与卡面文案计算同源），这里只再导出 */
+export type { PlanSeriesChip, PlanSeriesStatus, PlanSeriesTone } from '@mc/core/services/plan/plan-series'
 
 export interface PlanSeriesCardProps {
   /** 方案名 */

@@ -1,58 +1,23 @@
-/** 综合大数据矩阵的纯逻辑：列定义、行构建、复式选中、完整性校验、快照构建（不读写 storage、不取真实时间） */
-import {
-  POOL_DEFS,
-  type OddsOption,
-  type PoolCode,
-  type SportKey,
-  type SportMatch,
-} from '@/components/PlanCalculator/model'
+/** 综合大数据矩阵的行构建、复式选中、完整性校验、快照构建（不读写 storage、不取真实时间） */
+import { MATRIX_POOLS } from '@mc/core/models/matrix'
+import type { MatrixSnapshot, MatrixSnapshotCell } from '@mc/core/models/matrix'
+import type { OddsOption, PoolCode, SportKey, SportMatch } from '@/components/PlanCalculator/model'
 
-/** 表头列顺序 = 需求 §6.1.7 的玩法顺序；名称只取 POOL_DEFS 里的中文 */
-export const MATRIX_POOLS: Record<SportKey, readonly PoolCode[]> = {
-  football: ['HAD', 'HHAD', 'CRS', 'TTG', 'HAFU'],
-  basketball: ['MNL', 'HDC', 'WNM', 'HILO'],
-}
-
-/** 全局玩法开关：每种运动各自一组，至少保留 1 个 */
-export type MatrixSettings = Record<SportKey, PoolCode[]>
-
-export function matrixPoolName(poolCode: PoolCode): string {
-  return POOL_DEFS[poolCode].name
-}
-
-export function defaultMatrixSettings(): MatrixSettings {
-  return { football: [...MATRIX_POOLS.football], basketball: [...MATRIX_POOLS.basketball] }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-/**
- * 解析持久化的玩法开关：未知编码过滤、重复去掉、顺序按 MATRIX_POOLS 归一；
- * 某种运动解析不出任何玩法时回落「全部启用」，保证页面永远至少有一列。
- */
-export function parseMatrixSettings(raw: unknown): MatrixSettings {
-  const settings = defaultMatrixSettings()
-  let value = raw
-  if (typeof value === 'string') {
-    if (!value) return settings
-    try {
-      value = JSON.parse(value) as unknown
-    } catch {
-      return settings
-    }
-  }
-  if (!isRecord(value)) return settings
-
-  ;(['football', 'basketball'] as const).forEach((sport) => {
-    const stored = value[sport]
-    if (!Array.isArray(stored)) return
-    const picked = MATRIX_POOLS[sport].filter((code) => stored.includes(code))
-    if (picked.length) settings[sport] = picked
-  })
-  return settings
-}
+/** 列定义、玩法开关解析、storage 键与快照类型都在 @mc/core，这里只做再导出（实现只此一份） */
+export {
+  MATRIX_POOLS,
+  defaultMatrixSettings,
+  matrixEntryKey,
+  matrixPoolName,
+  parseMatrixSettings,
+} from '@mc/core/models/matrix'
+export type {
+  MatrixSettings,
+  MatrixSnapshot,
+  MatrixSnapshotCell,
+  MatrixSnapshotOption,
+  MatrixSnapshotRow,
+} from '@mc/core/models/matrix'
 
 /** 矩阵一行：当日在售的一场 + 启用玩法的赔率单元格 */
 export interface MatrixCell {
@@ -87,11 +52,6 @@ export type MatrixSelectionMap = Record<string, MatrixPick[]>
 
 export function matrixCellKey(matchId: number, poolCode: PoolCode): string {
   return `${matchId}:${poolCode}`
-}
-
-/** storage 条目键：足球、篮球每天各一份 */
-export function matrixEntryKey(sport: SportKey, date: string): string {
-  return `${sport}:${date}`
 }
 
 /** 「周一001」/「第2001场」→ 001 / 2001；取不到数字就用 matchNum */
@@ -236,38 +196,6 @@ export function uniformPoolLine(rows: readonly MatrixTableRow[], poolCode: PoolC
   const lines = rows.map((row) => row.cells[poolCode]?.line ?? '').filter(Boolean)
   if (!lines.length) return ''
   return lines.every((line) => line === lines[0]) ? lines[0] : ''
-}
-
-/** 快照里一格的一个结果（不含 poolCode / line，避免同格重复） */
-export interface MatrixSnapshotOption {
-  optionKey: string
-  label: string
-  odds: number
-}
-
-/** 快照里的一格：复式时 options 多个，顺序与表格里的选项顺序一致 */
-export interface MatrixSnapshotCell {
-  poolCode: PoolCode
-  line: string
-  options: MatrixSnapshotOption[]
-}
-
-export interface MatrixSnapshotRow {
-  matchId: number
-  matchNo: string
-  league: string
-  home: string
-  away: string
-  time: string
-  cells: MatrixSnapshotCell[]
-}
-
-export interface MatrixSnapshot {
-  version: 1
-  date: string
-  sport: SportKey
-  rows: MatrixSnapshotRow[]
-  updatedAt: number
 }
 
 /**

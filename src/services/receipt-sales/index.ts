@@ -1,9 +1,2 @@
-export {
-  parseGameReport,
-  parseJingcaiReport,
-  parseSubgameReport,
-  parseReceiptLines,
-  parseAmountToCents,
-  yuanTextToCents,
-} from './parse'
-export type { ReceiptItem, ReceiptKind, ReceiptResult } from './parse'
+// 实现已迁到 @mc/core；保留本文件让既有 import '...' 继续可用
+export * from '@mc/core/services/receipt-sales'

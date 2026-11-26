@@ -1,4 +1,6 @@
 import Taro from '@tarojs/taro'
+import { configureCore } from '@mc/core/platform'
+import type { KeyValueStore } from '@mc/core/platform/storage'
 import {
   MATRIX_SETTINGS_KEY,
   MATRIX_STORE_KEY,
@@ -9,6 +11,8 @@ import {
   saveMatrixSettings,
 } from './matrix-store'
 import { defaultMatrixSettings, type MatrixSnapshot } from '@/pages/matrix/matrix-data'
+import { taroFeedback } from '@/platform/taro-feedback'
+import { taroTransport } from '@/platform/taro-transport'
 
 jest.mock('@tarojs/taro', () => ({
   __esModule: true,
@@ -22,6 +26,26 @@ const getStorageSync = Taro.getStorageSync as jest.Mock
 const setStorageSync = Taro.setStorageSync as jest.Mock
 
 let storage: Map<string, string>
+
+/** 实现已迁到 @mc/core：把平台存储接回本文件 mock 的 Taro（core 以 JSON 字符串落盘） */
+const coreStorage: KeyValueStore = {
+  get(key) {
+    const value = getStorageSync(key)
+    return value === '' || value === undefined || value === null
+      ? null
+      : typeof value === 'string'
+        ? value
+        : JSON.stringify(value)
+  },
+  set(key, value) {
+    setStorageSync(key, JSON.parse(value) as unknown)
+  },
+  remove(key) {
+    storage.delete(key)
+  },
+}
+
+configureCore({ transport: taroTransport, storage: coreStorage, feedback: taroFeedback, apiBaseUrl: '' })
 
 /** 复式一格两个结果，用于验证读回顺序稳定 */
 function multiSnapshot(overrides: Partial<MatrixSnapshot> = {}): MatrixSnapshot {
