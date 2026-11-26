@@ -36,6 +36,22 @@ function readBuildEnv(key: string): string {
  */
 const APP_CONFIG_PATH = resolve(__dirname, '..', '..', 'MaterialCreaterServer', 'config', 'app.config.json')
 
+/**
+ * 三端共享业务层 @mc/core 的源码在 App 仓里（MaterialCreaterApp/packages/core），
+ * 落在 sourceRoot 之外，必须显式加入 babel 编译白名单，否则 TS 语法不会被转译。
+ * 与 tsconfig.json 的 "@mc/core/*" 别名指向同一目录。
+ */
+const CORE_SRC_PATH = resolve(__dirname, '..', '..', 'MaterialCreaterApp', 'packages', 'core', 'src')
+
+/**
+ * Taro 的 script 规则（babel-loader）只 include sourceDir；@mc/core 在仓库之外，
+ * 必须把它的目录补进同一条规则的 include，否则 TS 语法不会被转译
+ * （webpack 报 "no loaders are configured to process this file"）。
+ */
+function applyCoreCompile(chain: any): void {
+  chain.module.rule('script').include.add(CORE_SRC_PATH)
+}
+
 interface BuildAppConfig {
   api: { lotteryProxyBaseUrl: string }
   ocr: { modelUrl: string }
@@ -115,6 +131,7 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
       },
       webpackChain(chain) {
         chain.resolve.plugin('tsconfig-paths').use(TsconfigPathsPlugin);
+        applyCoreCompile(chain);
         // OCR 模型由 copy 插件拷进代码包，属于静态资源而非入口产物，
         // 用 webpack 默认的 244KiB 阈值检查它会刷出一串无意义的性能提示
         chain.performance.assetFilter((asset: string) => !/\.onnx$/i.test(asset));
@@ -155,6 +172,7 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
       },
       webpackChain(chain) {
         chain.resolve.plugin('tsconfig-paths').use(TsconfigPathsPlugin);
+        applyCoreCompile(chain);
         // 同上：onnx 模型不是首屏资源，不参与体积提示
         chain.performance.assetFilter((asset: string) => !/\.onnx$/i.test(asset));
       },

@@ -14,12 +14,12 @@
     "strictNullChecks": true,
     "sourceMap": true,
     "baseUrl": "",
-    "rootDir": "",
     "jsx": "react-jsx",
     "allowJs": true,
     "resolveJsonModule": true,
     "typeRoots": ["node_modules/@types"],
     "paths": {
+      "@mc/core/*": ["../MaterialCreaterApp/packages/core/src/*"],
       "@/*": ["src/*"],
       "@app-config": ["../MaterialCreaterServer/config/app.config.json"]
     },

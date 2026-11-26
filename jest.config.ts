@@ -18,6 +18,8 @@ const config: Config = {
   // "@app-config" 是前后端共享的唯一配置真值（Server 仓库里的 app.config.json），这里与 tsconfig.json 同名同指向
   moduleNameMapper: {
     '^@app-config$': '<rootDir>/../MaterialCreaterServer/config/app.config.json',
+    // "@mc/core/*" 是三端共享业务层（MaterialCreaterApp/packages/core），实现只此一份
+    '^@mc/core/(.*)$': '<rootDir>/../MaterialCreaterApp/packages/core/src/$1',
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 
