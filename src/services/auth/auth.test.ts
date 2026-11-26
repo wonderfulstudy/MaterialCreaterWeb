@@ -1,3 +1,4 @@
+import { configureCore } from '@mc/core/platform'
 import Taro from '@tarojs/taro'
 import AppConfig from '@/config/app'
 import {
@@ -35,6 +36,33 @@ function cachedSession(token: string, expiresAt: number): string {
   return JSON.stringify({ token, expiresAt, user: MOCK_LOGIN_RESPONSE.user })
 }
 
+/** 共享请求层经平台适配层发起请求；测试里把它接回本文件 mock 的 Taro */
+function useTaroPlatform(): void {
+  configureCore({
+    transport: {
+      request: (input: any) =>
+        taro.request({
+          url: input.url,
+          method: input.method,
+          data: input.data,
+          header: input.headers,
+          timeout: input.timeoutMs,
+        }),
+    },
+    storage: {
+      get: (key: string) => (store.has(key) ? String(store.get(key)) : null),
+      set: (key: string, value: string) => {
+        store.set(key, value)
+      },
+      remove: (key: string) => {
+        store.delete(key)
+      },
+    },
+    feedback: { toast: () => {} },
+    apiBaseUrl: API_BASE,
+  })
+}
+
 beforeEach(() => {
   store.clear()
   AppConfig.app.auth_mock = true
@@ -46,6 +74,7 @@ beforeEach(() => {
   taro.removeStorageSync.mockImplementation((key: string) => {
     store.delete(key)
   })
+  useTaroPlatform()
 })
 
 describe('auth service', () => {

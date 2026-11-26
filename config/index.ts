@@ -50,6 +50,9 @@ const CORE_SRC_PATH = resolve(__dirname, '..', '..', 'MaterialCreaterApp', 'pack
  */
 function applyCoreCompile(chain: any): void {
   chain.module.rule('script').include.add(CORE_SRC_PATH)
+  // core 在仓库之外，它引用的裸模块（@babel/runtime 助手等）向上找不到 node_modules，
+  // 必须把本项目的 node_modules 显式加进解析根，否则打包报 Module not found。
+  chain.resolve.modules.clear().add('node_modules').add(resolve(__dirname, '..', 'node_modules'))
 }
 
 interface BuildAppConfig {

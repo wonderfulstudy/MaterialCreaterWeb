@@ -1,18 +1,2 @@
-// 体彩原始数据结构
-// 真实响应中奖期列表位于 value.list 下（2026-11-05 实测）
-export interface LotteryHistory {
-    dataFrom: string
-    emptyFlag: Boolean
-    errorCode: string
-    errorMessage: string
-    success: Boolean
-    value: {
-        list: {
-            lotteryDrawNum: string
-            lotteryDrawResult: string
-            lotteryDrawTime: string
-            lotteryGameName: string
-            lotteryGameNum: string
-        }[]
-    }
-}
+// 实现已迁到 @mc/core；保留本文件让既有 import '@/api/lottery/lottery.dto' 继续可用
+export * from '@mc/core/api/lottery/lottery.dto'

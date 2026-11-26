@@ -23,6 +23,10 @@ const config: Config = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 
+  // core 源码在 Web 根之外（MaterialCreaterApp/packages/core），
+  // 它引用的裸模块（@babel/runtime 助手等）向上找不到 node_modules，这里补一个解析根
+  modulePaths: ['<rootDir>/node_modules'],
+
   // All imported modules in your tests should be mocked automatically
   // automock: false,
 

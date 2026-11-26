@@ -134,7 +134,8 @@ describe('AppConfig 适配层', () => {
   })
 
   it('不再硬编码任何配置文案，只从 @app-config 读取', () => {
-    const adapter = readSource('./app.ts')
+    // 适配层实现已迁到三端共享层 @mc/core，Web 侧 src/config/app.ts 只是再导出壳；路径随之指向实现处
+    const adapter = readSource('../../../MaterialCreaterApp/packages/core/src/config/app.ts')
     expect(adapter).toContain("from '@app-config'")
     const texts = [
       rawAppConfig.app.name,
@@ -153,7 +154,8 @@ describe('AppConfig 适配层', () => {
   })
 
   it('彩种清单同样不含硬编码 label', () => {
-    const gamesSource = readSource('../api/business/games.ts')
+    // 实现已迁到三端共享层 @mc/core，Web 侧 src/api/business/games.ts 只是再导出壳
+    const gamesSource = readSource('../../../MaterialCreaterApp/packages/core/src/api/business/games.ts')
     expect(gamesSource).toContain("from '@app-config'")
     rawAppConfig.sales.games.forEach((item) => {
       expectLiteralAbsent(gamesSource, item.label)

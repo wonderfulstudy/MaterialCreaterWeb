@@ -1,13 +1,2 @@
-// 福彩接口原始数据模型
-export interface CwlHistory {
-    state: number
-    message: string
-    Tflag: number
-    result: {
-        name: string
-        code: string
-        date: string
-        red: string
-        blue: string
-    }[]
-}
+// 实现已迁到 @mc/core；保留本文件让既有 import '@/api/cwl/cwl.dto' 继续可用
+export * from '@mc/core/api/cwl/cwl.dto'
