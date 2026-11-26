@@ -1,7 +1,12 @@
 /**
  * 经营域彩种清单（REQUIREMENTS.r6 §3.2 / §3.5）。顺序即录入页与月报的列顺序。
  * 大类 key 只能配 granularity=total，竞彩子玩法 key 只能配 granularity=detail（API.r6 §0.1）。
+ *
+ * 数据来自前后端唯一真值 config/app.config.json 的 sales.games / sales.subgames：
+ * 顺序、label、rateBp 全部就地读取，本文件不再各存一份。
  */
+import rawAppConfig from '@app-config'
+
 export type GameKey = 'qxc' | 'pl3' | 'pl5' | 'dlt' | 'sfc' | 'sfc9' | 'sfc4' | 'sfc6' | 'jczq' | 'scratch'
 
 export type JcSubgameKey =
@@ -20,39 +25,28 @@ export interface GameDefinition {
   rateBp: number
 }
 
-export const GAME_DEFINITIONS: GameDefinition[] = [
-  { key: 'qxc', label: '七星彩', rateBp: 900 },
-  { key: 'pl3', label: '排列3', rateBp: 800 },
-  { key: 'pl5', label: '排列5', rateBp: 800 },
-  { key: 'dlt', label: '超级大乐透', rateBp: 900 },
-  { key: 'sfc', label: '足球胜平负', rateBp: 800 },
-  { key: 'sfc9', label: '任选9场', rateBp: 800 },
-  { key: 'sfc4', label: '4场进球', rateBp: 800 },
-  { key: 'sfc6', label: '6场半全场', rateBp: 800 },
-  { key: 'jczq', label: '竞彩', rateBp: 700 },
-  { key: 'scratch', label: '刮刮乐', rateBp: 800 },
-]
-
 export interface JcSubgameDefinition {
   key: JcSubgameKey
   label: string
 }
 
-export const JC_SUBGAME_DEFINITIONS: JcSubgameDefinition[] = [
-  { key: 'jczq_bf', label: '竞彩足球比分' },
-  { key: 'jczq_zjq', label: '竞彩足球总进球数' },
-  { key: 'jczq_rqspf', label: '竞彩足球让球胜平负' },
-  { key: 'jczq_bqc', label: '竞彩足球半全场胜平负' },
-  { key: 'jczq_spf', label: '竞彩足球胜平负' },
-  { key: 'jcbk_sf', label: '竞彩篮球胜负' },
-  { key: 'jcbk_sfc', label: '竞彩篮球胜分差' },
-  { key: 'jcbk_dxf', label: '竞彩篮球大小分' },
-  { key: 'jcbk_rqsf', label: '竞彩篮球让分胜负' },
-  { key: 'jczq_mc', label: '足球竞彩名次' },
-  { key: 'jcbk_mc', label: '篮球竞彩名次' },
-  { key: 'jczq_hh', label: '竞彩足球混合过关' },
-  { key: 'jcbk_hh', label: '竞彩篮球混合过关' },
-]
+/**
+ * JSON 侧 key 只是 string，收窄成联合类型只在这两个映射里发生；
+ * 联合与 JSON 是否逐项一致由 src/config/config.test.ts 的运行期断言守住。
+ */
+function toGameDefinition(item: { key: string; label: string; rateBp: number }): GameDefinition {
+  return { key: item.key as GameKey, label: item.label, rateBp: item.rateBp }
+}
+
+function toJcSubgameDefinition(item: { key: string; label: string }): JcSubgameDefinition {
+  return { key: item.key as JcSubgameKey, label: item.label }
+}
+
+export const GAME_DEFINITIONS: GameDefinition[] = rawAppConfig.sales.games.map(toGameDefinition)
+
+export const JC_SUBGAME_DEFINITIONS: JcSubgameDefinition[] = rawAppConfig.sales.subgames.map(
+  toJcSubgameDefinition,
+)
 
 export const GAME_KEYS: GameKey[] = GAME_DEFINITIONS.map((item) => item.key)
 

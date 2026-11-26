@@ -1,6 +1,14 @@
 /**
- * 应用配置类型定义
+ * 应用配置类型定义。
+ *
+ * 形状由 @app-config（Server 仓库的 config/app.config.json，前后端唯一真值）推导，
+ * 本层只做字段改名：app.name → name、app.authMock → auth_mock、api.businessBaseUrl → api_base_url、
+ * lotteryGames → games。JSON 改字段名时这里先编译报错，而 AppConfig 的导出面保持不变。
  */
+import type rawAppConfig from '@app-config'
+
+/** 唯一配置真值的原始形状（JSON 模块的类型） */
+export type RawAppConfig = typeof rawAppConfig
 
 export interface GameType {
   displayName: string
@@ -10,37 +18,14 @@ export interface GameType {
 
 export interface AppConfigType {
   app : {
-    name: string
-    api_base_url: string
-    auth_mock: boolean
+    name: RawAppConfig['app']['name']
+    api_base_url: RawAppConfig['api']['businessBaseUrl']
+    auth_mock: RawAppConfig['app']['authMock']
   }
   
-  navigation: {
-    home: string
-    material: string
-    profile: string
-    selector: string
-  }
+  navigation: RawAppConfig['navigation']
 
-  games: {
-    DLT: GameType,
-    QXC: GameType,
-    PL3: GameType,
-    PL5: GameType,
-    SSQ: GameType,
-    KL8: GameType,
-    ThreeD: GameType,
-    QLC: GameType
-  }
+  games: RawAppConfig['lotteryGames']
 
-  common: {
-    loading: string
-    error: string
-    retry: string
-    noData: string
-    confirm: string
-    cancel: string
-    success: string
-    failed: string
-  }
+  common: RawAppConfig['common']
 }

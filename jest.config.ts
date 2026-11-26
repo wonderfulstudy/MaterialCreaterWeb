@@ -15,7 +15,9 @@ const config: Config = {
   },
 
   // 让 jest 认识 tsconfig 里的 "@/*" 路径别名
+  // "@app-config" 是前后端共享的唯一配置真值（Server 仓库里的 app.config.json），这里与 tsconfig.json 同名同指向
   moduleNameMapper: {
+    '^@app-config$': '<rootDir>/../MaterialCreaterServer/config/app.config.json',
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 

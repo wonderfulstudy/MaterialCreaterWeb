@@ -3,12 +3,13 @@
  * 仓库内所有 Taro.request 调用都必须经过本文件（包一层可测、可替换的最小面）。
  */
 import Taro from '@tarojs/taro'
+import rawAppConfig from '@app-config'
 
-/** 默认超时（毫秒）：上游慢时尽快失败，让调用方回落本地缓存 */
-export const REQUEST_TIMEOUT = 8000
+/** 默认超时（毫秒）：取共享真值的 api.timeoutMs，上游慢时尽快失败，让调用方回落本地缓存 */
+export const REQUEST_TIMEOUT = rawAppConfig.api.timeoutMs
 
-/** 网络失败/超时后的重试次数；HTTP 非 2xx 不重试 */
-const NETWORK_RETRIES = 1
+/** 网络失败/超时后的重试次数；HTTP 非 2xx 不重试。取共享真值的 api.networkRetries（导出供配置契约单测断言） */
+export const NETWORK_RETRIES = rawAppConfig.api.networkRetries
 
 /** 业务失败：统一信封 code!==0 */
 export class ApiError extends Error {

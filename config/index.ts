@@ -29,8 +29,25 @@ function readBuildEnv(key: string): string {
   return ''
 }
 
+/**
+ * 构建期要用的地址来自前后端共享的唯一真值 MaterialCreaterServer/config/app.config.json
+ * （与 src/config 的 "@app-config" 别名指向同一份文件，不复制、不生成副本）。
+ * 这里用 readFileSync 而不是别名：本文件在 Node 里由 Taro 直接执行，不经过 webpack 的别名解析。
+ */
+const APP_CONFIG_PATH = resolve(__dirname, '..', '..', 'MaterialCreaterServer', 'config', 'app.config.json')
+
+interface BuildAppConfig {
+  api: { lotteryProxyBaseUrl: string }
+  ocr: { modelUrl: string }
+}
+
+function readAppConfig(): BuildAppConfig {
+  return JSON.parse(readFileSync(APP_CONFIG_PATH, 'utf8')) as BuildAppConfig
+}
+
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
 export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
+  const appConfig = readAppConfig()
   const outputRoot = process.env.TARO_OUTPUT_DIR || 'dist'
   // PP-OCRv6 tiny 识别模型：src/ocr_model 或根目录 ocr_model，模型文件存在哪个用哪个。
   // 默认不随包分发（走 OCR_MODEL_URL 运行时下载），此时不参与 copy，避免构建报错。
@@ -52,10 +69,11 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
     outputRoot,
     plugins: ['@tarojs/plugin-html'],
     defineConstants: {
-      // 模型下载地址由构建环境注入，避免把带签名的临时链接提交到仓库
-      __OCR_MODEL_URL__: JSON.stringify(readBuildEnv('OCR_MODEL_URL')),
-      // 开奖数据代理根地址（API.r1）：.env 的 API_BASE，未配置时连本地代理进程
-      __API_BASE__: JSON.stringify(readBuildEnv('API_BASE') || 'http://localhost:8081'),
+      // 模型下载地址：构建环境注入 > .env.local > .env > 真值 ocr.modelUrl
+      // （签名临时链接不写进仓库，所以真值里只留缺省值）
+      __OCR_MODEL_URL__: JSON.stringify(readBuildEnv('OCR_MODEL_URL') || appConfig.ocr.modelUrl),
+      // 开奖数据代理根地址（API.r1）：构建环境注入 > .env.local > .env > 真值 api.lotteryProxyBaseUrl
+      __API_BASE__: JSON.stringify(readBuildEnv('API_BASE') || appConfig.api.lotteryProxyBaseUrl),
     },
     copy: {
       patterns: ocrModelDir
